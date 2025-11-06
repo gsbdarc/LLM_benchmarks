@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[80]:
+# In[3]:
 
 
 # Standard library imports
@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field
 import Validity_Functions
 
 
-# In[50]:
+# In[4]:
 
 
 def pdf_to_b64(pdf_path: str) -> str:
@@ -39,26 +39,27 @@ def pdf_to_b64(pdf_path: str) -> str:
     return img_b64
 
 
-# In[101]:
+# In[5]:
 
 
 class meta_data(BaseModel):
     newspaper_name: str
     publication_date: str
-    
 
 
-# In[102]:
+# In[6]:
 
 
-def call_llm(b64: str, model: str, role_prompt: str, content_prompt: str, structured_output: Type[BaseModel]) -> BaseModel:
+def call_llm(b64: str, model: str, role_prompt: str, content_prompt: str,
+             structured_output: Type[BaseModel]) -> BaseModel:
     """Feeds B64 image into LLM and returns structured output."""
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     response = client.responses.parse(
         model=model,
         input=[
-            {"role": "system", "content": [{"type": "input_text", "text": role_prompt}]},
+            {"role": "system", "content": [
+                {"type": "input_text", "text": role_prompt}]},
             {
                 "role": "user",
                 "content": [
@@ -66,7 +67,7 @@ def call_llm(b64: str, model: str, role_prompt: str, content_prompt: str, struct
                     {
                         "type": "input_image",
                         "image_url": f"data:image/png;base64,{b64}",
-                        "detail":"low"
+                        "detail": "low"
                     },
                 ],
             },
@@ -75,16 +76,15 @@ def call_llm(b64: str, model: str, role_prompt: str, content_prompt: str, struct
     )
 
     return response.output_parsed
-    
 
 
-# In[104]:
+# In[7]:
 
 
 def get_date_csv(path: str) -> str:
     """Builds date object based on year, month, and date columns in csv."""
     truth_df = pd.read_csv(path)
-    
+
     true_year = str(truth_df.loc[0, 'Year']).strip()
     true_month = str(truth_df.loc[0, 'Month']).strip()
     true_date_raw = str(truth_df.loc[0, 'Date']).strip()
@@ -97,7 +97,7 @@ def get_date_csv(path: str) -> str:
     return date_obj
 
 
-# In[105]:
+# In[8]:
 
 
 def convert_string_to_date(input: str) -> datetime:
@@ -106,22 +106,21 @@ def convert_string_to_date(input: str) -> datetime:
     return date_obj
 
 
-# In[99]:
+# In[9]:
 
 
-def calc_accuracy(df: pd.DataFrame,  column_name) -> str:
+def calc_accuracy(df: pd.DataFrame, column_name) -> str:
     """calculates the accuracy rate of a boolean column."""
     accuracy = df[column_name].mean()
     msg = f"{column_name} accuracy: {accuracy:.2%}"
-    
+
     logger.info("=== Accuracy ===")
     logger.info(msg)
-    
+
     print(msg)
 
 
-
-# In[66]:
+# In[10]:
 
 
 def extract_newspaper_name(file_path: str) -> str:
@@ -130,7 +129,8 @@ def extract_newspaper_name(file_path: str) -> str:
     'Arizona_Republic_Sun__Dec_17__2000_ (15).csv'
     and returns 'Arizona Republic Sun'.
     """
-    # Get just the filename, e.g. "Arizona_Republic_Sun__Dec_17__2000_ (15).csv"
+    # Get just the filename, e.g. "Arizona_Republic_Sun__Dec_17__2000_
+    # (15).csv"
     filename = os.path.basename(file_path)
     # Remove the extension (.csv)
     filename = os.path.splitext(filename)[0]
@@ -146,7 +146,7 @@ def extract_newspaper_name(file_path: str) -> str:
     return " ".join(parts).strip()
 
 
-# In[106]:
+# In[11]:
 
 
 def normalize_name(name: str) -> str:
@@ -154,12 +154,13 @@ def normalize_name(name: str) -> str:
     name = name.lower()                     # ignore capitalization
     name = re.sub(r"\(.*?\)", "", name)     # remove parentheses and contents
     name = name.replace("-", " ")           # replace dashes with spaces
-    name = re.sub(r"^\s*the\s+", "", name)  # remove 'the' at start (if present)
+    # remove 'the' at start (if present)
+    name = re.sub(r"^\s*the\s+", "", name)
     name = re.sub(r"\s+", " ", name)        # collapse multiple spaces
     return name.strip()
 
 
-# In[97]:
+# In[12]:
 
 
 today = datetime.now().strftime("%Y-%m-%d")
@@ -174,42 +175,50 @@ file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
 
-# In[51]:
+# In[13]:
 
 
 load_dotenv("/zfs/projects/students/ltdarc-usf-intern-2025/.env")
 
 
-# In[52]:
+# In[14]:
 
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
-# In[53]:
+# In[15]:
 
 
 model = "gpt-4o-mini"
 
 
-# In[54]:
+# In[16]:
 
 
 role_prompt = "You are a metadata extraction assistant that specializes reading the TV guides of newspapers."
 
 
-# In[55]:
+# In[17]:
 
 
-content_prompt = """Look at this newspaper page and extract two fields:
-1. The name of the newspaper
-2. The date the tv guide is for (do not include day of week)
+content_prompt = """You are analyzing a scanned newspaper page that includes a TV guide.
 
-Return your answer ONLY as a valid JSON object with the following keys:
-  - newspaper
-  - date
+Your task is to extract exactly two pieces of information:
+1. The **name of the newspaper** where the TV guide appears.
+2. The **date** that the TV guide is for.
+   - Ignore any day-of-week labels (like "Sunday" or "Wed").
+   - If there is a mismatch — for example, a date appears in the upper-right corner and a day of week appears in another corner — assume the guide is for the **day of the week immediately after** that date.
+     Example: if you see "Sun, Dec 17, 2000" and the heading says "Wednesday", the correct date is **Dec 20, 2000**.
 
-Example:
+Formatting rules:
+- Return **only** a valid JSON object.
+- Use the following keys exactly:
+  - `"newspaper"` — the name of the newspaper
+  - `"date"` — the publication date of the TV guide, written as "Month Day, Year" (e.g., "January 5, 2023").
+- Do not include any additional text, explanations, or comments outside the JSON.
+
+Example output:
 {
   "newspaper": "The New York Times",
   "date": "January 5, 2023"
@@ -217,15 +226,15 @@ Example:
 """
 
 
-# In[59]:
+# In[18]:
 
 
-data_path='/zfs/projects/students/ltdarc-usf-intern-2025/data'
+data_path = '/zfs/projects/students/ltdarc-usf-intern-2025/data'
 
 index = Validity_Functions.make_index(data_path)
 
 
-# In[98]:
+# In[20]:
 
 
 results = []
@@ -240,10 +249,9 @@ for idx, row in index.iterrows():
     pdf_path = row["pdf_files"]
     b64 = pdf_to_b64(pdf_path)
 
-    llm_meta = call_llm(b64, model, role_prompt, content_prompt, MetaData)
+    llm_meta = call_llm(b64, model, role_prompt, content_prompt, meta_data)
     date_str = llm_meta.publication_date
     date_obj = convert_string_to_date(date_str)
-    
 
     results.append({
         "Index": idx,
@@ -254,7 +262,7 @@ for idx, row in index.iterrows():
 results_df = pd.DataFrame(results)
 
 
-# In[73]:
+# In[21]:
 
 
 comparison_results = list()
@@ -264,7 +272,8 @@ for _, row in results_df.iterrows():
     true_name = extract_newspaper_name(ground_truth_path)
     true_date = get_date_csv(ground_truth_path)
 
-    name_match = normalize_name(row["LLM_Newspaper_Name"]) == normalize_name(true_name)
+    name_match = normalize_name(
+        row["LLM_Newspaper_Name"]) == normalize_name(true_name)
     date_match = row["LLM_Newspaper_Date"] == true_date
 
     comparison_results.append({
@@ -280,22 +289,22 @@ for _, row in results_df.iterrows():
 comparison_df = pd.DataFrame(comparison_results)
 
 
-
-
-# In[74]:
+# In[22]:
 
 
 print(comparison_df)
 
 
-# In[100]:
+# In[23]:
 
 
 calc_accuracy(comparison_df, "Name_Match")
 
 
-# In[107]:
+# In[24]:
 
 
 calc_accuracy(comparison_df, "Date_Match")
 
+
+# In[ ]:
