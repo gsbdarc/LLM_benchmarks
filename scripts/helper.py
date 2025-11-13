@@ -6,6 +6,19 @@ import base64
 from datetime import datetime
 from pdf2image import convert_from_path
 
+os.makedirs("logs", exist_ok=True)
+
+today = datetime.now().strftime("%Y-%m-%d")
+log_path = f"logs/llm_call_{today}.log"
+
+logger = logging.getLogger("llm_logger")
+logger.setLevel(logging.INFO)
+
+file_handler = logging.FileHandler(log_path)
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
 def make_index(path: str):
 
     """
@@ -89,3 +102,33 @@ def file_viewer(df: pd.DataFrame, index: int):
     truth=pd.read_csv(csv_path)
 
     return truth
+
+def pdf_to_b64(pdf_path: str) -> str:
+    """ Converts pdf image to b64."""
+    pages = convert_from_path(pdf_path, first_page=1, last_page=1, dpi=100)
+    buffer = BytesIO()
+    pages[0].save(buffer, format="PNG")
+    img_bytes = buffer.getvalue()
+    img_b64 = base64.b64encode(img_bytes).decode()
+
+    return img_b64
+
+def get_date_csv(path: str) -> str:
+    """Builds date object based on year, month, and date columns in csv."""
+    truth_df = pd.read_csv(path)
+    
+    true_year = str(truth_df.loc[0, 'Year']).strip()
+    true_month = str(truth_df.loc[0, 'Month']).strip()
+    true_date_raw = str(truth_df.loc[0, 'Date']).strip()
+
+    match = re.search(r"\d+", true_date_raw)
+    true_day = int(match.group())
+    date_str = f"{true_month} {true_day}, {int(true_year)}"
+    date_obj = datetime.strptime(date_str, "%B %d, %Y")
+
+    return date_obj
+
+def convert_string_to_date(input: str) -> datetime:
+    """converts string to date object"""
+    date_obj = pd.to_datetime(input, format="%B %d, %Y")
+    return date_obj
