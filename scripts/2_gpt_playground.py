@@ -1,17 +1,20 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[3]:
+# In[1]:
 
 
 # Standard library imports
+import helper
 import base64
 import json
 import logging
+import sys
 import os
 import re
 from datetime import datetime
 from io import BytesIO
+from multiprocessing import Pool
 from typing import Type
 
 # Third-party imports
@@ -22,10 +25,29 @@ from pdf2image import convert_from_path
 from pydantic import BaseModel, Field
 
 # Local application imports
-import Validity_Functions
+script_dir = os.path.abspath(
+    '/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/scripts')
+sys.path.append(script_dir)
 
 
-# In[4]:
+# In[2]:
+
+
+os.makedirs("logs", exist_ok=True)
+
+today = datetime.now().strftime("%Y-%m-%d")
+log_path = f"logs/llm_call_{today}.log"
+
+logger = logging.getLogger("llm_logger")
+logger.setLevel(logging.INFO)
+
+file_handler = logging.FileHandler(log_path)
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
+
+# In[3]:
 
 
 def pdf_to_b64(pdf_path: str) -> str:
@@ -39,7 +61,7 @@ def pdf_to_b64(pdf_path: str) -> str:
     return img_b64
 
 
-# In[5]:
+# In[4]:
 
 
 class meta_data(BaseModel):
@@ -47,19 +69,49 @@ class meta_data(BaseModel):
     publication_date: str
 
 
-# In[6]:
+# In[5]:
+
+example_1_path = "/zfs/projects/students/ltdarc-usf-intern-2025/data/Austin_American_Statesman_Sun__Aug_3__2014_ (10).pdf"
+example_2_path = "/zfs/projects/students/ltdarc-usf-intern-2025/data/Chicago_Tribune_Sun__May_28__1995_ (30).pdf"
+
+example_b64_1 = pdf_to_b64(example_1_path)
+example_b64_2 = pdf_to_b64(example_2_path)
 
 
-def call_llm(b64: str, model: str, role_prompt: str, content_prompt: str,
-             structured_output: Type[BaseModel]) -> BaseModel:
+# In[62]:
+
+
+def call_llm(
+        b64: str,
+        model: str,
+        role_prompt: str,
+        content_prompt: str,
+        structured_output: Type[BaseModel]) -> BaseModel:
     """Feeds B64 image into LLM and returns structured output."""
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     response = client.responses.parse(
         model=model,
+        reasoning={"effort": "high"},
         input=[
-            {"role": "system", "content": [
-                {"type": "input_text", "text": role_prompt}]},
+            {"role": "system", "content": [{"type": "input_text", "text": role_prompt}]},
+
+            {
+                "role": "user",
+                "content": [
+                    {"type": "input_text", "text": "Example 1: Extract metadata from this page."},
+                    {"type": "input_image", "image_url": f"data:image/png;base64,{example_b64_1}"},
+                    {"type": "input_text", "text": '{"newspaper": "Austin American-Statesman", "date": "August 9, 2014"}'}
+                ]
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "input_text", "text": "Example 2: Extract metadata from this page."},
+                    {"type": "input_image", "image_url": f"data:image/png;base64,{example_b64_2}"},
+                    {"type": "input_text", "text": '{"newspaper": "The Chicago Tribune", "date": "May 28, 1995"}'}
+                ]
+            },
+
             {
                 "role": "user",
                 "content": [
@@ -67,7 +119,6 @@ def call_llm(b64: str, model: str, role_prompt: str, content_prompt: str,
                     {
                         "type": "input_image",
                         "image_url": f"data:image/png;base64,{b64}",
-                        "detail": "low"
                     },
                 ],
             },
@@ -112,6 +163,7 @@ def convert_string_to_date(input: str) -> datetime:
 def calc_accuracy(df: pd.DataFrame, column_name) -> str:
     """calculates the accuracy rate of a boolean column."""
     accuracy = df[column_name].mean()
+
     msg = f"{column_name} accuracy: {accuracy:.2%}"
 
     logger.info("=== Accuracy ===")
@@ -163,107 +215,140 @@ def normalize_name(name: str) -> str:
 # In[12]:
 
 
-today = datetime.now().strftime("%Y-%m-%d")
-log_path = f"logs/llm_call_{today}.log"
-
-logger = logging.getLogger("llm_logger")
-logger.setLevel(logging.INFO)
-
-file_handler = logging.FileHandler(log_path)
-formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
+load_dotenv("/zfs/projects/students/ltdarc-usf-intern-2025/.env")
 
 
 # In[13]:
 
 
-load_dotenv("/zfs/projects/students/ltdarc-usf-intern-2025/.env")
-
-
-# In[14]:
-
-
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+
+# In[56]:
+
+
+model = "gpt-5"
 
 
 # In[15]:
 
 
-model = "gpt-4o-mini"
+role_prompt = (
+    "You are a precise metadata extraction assistant. "
+    "Your job is to identify and extract structured information from scanned newspaper TV guide images. "
+    "You must always return the result as a valid JSON object that exactly matches the schema: "
+    '{"newspaper": "<name>", "date": "<Month Day, Year>"}')
 
 
 # In[16]:
 
 
-role_prompt = "You are a metadata extraction assistant that specializes reading the TV guides of newspapers."
+content_prompt = """
+You are analyzing a scanned newspaper page that includes a TV guide.
+
+Your task is to extract exactly two fields:
+
+1. `"newspaper"` — the full name of the newspaper where the TV guide appears.
+2. `"date"` — the date the TV guide is for, formatted as "Month Day, Year" (e.g., "January 5, 2023").
+
+Important extraction rules:
+- If you see a mismatch (e.g., “Sun, Dec 17, 2000” in the upper right and “Wednesday” heading), assume the guide is for the **day immediately after** that date.
+- If you see a range of dates (e.g. "May 28-June 3, 1995), assume the guide is for the first day within that range.
+- If uncertain, output `null` for that field.
+
+Below are a few labeled examples for guidance.
+Study them carefully before analyzing the final image.
+
+---
+
+### Example 1
+Image:
+(Shown below)
+Expected Output:
+{
+  "newspaper": "Austin American-Statesman",
+  "date": "August 9, 2014"
+}
+
+---
+
+### Example 2
+Image:
+(Shown below)
+Expected Output:
+{
+  "newspaper": "The Chicago Tribune",
+  "date": "May 28, 1995"
+}
+
+---
+
+Now analyze the next image and output only valid JSON with the same keys:
+{
+  "newspaper": "...",
+  "date": "..."
+}
+"""
 
 
 # In[17]:
 
 
-content_prompt = """You are analyzing a scanned newspaper page that includes a TV guide.
+data_path = '/zfs/projects/students/ltdarc-usf-intern-2025/data'
 
-Your task is to extract exactly two pieces of information:
-1. The **name of the newspaper** where the TV guide appears.
-2. The **date** that the TV guide is for.
-   - Ignore any day-of-week labels (like "Sunday" or "Wed").
-   - If there is a mismatch — for example, a date appears in the upper-right corner and a day of week appears in another corner — assume the guide is for the **day of the week immediately after** that date.
-     Example: if you see "Sun, Dec 17, 2000" and the heading says "Wednesday", the correct date is **Dec 20, 2000**.
-
-Formatting rules:
-- Return **only** a valid JSON object.
-- Use the following keys exactly:
-  - `"newspaper"` — the name of the newspaper
-  - `"date"` — the publication date of the TV guide, written as "Month Day, Year" (e.g., "January 5, 2023").
-- Do not include any additional text, explanations, or comments outside the JSON.
-
-Example output:
-{
-  "newspaper": "The New York Times",
-  "date": "January 5, 2023"
-}
-"""
+index = helper.make_index(data_path)
 
 
 # In[18]:
 
 
-data_path = '/zfs/projects/students/ltdarc-usf-intern-2025/data'
-
-index = Validity_Functions.make_index(data_path)
+gpt_models = ["gpt-4o-mini", "gpt-4.1", "gpt-5-nano", "gpt-5-mini", "gpt-5"]
 
 
-# In[20]:
+# In[63]:
 
-
-results = []
 
 # --- log prompts ---
 logger.info("=== LLM CALL ===")
 logger.info(f"Model: {model}")
 logger.info(f"Role Prompt:\n{role_prompt}")
 logger.info(f"Content Prompt:\n{content_prompt}")
+logger.info(f"Reasoning Effort:\n{'high'}")
 
-for idx, row in index.iterrows():
-    pdf_path = row["pdf_files"]
-    b64 = pdf_to_b64(pdf_path)
+# Function to process ONE file (this will run in parallel)
 
+
+def process_file(file):
+    b64 = pdf_to_b64(file)
     llm_meta = call_llm(b64, model, role_prompt, content_prompt, meta_data)
-    date_str = llm_meta.publication_date
-    date_obj = convert_string_to_date(date_str)
 
-    results.append({
-        "Index": idx,
+    date_str = llm_meta.publication_date
+    if date_str:
+        date_obj = convert_string_to_date(date_str)
+    else:
+        date_obj = date_str
+
+    return {
         "LLM_Newspaper_Name": llm_meta.newspaper_name,
         "LLM_Newspaper_Date": date_obj
-    })
+    }
+
+
+# Run the work in parallel
+files = list(index['pdf_files'])
+
+with Pool(34) as p:
+    results = p.map(process_file, files)
+
+# Add index after the fact
+for i, r in enumerate(results):
+    r["Index"] = i
+
+
+# In[64]:
+
 
 results_df = pd.DataFrame(results)
-
-
-# In[21]:
-
 
 comparison_results = list()
 
@@ -289,19 +374,19 @@ for _, row in results_df.iterrows():
 comparison_df = pd.DataFrame(comparison_results)
 
 
-# In[22]:
+# In[65]:
 
 
-print(comparison_df)
+comparison_df
 
 
-# In[23]:
+# In[66]:
 
 
 calc_accuracy(comparison_df, "Name_Match")
 
 
-# In[24]:
+# In[67]:
 
 
 calc_accuracy(comparison_df, "Date_Match")
