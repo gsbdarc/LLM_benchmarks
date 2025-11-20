@@ -3,4 +3,5 @@ pandas
 python-dotenv
 openai
 pdf2image
-pydantic 
+pydantic
+tabulate
