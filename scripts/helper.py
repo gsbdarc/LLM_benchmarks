@@ -2,8 +2,10 @@ import pandas as pd
 import os
 import logging
 import base64
+import re
 
 from datetime import datetime
+from io import BytesIO
 from pdf2image import convert_from_path
 
 os.makedirs("logs", exist_ok=True)
@@ -26,7 +28,7 @@ def make_index(path: str):
     PDF and CSV files.
     """
 
-    os.makedirs("/zfs/projects/students/ltdarc-usf-intern-2025/code/snapshots", exist_ok = True)
+    os.makedirs("/zfs/projects/students/ltdarc-usf-intern-2025/data/snapshots", exist_ok = True)
     files=os.listdir(path)
     
     pdf_files = [path+'/'+f for f in files if f.endswith('.pdf')]
@@ -132,3 +134,41 @@ def convert_string_to_date(input: str) -> datetime:
     """converts string to date object"""
     date_obj = pd.to_datetime(input, format="%B %d, %Y")
     return date_obj
+
+def calc_accuracy(df: pd.DataFrame,  column_name) -> str:
+    """calculates the accuracy rate of a boolean column."""
+    accuracy = df[column_name].mean()
+    #msg = f"{column_name} accuracy: {accuracy:.2%}"
+
+    return accuracy
+
+def extract_newspaper_name(file_path: str) -> str:
+    """
+    Extracts the newspaper name from a file path like:
+    'Arizona_Republic_Sun__Dec_17__2000_ (15).csv'
+    and returns 'Arizona Republic Sun'.
+    """
+    # Get just the filename, e.g. "Arizona_Republic_Sun__Dec_17__2000_ (15).csv"
+    filename = os.path.basename(file_path)
+    # Remove the extension (.csv)
+    filename = os.path.splitext(filename)[0]
+
+    # Use regex to capture everything before the first '__'
+    match = re.match(r"^(.*?)__", filename)
+    name_part = match.group(1)
+    parts = name_part.split("_")
+
+    if parts[-1].lower() in ["sun"]:
+        parts = parts[:-1]
+
+    return " ".join(parts).strip()
+
+def normalize_name(name: str) -> str:
+    """cleans newspaper name ahead of comparison"""
+    name = name.lower()                     # ignore capitalization
+    name = re.sub(r"\(.*?\)", "", name)     # remove parentheses and contents
+    name = name.replace("-", " ")           # replace dashes with spaces
+    name = re.sub(r"^\s*the\s+", "", name)  # remove 'the' at start (if present)
+    name = re.sub(r"\s+", " ", name)        # collapse multiple spaces
+    return name.strip()
+
