@@ -5,3 +5,4 @@ openai
 pdf2image
 pydantic
 tabulate
+instructor

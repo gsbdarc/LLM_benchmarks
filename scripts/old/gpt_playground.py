@@ -24,7 +24,7 @@ sys.path.append(script_dir)
 
 import helper
 
-# Configuring inputs
+# Configuring inputs, adjust model and examples as neede
 
 data_path = '/zfs/projects/students/ltdarc-usf-intern-2025/data'
 load_dotenv("/zfs/projects/students/ltdarc-usf-intern-2025/.env")
@@ -130,7 +130,24 @@ def call_llm(
         role_prompt: str,
         content_prompt: str,
         structured_output: Type[BaseModel]) -> BaseModel:
-    """Feeds B64 image into LLM and returns structured output."""
+    """
+    Inputs:
+    - b64: Base64 image for LLM to extact metadata
+    - model: Which model of chatgpt sould be used
+    - role prompt: What role the model should take on
+    - content prompt: What shoud the model do with the input
+    - structured output: What should the model do with the input
+
+    Function will feed inputs as well as a two few shot examples into the LLM.
+
+    Outputs:
+    - response.output_parsed: structured output in json format
+    - elapsed: time it took to call LLM and recieve the structured output
+    - input_tokens: number of tokens the inputs translated to
+    - output_tokens: number of tokens the output translated to
+    - tps_output: rate of output tokens per second.
+    
+    """
 
     start = time.time()
 
@@ -184,6 +201,14 @@ def call_llm(
 
 
 def process_file(file):
+
+    """
+    Converts input file into Base64
+    Feeds this and other inputs definied earlier in script into ChatGPT
+    Extracts structure output and well as time/token metrics
+    returns a dictionary of these outputs
+    """
+    
     b64 = helper.pdf_to_b64(file)
     llm_meta, elapsed, input_tokens, output_tokens, tps_output = call_llm(b64, model, role_prompt, content_prompt, meta_data)
     
@@ -205,6 +230,33 @@ def process_file(file):
 # Evaluation Functions
     
 def compare_results(results_df, index):
+
+    """
+    Inputs
+    - results_df: DataFrame of outputs from process_file
+    - index: DataFrame of PDF's and CSV source of truth
+
+    For each row in the results_df the script find the corresponding row in the index df
+    This points to the location of CSV source of truth file for a given pdf 
+    It extracts the newspaper name and tv guide date from ths CSV file
+    These values are then compared to the structured output from the LLM
+
+    - name_match: does the name the LLM extracted equal the name in the CSV
+    - date_match: does the date the LLM extracted equal the date in the CSV
+
+
+    Output:
+    - Data Frame with the following columns:
+        - Index
+        - LLM Newspaper Name
+        - LLM Newspaper Date
+        - Actual Name (from CSV)
+        - Actual Date (from CSV)
+        - Time taken (for single call of LLM)
+        - Input tokens
+        - Output token 
+        - Tokens/second
+    """
 
     comparison_results = list()
 
@@ -237,11 +289,21 @@ def compare_results(results_df, index):
 # main/orchestration
 
 def main():
+
+    """
+    Creates "index" data frame where each row has the locations of a PDF and it's CSV source of truth file
+    Make a list of only pdf locations called "files"
+    Using parallel processing feed files into process_files function (calls LLM)
+    Append each result to a list called "results"
+    Add an index and convert to a dataframe
+    Using the compare_results function match LLM outputs to source of truth
+    calc_accuracy looks at the proportion of "True" for each metric
+    """
     index = helper.make_index(data_path)
 
     files = list(index['pdf_files'])
 
-    with Pool(34) as p:
+    with Pool(25) as p: #parallel processing across 25 threads
         results = p.map(process_file, files)
 
     # Add index after the fact
@@ -255,6 +317,19 @@ def main():
     name_accuracy = helper.calc_accuracy(comparison_df, "Name_Match")
 
     date_accuracy = helper.calc_accuracy(comparison_df, "Date_Match")
+
+    """
+    Once accuracy has been evaluated we need to log inputs and results
+    Creates a "logs" folder in current scripts folder
+    Each time the script is called the following is logged:
+    - model type
+    - role prompt
+    - content prompt
+    - reasoning effort
+    - dataframe of results
+    - name accuracy rate
+    - date accuracy rate
+    """
 
     os.makedirs("logs", exist_ok=True)
 
