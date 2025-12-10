@@ -6,3 +6,5 @@ pdf2image
 pydantic
 tabulate
 instructor
+ollama-instructor
+matplotlib

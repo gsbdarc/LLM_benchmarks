@@ -1,6 +1,6 @@
 # LLM_benchmarks
 
-Purpose: Evaluating open and closed vision/vison supported LLMs data extraction, table understanding, and reasoning capabilties on PDF TV 
+Purpose: Evaluate open- and closed-source LLMs with vision capabilities, both explicitly vision-labeled (i.e. Qwen3-vl) and general multimodal models (i.e. GPT-5), on their ability to extract data, interpret tables, and perform reasoning tasks on TV guide PDFs collected from historical newspapers.
 
 Start by cloning repo:
 
@@ -28,13 +28,16 @@ Configure environment variables:
 
 - Create an .env file
 - Add OPENAI_API_Key=your_key_here
+- Add STANFORD_API_KEY=your_key_here
 
 Directory Structure:
 
 LLM_benchmarks/
     scripts/
         helper.py
+        run_ollama_server.slurm
         1_snapshot.py
+    notebooks/
     data/
         <pdf files>
         <csv files>
@@ -45,8 +48,33 @@ Script Overview:
 
 - `1_snapshot.py`
  - Creates a full index of a pdf and csv files in /data
- - Confirms that ever file loads correctly via pdf2image
- - Generates a snapshot DataFrame used by later scripts 
+ - Confirms that every file loads correctly via pdf2image
+ - Generates a snapshot DataFrame used by later scripts
+
+- `run_ollama_server.slurm`
+
+```
+sbatch run_ollama_server.slurm
+```
+ - Starts ollama server
+ - Cancel job once you're done with ollama LLMs
+
+```
+squeue
+scancel JOBID
+```
+
+Noteboks Overview:
+
+- For code that is still in testing/WIP
+
+- `Instructor_Playground.ipynb`
+ - Testing compatability of Instructor module with Stanford AI Playground API 
+ - Passing PNGs into models via image input, asking models to return
+  -  Newspaper Publishing Date
+  -  TV Guide Day of Week
+  -  Date of TV Guide
+ - Conclusion: Stanford API does not support direct image processesing, Instructor can not be used as a way a circumvent this. Will call API's directly with Instructor module.
 
 How to run scripts:
 

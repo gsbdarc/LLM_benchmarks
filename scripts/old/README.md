@@ -3,7 +3,7 @@ Retired scripts from LLM Benchmarking project.
 Script Overview:
 
 ```
-python scripts/gpt_playground.py
+python scripts/old/gpt.py
 ```
 
  -  Reads all PDFs in /data
@@ -32,7 +32,7 @@ Findings:
 - GPT-5 with reasoning turned "high" had the best results with 97% name accuracy and 69% date accuracy.
 
 ```
-python scripts/llama_playground.py
+python scripts/old/llama.py
 ```
 
 Running llama3.2-vision via ollama on yen:
@@ -43,7 +43,7 @@ https://rcpedia.stanford.edu/blog/2025/05/12/running-ollama-on-stanford-computin
 
 -  Reads all PDFs in /data
  -  Converts each to Base 64
- -  Sends target PDF to llama3.2-vision:11b
+ -  Sends zero shot example and target PDF to llama3.2-vision:11b
  -  Extracts:
   -  Newspaper name
   -  Publication date
@@ -60,6 +60,6 @@ Findings:
 - LLAMA struggled with both name extraction and date reasoning, scoring 0% and 11% respectively.
 
 How to run scripts:
-- `gpt_playground.py`: feeds pdfs into chatgpt, with newspaper name and date extracted. Compares to source of truth csv files.
+- `gpt_playground.py`: feeds pdfs into GPT models, with newspaper name and date extracted. Compares to source of truth csv files.
 - `llama_playground.py`: feeds pdfs into llama, with newspaper name and date extracted. Compares to source of truth csv files.
   - Note: ollama GPU server should be run first. Following that the script can be run from the cpu node.
