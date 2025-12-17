@@ -89,8 +89,6 @@ def build_llama_prompt(messages):
 
 def call_llm(system_prompt, user_prompt, output_schema):
     LLM_API_URL = f"{ollama_url}/api/chat"
-
-    shste
     
     payload = {
         "model": model,
