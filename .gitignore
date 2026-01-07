@@ -2,6 +2,7 @@ __pycache__/
 logs/
 snapshots/
 venv/
-data/
+inputs/data/
 *.swp
 .ipynb_checkpoints/
+pipeline_flow.png

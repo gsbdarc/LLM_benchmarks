@@ -5,7 +5,7 @@
   "gpt-4": {
     "max_context_length": 1047576
   },
-  "gpt_4.omini": {
+  "gpt-4.omini": {
     "max_context_length": 128000,
     "vision_detail": "low"
   },
