@@ -59,44 +59,26 @@ STANFORD_API_KEY=your_key_here
 ## High-Level Directory Structure
 
 ```
-Input Files/
 ├── venv/
-├── data/
-│   ├── pdf_images/
-│   ├── png_images/
-│   ├── logs/
-│   └── csv_files/
+├── logs/
 ├── dev/
 │   ├── development_notebooks/
 │   └── archive/
 └── LLM_benchmarks/
-    ├── input_files/
-    ├── output_files/
+    ├── inputs/
+    │   ├── models.json
+    │   ├── benchmarks.json
+    │   └── data/
+    │       ├── pdfs/
+    │       ├── pngs/
+    │       └── csvs/
+    ├── outputs/
     └── scripts/
 ```
 
-Each directory has a single responsibility, described below.
+## Logs (`logs/`)
 
----
-
-## Data Overview (`data/`)
-
-This directory contains **all raw and processed data assets** used during benchmarking.
-
-### `pdf_images/`
-- Original scanned **PDF newspaper TV guide pages**
-- Treated as immutable source files
-
-### `png_images/`
-- PNG images converted from PDFs
-- Used as inputs for multimodal LLM calls
-
-### `logs/`
-- Results from prior evaluations of LLM calls, mostly GPT and LLAMA
-
-### `csv_files/`
-- Human-transcribed **ground truth CSVs**
-- Serve as the source of truth for evaluation
+Results from prior evaluations of LLM calls, mostly GPT and LLAMA
 
 ---
 
@@ -110,6 +92,7 @@ This folder is used for **iteration, experimentation, and debugging**.
   - Model behavior exploration
   - Debugging Base64 encoding or schemas
   - Testing metric logic
+  - Testing experiment pipelines
 
 ### `archive/`
 - Older or deprecated notebooks
@@ -119,15 +102,7 @@ This folder is used for **iteration, experimentation, and debugging**.
 
 ---
 
-## Production Codebase (`LLM_benchmarks/`)
-
-This directory contains the **authoritative, production-ready benchmarking system**.
-
-All benchmark runs should be executable **without notebooks**, using scripts only.
-
----
-
-## Input Configuration (`LLM_benchmarks/input_files/`)
+## Input Configuration (`LLM_benchmarks/inputs/`)
 
 These files define **what gets evaluated** and **how evaluation is performed**.
 
@@ -185,6 +160,22 @@ Example:
 
 Adding a new task typically requires **no changes to core code**, only this file.
 
+## Data Overview (`LLM_benchmarks/inputs/data/`)
+
+This directory contains **all raw and processed data assets** used during benchmarking.
+
+### `pdfs/`
+- Original scanned **PDF newspaper TV guide pages**
+- Treated as immutable source files
+
+### `pngs/`
+- PNG images converted from PDFs
+- Used as inputs for multimodal LLM calls
+
+### `csvs/`
+- Human-transcribed **ground truth CSVs**
+- Serve as the source of truth for evaluation
+
 ---
 
 ### `ground_truth.json`
@@ -212,7 +203,7 @@ This structure supports:
 
 ---
 
-## Output Artifacts (`LLM_benchmarks/output_files/`)
+## Outputs (`LLM_benchmarks/outputs/`)
 
 This directory is populated automatically after benchmark runs.
 
@@ -255,9 +246,7 @@ Contains **production-ready Python scripts**, including:
 
 ## End-to-End Execution Flow
 
-A visual pipeline overview is available here:  
-**Figma Flowchart**  
-https://www.figma.com/board/4hsI8oro2HJvl5MPIxHBPC/Pipeline-Visualization?node-id=25-77&p=f&t=c5xVyTikN39ckBle-0
+![Flowchart](./zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/gitignore/pipeline_flow.png)
 
 ### Execution Steps
 
