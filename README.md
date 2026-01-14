@@ -113,14 +113,17 @@ Defines supported LLMs and model-specific configuration.
 Example:
 ```json
 {
-  "gpt-5": {
-    "detail": "low",
-    "max_context_len": 272000
-  },
-  "gpt-4": {
-    "detail": "low",
-    "max_context_len": 1047576
-  }
+    1 : {
+        "model": "llama-3.2",
+        "family": "llama",
+        "max_context_window": 128000},
+    2: {
+        "model": "gpt-4",
+        "family": "gpt",
+        "max_context_input": 128000,
+        "max_context_output": 4096,
+        "max_context_window": 132096,
+        "detail": "low"}
 }
 ```
 
@@ -136,25 +139,27 @@ This file allows you to:
 Defines **tasks** executed by LLMs.
 
 Each task includes:
+- A task name
 - A system prompt
 - A user prompt
 - A task description
 - An expected output schema
+- Aliases for the task name to help with LLM output matching
 
 Example:
 ```json
 {
-  "newspaper_name": {
-    "system_prompt": "You are ...",
-    "user_prompt": "...",
-    "task_description": "Extract the newspaper name from the image",
-    "schema": {
-      "class_name": "NewspaperName",
-      "fields": {
-        "newspaper_name": "str"
-      }
+    1 : {
+        "task_name": "newspaper_name",
+        "system_prompt": "You are a metadata extraction assistant. Extract information from newspaper TV guide image. Always return valid JSON matching the exact schema provided.",
+        "user_prompt": "Extract the newspaper name from this image.",
+        "task_description": "Extraction: LLM should extract the name of the newspaper the TV guide is published in.",
+        "schema":{
+            "class_name": "newspaper_name", 
+            "fields":{
+                "newspaper_name": "str"}},
+        "aliases": ["newspaper_name", "newspaper", "newspaperName"]
     }
-  }
 }
 ```
 
@@ -239,6 +244,23 @@ This file enables:
 ## Scripts (`LLM_benchmarks/scripts/`)
 
 Contains **production-ready Python scripts**, including:
+
+### `test_pipeline.py`
+
+Testing the feasability of the LLM benchmarking project pipeline.
+User selects prompt and Stanford API LLM via an index.
+Script then passes the prompt and ten sample PNGs into the selected Stanford API LLM.
+Dynamically generates pydantic model and saves the following outputs as a JSON file:
+
+- Image path
+- LLM output
+- Completion tokens
+- Total tokens
+- Model name
+- Task id
+
+Results from each model and task are saved as seperate JSON files.
+
 - `main.py` — orchestrates benchmark runs
 - `compute_metrics.py` — evaluates model outputs against ground truth
 
@@ -246,7 +268,7 @@ Contains **production-ready Python scripts**, including:
 
 ## End-to-End Execution Flow
 
-![Flowchart](./zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/gitignore/pipeline_flow.png)
+![Flowchart](./images/pipeline.png)
 
 ### Execution Steps
 

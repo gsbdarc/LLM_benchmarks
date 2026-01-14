@@ -1,57 +1,85 @@
 {
-  "newspaper_name": {
-    "system_prompt": "You are a metadata extraction and date calculation assistant. Extract information from newspaper TV guide image. Always return valid JSON matching the exact schema provided.",
-    "user_prompt": "Extract the newspaper name and publication date from this image.",
+  "1": {
+    "task_name": "newspaper_name",
+    "system_prompt": "You are a metadata extraction assistant. Extract information from newspaper TV guide image. Always return valid JSON matching the exact schema provided.",
+    "user_prompt": "Extract the newspaper name from this image.",
     "task_description": "Extraction: LLM should extract the name of the newspaper the TV guide is published in.",
     "schema": {
-      "class_name": "NewspaperName",
+      "class_name": "newspaper_name",
       "fields": {
         "newspaper_name": "str"
       }
-    }
+    },
+    "aliases": [
+      "newspaper_name",
+      "newspaper",
+      "newspaperName"
+    ]
   },
-  "newspaper_date": {
-    "system_prompt": "You are a metadata extraction and date calculation assistant. Extract information from newspaper TV guide image. Always return valid JSON matching the exact schema provided.",
+  "2": {
+    "task_name": "newspaper_date",
+    "system_prompt": "You are a metadata extraction assistant. Extract information from newspaper TV guide image. Always return valid JSON matching the exact schema provided.",
     "user_prompt": "Extract the date this newspaper was published.",
     "task_description": "Extraction: LLM should extract the date the newspaper was published.",
     "schema": {
-      "class_name": "NewspaperDate",
+      "class_name": "newspaper_date",
       "fields": {
         "newspaper_date": "str"
       }
-    }
+    },
+    "aliases": [
+      "newspaper_date",
+      "publication_date",
+      "date_published"
+    ]
   },
-  "day_of_week": {
-    "system_prompt": "You are a metadata extraction and date calculation assistant. Extract information from newspaper TV guide image. Always return valid JSON matching the exact schema provided.",
+  "3": {
+    "task_name": "day_of_week",
+    "system_prompt": "You are a metadata extraction assistant. Extract information from newspaper TV guide image. Always return valid JSON matching the exact schema provided.",
     "user_prompt": "Extract the day of the week the TV guide is for.",
     "task_description": "Extraction: LLM should extract the day of the week the TV guide is for.",
     "schema": {
-      "class_name": "DayOfWeek",
+      "class_name": "day_of_week",
       "fields": {
         "day_of_week": "str"
       }
-    }
+    },
+    "aliases": [
+      "day_of_week"
+    ]
   },
-  "tv_guide_date": {
+  "4": {
+    "task_name": "tv_guide_date",
     "system_prompt": "You are a metadata extraction and date calculation assistant. Extract information from newspaper TV guide image. Always return valid JSON matching the exact schema provided.",
     "user_prompt": "Return the exact date the TV guide is for.",
     "task_description": "Reasoning: LLM should return the exact date the TV guide is for. Requires LLM to first extract the date the newspaper        was published and the day of week the TV guide is for. From there is should use reasoning to return the exact date the TV guide is for.",
     "schema": {
-      "class_name": "TvGuideDate",
+      "class_name": "tv_guide_date",
       "fields": {
         "tv_guide_date": "str"
       }
-    }
+    },
+    "aliases": [
+      "tv_guide_date",
+      "date"
+    ]
   },
-  "first_program": {
-    "system_prompt": "You are a metadata extraction and date calculation assistant. Extract information from newspaper TV guide image. Always return valid JSON matching the exact schema provided.",
+  "5": {
+    "task_name": "first_program",
+    "system_prompt": "You are a metadata extraction assistant. Extract information from newspaper TV guide image. Always return valid JSON matching the exact schema provided.",
     "user_prompt": "Return the name of the program for the first channel listed and for the earliest time slot shown.",
     "task_description": "Extraction: LLM should identify the name of the first program of the TV guide (i.e. the name in the upper leftmost corner).",
     "schema": {
-      "class_name": "FirstProgram",
+      "class_name": "first_program",
       "fields": {
         "first_program": "str"
       }
-    }
+    },
+    "aliases": [
+      "first_program",
+      "first_channel",
+      "channel",
+      "first_channel_name"
+    ]
   }
 }
