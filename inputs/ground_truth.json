@@ -1,0 +1,282 @@
+{
+  "0": {
+    "newspaper_name": "Arizona Republic",
+    "newspaper_date": "Dec 17 2000",
+    "day_of_week": "Wednesday",
+    "tv_guide_date": "December 20 2000",
+    "first_program": "Good Morning Arizona 94204",
+    "first_channel": "3"
+  },
+  "1": {
+    "newspaper_name": "Austin American Statesman",
+    "newspaper_date": "Aug 3 2014",
+    "day_of_week": "Saturday",
+    "tv_guide_date": "August 9 2014",
+    "first_program": "Good Day Austin Saturday",
+    "first_channel": "Fox/7.1"
+  },
+  "2": {
+    "newspaper_name": "Austin American Statesman",
+    "newspaper_date": "Feb 22 2015",
+    "day_of_week": "Sunday",
+    "tv_guide_date": "February 22 2015",
+    "first_program": "2015 Daytona 500 The 57th running of the event. The race consists of 200 laps and is the first race of the season. (N) (cc)",
+    "first_channel": "Fox/7.1"
+  },
+  "3": {
+    "newspaper_name": "Austin American Statesman",
+    "newspaper_date": "Jan 12 2014",
+    "day_of_week": "Saturday",
+    "tv_guide_date": "January 18 2014",
+    "first_program": "Good Day Austin Saturday",
+    "first_channel": "Fox/7.1"
+  },
+  "4": {
+    "newspaper_name": "Austin American Statesman",
+    "newspaper_date": "Nov 23 2014",
+    "day_of_week": "Saturday",
+    "tv_guide_date": "November 29 2014",
+    "first_program": "News",
+    "first_channel": "Fox/7.1"
+  },
+  "5": {
+    "newspaper_name": "Chicago Tribune",
+    "newspaper_date": "May 28 1995",
+    "day_of_week": "Saturday",
+    "tv_guide_date": "June 3 1995",
+    "first_program": "Ancient Mysteries",
+    "first_channel": "AE"
+  },
+  "6": {
+    "newspaper_name": "Chicago Tribune",
+    "newspaper_date": "Oct 30 1994",
+    "day_of_week": "Saturday",
+    "tv_guide_date": "November 5 1994",
+    "first_program": "Ancient Mysteries",
+    "first_channel": "AE"
+  },
+  "7": {
+    "newspaper_name": "Daily News",
+    "newspaper_date": "Apr 13 2008",
+    "day_of_week": "Monday",
+    "tv_guide_date": "April 14 2008",
+    "first_program": "News at Noon",
+    "first_channel": "2"
+  },
+  "8": {
+    "newspaper_name": "Daily News",
+    "newspaper_date": "Apr 25 2010",
+    "day_of_week": "Thursday",
+    "tv_guide_date": "April 29 2010",
+    "first_program": "CBS 2 News",
+    "first_channel": "2 WCBS"
+  },
+  "9": {
+    "newspaper_name": "Daily News",
+    "newspaper_date": "Jun 17 2012",
+    "day_of_week": "Monday",
+    "tv_guide_date": "June 18 2012",
+    "first_program": "CBS 2 News Sunday (N)",
+    "first_channel": "2 WCBS"
+  },
+  "10": {
+    "newspaper_name": "Daily News",
+    "newspaper_date": "Jun 9 2013",
+    "day_of_week": "Sunday",
+    "tv_guide_date": "June 9 2013",
+    "first_program": "CBS 2 News Sunday (N)",
+    "first_channel": "2 WCBS"
+  },
+  "11": {
+    "newspaper_name": "Daily News",
+    "newspaper_date": "Mar 11 2012",
+    "day_of_week": "Friday",
+    "tv_guide_date": "March 16 2012",
+    "first_program": "(4:30) CBS 2 News This Morning (N) (cc)",
+    "first_channel": "2 WCBS"
+  },
+  "12": {
+    "newspaper_name": "Daily News",
+    "newspaper_date": "Mar 30 2014",
+    "day_of_week": "Monday",
+    "tv_guide_date": "March 31 2014",
+    "first_program": "NCAA Basketball",
+    "first_channel": "2 WCBS"
+  },
+  "13": {
+    "newspaper_name": "Daily News",
+    "newspaper_date": "May 15 2016",
+    "day_of_week": "Sunday",
+    "tv_guide_date": "May 22 2016",
+    "first_program": "CBS 2 News Saturday (N) (cc)",
+    "first_channel": "2 WCBS"
+  },
+  "14": {
+    "newspaper_name": "Daily News",
+    "newspaper_date": "Oct 14 2007",
+    "day_of_week": "Monday",
+    "tv_guide_date": "October 15 2007",
+    "first_program": "30-Minute Meals",
+    "first_channel": "FOOD"
+  },
+  "15": {
+    "newspaper_name": "Daily News",
+    "newspaper_date": "Oct 18 2009",
+    "day_of_week": "Saturday",
+    "tv_guide_date": "October 24 2009",
+    "first_program": "SNAKES ON A PLANE ('06) Samuel L. Jackson, Kenan Thompson. 3066705",
+    "first_channel": "FX"
+  },
+  "16": {
+    "newspaper_name": "Honolulu Star Advertiser",
+    "newspaper_date": "Oct 9 2016",
+    "day_of_week": "Tuesday",
+    "tv_guide_date": "October 11 2016",
+    "first_program": "Wake Up 2Day",
+    "first_channel": "2 KHON 3 3 3"
+  },
+  "17": {
+    "newspaper_name": "Messenger Inquirer",
+    "newspaper_date": "Oct 12 1997",
+    "day_of_week": "Monday",
+    "tv_guide_date": "October 13 1997",
+    "first_program": "News",
+    "first_channel": "7 WTVW"
+  },
+  "18": {
+    "newspaper_name": "Statesman Journal",
+    "newspaper_date": "Jan 17 1999",
+    "day_of_week": "Thursday",
+    "tv_guide_date": "January 21 1999",
+    "first_program": "ABC World News Tonight (CC) 173",
+    "first_channel": "2 KATU ABC"
+  },
+  "19": {
+    "newspaper_name": "Statesman Journal",
+    "newspaper_date": "Nov 8 1998",
+    "day_of_week": "Friday",
+    "tv_guide_date": "November 13 1998",
+    "first_program": "Politically 9292145",
+    "first_channel": "2 KATU"
+  },
+  "20": {
+    "newspaper_name": "Statesman Journal",
+    "newspaper_date": "Sep 5 1999",
+    "day_of_week": "Wednesday",
+    "tv_guide_date": "September 8 1999",
+    "first_program": "News (CC) 85682",
+    "first_channel": "2 KATU"
+  },
+  "21": {
+    "newspaper_name": "The Arizona Republic",
+    "newspaper_date": "Mar 5 2000",
+    "day_of_week": "Saturday",
+    "tv_guide_date": "March 11 2000",
+    "first_program": "Biography: Gene Hackman. 413091",
+    "first_channel": "A&E"
+  },
+  "22": {
+    "newspaper_name": "The Californian",
+    "newspaper_date": "May 31 1998",
+    "day_of_week": "Tuesday",
+    "tv_guide_date": "June 2 1998",
+    "first_program": "News",
+    "first_channel": "KCBS 2"
+  },
+  "23": {
+    "newspaper_name": "The Honolulu Advertiser",
+    "newspaper_date": "Feb 9 1997",
+    "day_of_week": "Thursday",
+    "tv_guide_date": "February 13 1997",
+    "first_program": "(6:00) News (CC) 89164",
+    "first_channel": "2 3 2 Fox"
+  },
+  "24": {
+    "newspaper_name": "The Honolulu Advertiser",
+    "newspaper_date": "Mar 21 2004",
+    "day_of_week": "Friday",
+    "tv_guide_date": "March 26 2004",
+    "first_program": "Futurerama 8712",
+    "first_channel": "2 3 003 2"
+  },
+  "25": {
+    "newspaper_name": "The Honolulu Advertiser",
+    "newspaper_date": "Mar 9 2003",
+    "day_of_week": "Monday",
+    "tv_guide_date": "March 10 2003",
+    "first_program": "(6:00) News (CC) 52978",
+    "first_channel": "2 3 003 2"
+  },
+  "26": {
+    "newspaper_name": "The Honolulu Advertiser",
+    "newspaper_date": "May 26 2002",
+    "day_of_week": "Sunday",
+    "tv_guide_date": "May 26 2002",
+    "first_program": "(11:00) Auto Racing NASCAR Winston Cup -- Coca-Cola 600. (S Live) (CC) 193997",
+    "first_channel": "2 3 003 2"
+  },
+  "27": {
+    "newspaper_name": "The Honolulu Advertiser",
+    "newspaper_date": "Sep 28 1997",
+    "day_of_week": "Thursday",
+    "tv_guide_date": "October 2 1997",
+    "first_program": "(6:00) News (CC) 34666",
+    "first_channel": "3 2 Fox"
+  },
+  "28": {
+    "newspaper_name": "The Kansas City Star",
+    "newspaper_date": "Apr 3 2005",
+    "day_of_week": "Monday-Friday",
+    "tv_guide_date": "April 4-8 2005",
+    "first_program": "King of Hill",
+    "first_channel": "4 WDAF"
+  },
+  "29": {
+    "newspaper_name": "The Kansas City Star",
+    "newspaper_date": "Sep 15 2002",
+    "day_of_week": "Sunday",
+    "tv_guide_date": "September 15 2002",
+    "first_program": "Biography: Alan Alda 718318",
+    "first_channel": "A&E"
+  },
+  "30": {
+    "newspaper_name": "The Monitor",
+    "newspaper_date": "Nov 6 1994",
+    "day_of_week": "Tuesday",
+    "tv_guide_date": "November 8 1994",
+    "first_program": "Noticiero Telemundo: Edici\u00f3n Matutina 31717",
+    "first_channel": "Telemundo 2 XRIO"
+  },
+  "31": {
+    "newspaper_name": "The News Tribune",
+    "newspaper_date": "Mar 27 2011",
+    "day_of_week": "Saturday",
+    "tv_guide_date": "April 2 2011",
+    "first_program": "Jimmy Kimmel Live (CC) (HD)",
+    "first_channel": "KOMO ABC 4 4"
+  },
+  "32": {
+    "newspaper_name": "The Palm Beach Post",
+    "newspaper_date": "May 22 1994",
+    "day_of_week": "Sunday",
+    "tv_guide_date": "May 29 1994",
+    "first_program": "Born Losers (1967) Tom Laughlin. Part-Indian foot fighter Billy Jack vs. outlaw bikers. (Crime drama, PG, (2:00) +9493577",
+    "first_channel": "TBS"
+  },
+  "33": {
+    "newspaper_name": "The Sentinel",
+    "newspaper_date": "Jun 29 1997",
+    "day_of_week": "Monday-Friday",
+    "tv_guide_date": "June 30-4 1997",
+    "first_program": "Spider-Man (CC) 61721 7363",
+    "first_channel": "43 5"
+  },
+  "34": {
+    "newspaper_name": "The Sentinel",
+    "newspaper_date": "Nov 16 1997",
+    "day_of_week": "Monday-Friday",
+    "tv_guide_date": "November 17 to 21 1997",
+    "first_program": "Sesame Street (CC) 123017",
+    "first_channel": "33"
+  }
+}

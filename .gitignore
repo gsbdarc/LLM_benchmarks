@@ -5,4 +5,3 @@ venv/
 inputs/data/
 *.swp
 .ipynb_checkpoints/
-*.png

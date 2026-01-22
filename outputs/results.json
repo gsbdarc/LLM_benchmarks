@@ -1,0 +1,47 @@
+{
+  "1": {
+    "output": "Arizona Republic",
+    "model_name": "gpt-4",
+    "image_path": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Arizona_Republic_Sun__Dec_17__2000_ (15).png",
+    "benchmark_name": "newspaper_name",
+    "benchmark_id": "1",
+    "completion_tokens": 9,
+    "total_tokens": 184
+  },
+  "2": {
+    "output": "Austin American Statesman",
+    "model_name": "gpt-4",
+    "image_path": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Austin_American_Statesman_Sun__Aug_3__2014_ (10).png",
+    "benchmark_name": "newspaper_name",
+    "benchmark_id": "1",
+    "completion_tokens": 11,
+    "total_tokens": 186
+  },
+  "3": {
+    "output": "Austin American-Statesman",
+    "model_name": "gpt-4",
+    "image_path": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Austin_American_Statesman_Sun__Feb_22__2015_ (1).png",
+    "benchmark_name": "newspaper_name",
+    "benchmark_id": "1",
+    "completion_tokens": 12,
+    "total_tokens": 218
+  },
+  "4": {
+    "output": "Austin American-Statesman",
+    "model_name": "gpt-4",
+    "image_path": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Austin_American_Statesman_Sun__Jan_12__2014_ (10).png",
+    "benchmark_name": "newspaper_name",
+    "benchmark_id": "1",
+    "completion_tokens": 12,
+    "total_tokens": 187
+  },
+  "5": {
+    "output": "Austin American-Statesman",
+    "model_name": "gpt-4",
+    "image_path": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Austin_American_Statesman_Sun__Nov_23__2014_ (11).png",
+    "benchmark_name": "newspaper_name",
+    "benchmark_id": "1",
+    "completion_tokens": 12,
+    "total_tokens": 187
+  }
+}
