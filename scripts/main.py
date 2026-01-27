@@ -47,10 +47,11 @@ with open("/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/m
     models = json.load(f)
 
 with open("/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/mapping.csv", "r") as file:
-    mapping = csv.reader(file)
-    mapping = list(mapping)
+    reader = csv.reader(file)
+    header = next(reader)
+    mapping = list(reader)
 
-mapping = mapping[1:6] # select first 4 unique tasks ids, exclude header
+mapping = mapping[0:5] # select first 5 unique tasks ids
 
 # if processed.csv exists load the file, else create one
 
@@ -105,8 +106,8 @@ def run_model(model_name: str, test_b64):
                             "type": "image_url",
                             "image_url": {
                                 "url": f"data:image/png;base64,{test_b64}"
-                            },
-                            "detail": detail_level
+                            }
+                            #,"detail": detail_level
                         }
                     ],
                 },
@@ -217,7 +218,7 @@ def run_model(model_name: str, test_b64):
 
         output_dict["output"] =  llm_output[benchmark_name]
         output_dict["model_name"] = model_name
-        output_dict["image_path"] = image_path
+        output_dict["image_id"] = image_id
         output_dict["benchmark_name"] = benchmark_name
         output_dict["benchmark_id"] = benchmark_id
 
