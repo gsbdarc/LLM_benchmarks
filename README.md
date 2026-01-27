@@ -113,11 +113,11 @@ Defines supported LLMs and model-specific configuration.
 Example:
 ```json
 {
-    "1" : {
+    "0" : {
         "model": "llama-3.2",
         "family": "llama",
         "max_context_window": 128000},
-    "2" : {
+    "1" : {
         "model": "gpt-4",
         "family": "gpt",
         "max_context_input": 128000,
@@ -149,13 +149,13 @@ Each benchmark includes:
 Example:
 ```json
 {
-    "1" : {
+    "0" : {
         "task_name": "newspaper_name",
         "system_prompt": "You are a metadata extraction assistant. Extract information from newspaper TV guide image. Always return valid JSON matching the exact schema provided.",
         "user_prompt": "Extract the newspaper name from this image.",
         "task_description": "Extraction: LLM should extract the name of the newspaper the TV guide is published in.",
         "schema":{
-            "class_name": "newspaper_name", 
+            "class_name": "NewspaperName", 
             "fields":{
                 "newspaper_name": "str"}}}
 }
@@ -175,7 +175,7 @@ Each benchmark includes:
 Example:
 ```json
 {
-    "1" : {
+    "0" : {
         "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Austin_American_Statesman_Sun__Aug_3__2014_ (10).png",
         "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Austin_American_Statesman_Sun__Aug_3__2014_ (10).csv"
 }
@@ -196,7 +196,7 @@ Each combination includes:
 
 Example:
 ```csv
-['1', 'newspaper_name', '2', 'gpt-4', '0', '/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Arizona_Republic_Sun__Dec_17__2000_ (15).png']
+['0', 'newspaper_name', '2', 'gpt-4', '0', '/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Arizona_Republic_Sun__Dec_17__2000_ (15).png']
 ```
 
 ### `processed.csv`

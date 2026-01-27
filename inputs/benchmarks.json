@@ -1,5 +1,5 @@
 {
-  "1": {
+  "0": {
     "task_name": "newspaper_name",
     "system_prompt": "You are a metadata extraction assistant. Extract information from newspaper TV guide image. Always return valid JSON matching the exact schema provided.",
     "user_prompt": "Extract the newspaper name from this image.",
@@ -11,7 +11,7 @@
       }
     }
   },
-  "2": {
+  "1": {
     "task_name": "newspaper_date",
     "system_prompt": "You are a metadata extraction assistant. Extract information from newspaper TV guide image. Always return valid JSON matching the exact schema provided.",
     "user_prompt": "Extract the date this newspaper was published.",
@@ -23,7 +23,7 @@
       }
     }
   },
-  "3": {
+  "2": {
     "task_name": "day_of_week",
     "system_prompt": "You are a metadata extraction assistant. Extract information from newspaper TV guide image. Always return valid JSON matching the exact schema provided.",
     "user_prompt": "Extract the day of the week the TV guide is for.",
@@ -35,7 +35,7 @@
       }
     }
   },
-  "4": {
+  "3": {
     "task_name": "tv_guide_date",
     "system_prompt": "You are a metadata extraction and date calculation assistant. Extract information from newspaper TV guide image. Always return valid JSON matching the exact schema provided.",
     "user_prompt": "Return the exact date the TV guide is for.",
@@ -45,13 +45,9 @@
       "fields": {
         "tv_guide_date": "str"
       }
-    },
-    "aliases": [
-      "tv_guide_date",
-      "date"
-    ]
+    }
   },
-  "5": {
+  "4": {
     "task_name": "first_program",
     "system_prompt": "You are a metadata extraction assistant. Extract information from newspaper TV guide image. Always return valid JSON matching the exact schema provided.",
     "user_prompt": "Return the name of the program for the first channel listed and for the earliest time slot shown.",
@@ -63,7 +59,7 @@
       }
     }
   },
-  "6": {
+  "5": {
     "task_name": "first_channel",
     "system_prompt": "You are a metadata extraction assistant. Extract information from newspaper TV guide image. Always return valid JSON matching the exact schema provided.",
     "user_prompt": "Return the name of the first channel listed.",
