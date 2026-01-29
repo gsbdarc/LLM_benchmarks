@@ -21,6 +21,12 @@ import csv
 import base64
 import matplotlib.pyplot as plt
 from pathlib import Path
+import sys
+
+# Task selection from slurm array
+task_selection = sys.argv[1]
+task_selection = int(task_selection) #cast to int so we can use this to index mapping.csv
+#task_selection = 1
 
 # Load environment variables from .env file
 load_dotenv("/zfs/projects/students/ltdarc-usf-intern-2025/.env")
@@ -46,39 +52,12 @@ with open("/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/b
 with open("/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/models.json", "r") as f:
     models = json.load(f)
 
-with open("/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/mapping.csv", "r") as file:
+with open("/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/mapping_shuffled.csv", "r") as file:
     reader = csv.reader(file)
     header = next(reader)
     mapping = list(reader)
 
-mapping = mapping[0:5] # select first 5 unique tasks ids
-
-# if processed.csv exists load the file, else create one
-
-processed_csv = "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/processed.csv" 
-
-if os.path.exists(processed_csv):
-    
-    with open(processed_csv, "r") as file:
-        reader = csv.reader(file)
-        processed = list(reader)
-
-else:
-    with open(processed_csv, "w", newline="") as file:
-        writer = csv.writer(file)
-        processed = list()
-
-# if results.json exists load the file, else create one
-
-results_json = "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/outputs/results.json"
-
-if os.path.exists(results_json):
-    with open(results_json, "r") as f:
-        results = json.load(f)
-else:
-    with open(results_json, "w") as f:
-        results = {}
-        json.dump(results, f, indent=2)
+selected_task = mapping[task_selection]
 
 # Helper Functions
 
@@ -233,73 +212,73 @@ def run_model(model_name: str, test_b64):
         #print(json.dumps(data, indent=2))
     
     except Exception as e:
-        return resp_json
+        output_dict["error"] = str(e)
 
     return output_dict
 
 # Process Images
 
-for row in mapping:
-    task_id = row[0] # extract unique task id from mapping
+task_id = selected_task[0] # extract unique task id from mapping
 
-    if task_id not in processed:
-        benchmark_id = row[1]
-        benchmark_name = row[2]
-        model_id = row[3]
-        model_name = row[4]
-        image_id = row[5]
-        image_path = row[6]
+results_json = f"/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/outputs/results_{task_id}.json"
 
-        # load benchmark inputs
+if os.path.exists(results_json):
+    sys.exit(0) # if the task has already been completed than the program should terminate
+    
+benchmark_id = selected_task[1]
+benchmark_name = selected_task[2]
+model_id = selected_task[3]
+model_name = selected_task[4]
+image_id = selected_task[5]
+image_path = selected_task[6]
 
-        SYSTEM_PROMPT = benchmarks[benchmark_id]['system_prompt']
-        USER_PROMPT = benchmarks[benchmark_id]['user_prompt']
-        class_name = benchmarks[benchmark_id]['schema']['class_name']
-        fields = benchmarks[benchmark_id]['schema']['fields']
+# load benchmark inputs
 
-        #create pydantic model and other prompt related model inputs
+SYSTEM_PROMPT = benchmarks[benchmark_id]['system_prompt']
+USER_PROMPT = benchmarks[benchmark_id]['user_prompt']
+class_name = benchmarks[benchmark_id]['schema']['class_name']
+fields = benchmarks[benchmark_id]['schema']['fields']
 
-        pydantic_fields = {}
+#create pydantic model and other prompt related model inputs
 
-        for field_name, field_type in fields.items():
-            python_type = type_map[field_type][0] # converts "str" to str
-            pydantic_fields[field_name] = (python_type, ...) # "..." makes the python type mandatory vs optional
+pydantic_fields = {}
 
-        DynamicModel = create_model(
-            class_name,
-            **pydantic_fields
-        )
+for field_name, field_type in fields.items():
+    python_type = type_map[field_type][0] # converts "str" to str
+    pydantic_fields[field_name] = (python_type, ...) # "..." makes the python type mandatory vs optional
 
-        properties = {}
-        required = []
-        
-        for field_name, field_type in fields.items():
-            json_type = type_map[field_type][1] # converts "str" to "string"
-            properties[field_name] = {"type": json_type}
-            required.append(field_name)
+DynamicModel = create_model(
+    class_name,
+    **pydantic_fields
+)
 
-        # encode image
+properties = {}
+required = []
 
-        b64 = encode_image(image_path)
+for field_name, field_type in fields.items():
+    json_type = type_map[field_type][1] # converts "str" to "string"
+    properties[field_name] = {"type": json_type}
+    required.append(field_name)
 
-        # load model inputs
+# encode image
 
-        model_family = models[model_id]["family"]
-        
-        if "detail" in models[model_id]:
-            detail_level = models[model_id]["detail"]
+b64 = encode_image(image_path)
 
-        model_output = run_model(model_name, b64)
+# load model inputs
 
-        # update results dictionary
-        
-        results[task_id] = model_output
+model_family = models[model_id]["family"]
 
-        # update processed.csv
+if "detail" in models[model_id]:
+    detail_level = models[model_id]["detail"]
 
-        with open(processed_csv, "a", newline="") as file:
-            writer = csv.writer(file)
-            writer.writerow(task_id)
+model_output = run_model(model_name, b64)
+
+# update results dictionary
+
+results = dict()
+results[task_id] = model_output
+
+# save result to outputs
 
 with open(results_json, "w") as f:
     json.dump(results, f, indent=2)

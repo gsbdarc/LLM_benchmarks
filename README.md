@@ -199,11 +199,6 @@ Example:
 ['0', 'newspaper_name', '2', 'gpt-4', '0', '/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Arizona_Republic_Sun__Dec_17__2000_ (15).png']
 ```
 
-### `processed.csv`
-
-Log of combinations of **benchmark tasks, models, and images** already processed by task id.
-
-
 ## Data Overview (`LLM_benchmarks/inputs/data/`)
 
 This directory contains **all raw and processed data assets** used during benchmarking.
@@ -246,7 +241,7 @@ Example:
 
 This directory is populated automatically after benchmark runs.
 
-### `results.json`
+### `results_{task_id}.json`
 
 Stores raw model outputs and metadata by task id.
 
@@ -270,7 +265,6 @@ This file enables:
 - Metric computation
 - Debugging failed runs
 - Cross-model comparison
-- Reproducibility
 
 ---
 
@@ -287,10 +281,10 @@ Create a mapping file that:
 ### `main.py`
 
 Orchestrates benchmark runs across the entire dataset.
-Tasks are loaded via the mapping.csv file and compared to the processed.csv file.
+Tasks are loaded via the mapping.csv file
 If the task has not already been completed then the corresponding benchmark, model, and image data is loaded from their respective JSONs.
 A pydantic model is dynamically generated and inputs are passed into an LLM via Stanford API.
-The following outputs are appended to a json.results file.
+The following outputs are saved as an individual JSON file
 
 - Task ID
 - Image ID
