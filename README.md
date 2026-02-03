@@ -113,11 +113,11 @@ Defines supported LLMs and model-specific configuration.
 Example:
 ```json
 {
-    1 : {
+    "0" : {
         "model": "llama-3.2",
         "family": "llama",
         "max_context_window": 128000},
-    2: {
+    "1" : {
         "model": "gpt-4",
         "family": "gpt",
         "max_context_input": 128000,
@@ -136,34 +136,68 @@ This file allows you to:
 
 ### `benchmarks.json`
 
-Defines **tasks** executed by LLMs.
+Defines **benchmark tasks** executed by LLMs.
 
-Each task includes:
-- A task name
+Each benchmark includes:
+- A unique ID
+- A benchmark task name
 - A system prompt
 - A user prompt
-- A task description
+- A benchmark task description
 - An expected output schema
-- Aliases for the task name to help with LLM output matching
 
 Example:
 ```json
 {
-    1 : {
+    "0" : {
         "task_name": "newspaper_name",
         "system_prompt": "You are a metadata extraction assistant. Extract information from newspaper TV guide image. Always return valid JSON matching the exact schema provided.",
         "user_prompt": "Extract the newspaper name from this image.",
         "task_description": "Extraction: LLM should extract the name of the newspaper the TV guide is published in.",
         "schema":{
-            "class_name": "newspaper_name", 
+            "class_name": "NewspaperName", 
             "fields":{
-                "newspaper_name": "str"}},
-        "aliases": ["newspaper_name", "newspaper", "newspaperName"]
-    }
+                "newspaper_name": "str"}}}
 }
 ```
 
-Adding a new task typically requires **no changes to core code**, only this file.
+Adding a new benchmark task typically requires **no changes to core code**, only this file. If updating prompts **do not** edit an existing benchmark, add a new benchmark instead.
+
+### `image_index.json`
+
+Defines **png images** to be processed by LLMs.
+
+Each benchmark includes:
+- A unique ID
+- Image PNG Path
+- Ground Truth CSV Path
+
+Example:
+```json
+{
+    "0" : {
+        "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Austin_American_Statesman_Sun__Aug_3__2014_ (10).png",
+        "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Austin_American_Statesman_Sun__Aug_3__2014_ (10).csv"
+}
+```
+
+### `mapping.csv`
+
+Defines combinations of **benchmark tasks, models, and images** to be evaluted in the pipeline.
+
+Each combination includes:
+- A unique ID
+- Benchmark ID
+- Benchmark Name
+- Model ID
+- Model Name
+- Image ID
+- Image Path
+
+Example:
+```csv
+['0', 'newspaper_name', '2', 'gpt-4', '0', '/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Arizona_Republic_Sun__Dec_17__2000_ (15).png']
+```
 
 ## Data Overview (`LLM_benchmarks/inputs/data/`)
 
@@ -185,26 +219,21 @@ This directory contains **all raw and processed data assets** used during benchm
 
 ### `ground_truth.json`
 
-Stores **ground truth values** per task.
+Stores **ground truth values** per image id.
 
 Example:
 ```json
 {
-  "newspaper_name": {
-    "metric": "accuracy",
-    "images": [
-      {
-        "image_path": "/zfs/project/...",
-        "ground_truth": "Arizona Paper"
-      }
-    ]
-  }
+  "0": {
+    "newspaper_name": "Arizona Republic",
+    "newspaper_date": "Dec 17 2000",
+    "day_of_week": "Wednesday",
+    "tv_guide_date": "December 20 2000",
+    "first_program": "Good Morning Arizona 94204",
+    "first_channel": "3"
+    }
 }
 ```
-
-This structure supports:
-- Task-specific metrics
-- Multiple images per task
 
 ---
 
@@ -212,23 +241,22 @@ This structure supports:
 
 This directory is populated automatically after benchmark runs.
 
-### `results.json`
+### `results_{task_id}.json`
 
-Stores raw model outputs and metadata.
+Stores raw model outputs and metadata by task id.
 
 Example:
 ```json
 {
-  "newspaper_name": {
-    "gpt-5": {
-      "results": {
-        "image_path_1": {
-          "NewspaperName": "Some Output",
-          "completion_tokens": 123,
-          "error_message": null
-        }
-      }
-    }
+  "0": {
+      "output": "Arizona Republic",
+      "completion_tokens": 9,
+      "total_tokens": 1,
+      "model": "gpt-4",
+      "image_id": "0",
+      "image_path": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Arizona_Republic_Sun__Dec_17__2000_ (15).png",
+      "task_id": "1",
+      "task_name": "newspaper_name"
   }
 }
 ```
@@ -237,7 +265,6 @@ This file enables:
 - Metric computation
 - Debugging failed runs
 - Cross-model comparison
-- Reproducibility
 
 ---
 
@@ -245,23 +272,32 @@ This file enables:
 
 Contains **production-ready Python scripts**, including:
 
-### `test_pipeline.py`
+### `create_mapping.py`
+Create a mapping file that: 
+(1) finds all unique combinations of selected benchmarks, models, and images
+(2) assigns a unique task id to each one
+(3) saves these results into a csv file to be used in main.py
 
-Testing the feasability of the LLM benchmarking project pipeline.
-User selects prompt and Stanford API LLM via an index.
-Script then passes the prompt and ten sample PNGs into the selected Stanford API LLM.
-Dynamically generates pydantic model and saves the following outputs as a JSON file:
+### `main.py`
 
+Orchestrates benchmark runs across the entire dataset.
+Tasks are loaded via the mapping.csv file
+If the task has not already been completed then the corresponding benchmark, model, and image data is loaded from their respective JSONs.
+A pydantic model is dynamically generated and inputs are passed into an LLM via Stanford API.
+The following outputs are saved as an individual JSON file
+
+- Task ID
+- Image ID
 - Image path
 - LLM output
 - Completion tokens
 - Total tokens
-- Model name
-- Task id
+- Model ID
+- Model Name
+- Benchmark ID
+- Benchmark Name
 
-Results from each model and task are saved as seperate JSON files.
 
-- `main.py` — orchestrates benchmark runs
 - `compute_metrics.py` — evaluates model outputs against ground truth
 
 ---

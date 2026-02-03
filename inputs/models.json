@@ -1,86 +1,80 @@
 {
-  "1": {
+  "0": {
     "model": "llama-3.2",
     "family": "llama",
     "max_context_window": 128000
   },
-  "2": {
+  "1": {
     "model": "gpt-4",
     "family": "gpt",
     "max_context_input": 128000,
     "max_context_output": 4096,
-    "max_context_window": 132096,
-    "detail": "low"
+    "max_context_window": 132096
   },
-  "3": {
+  "2": {
     "model": "gpt-4.omini",
     "family": "gpt",
     "max_context_input": 128000,
     "max_context_output": 16384,
-    "max_context_window": 144384,
-    "detail": "low"
+    "max_context_window": 144384
   },
-  "4": {
+  "3": {
     "model": "gpt-4o",
     "family": "gpt",
     "max_context_input": 128000,
     "max_context_output": 4096,
-    "max_context_window": 132096,
-    "detail": "low"
+    "max_context_window": 132096
   },
-  "5": {
+  "4": {
     "model": "gpt-4.1",
     "family": "gpt",
     "max_context_input": 95232,
     "max_context_output": 32768,
-    "max_context_window": 128000,
-    "detail": "low"
+    "max_context_window": 128000
   },
-  "6": {
+  "5": {
     "model": "gpt-5",
     "family": "gpt",
     "max_context_input": 272000,
     "max_context_output": 128000,
-    "max_context_window": 400000,
-    "detail": "low"
+    "max_context_window": 400000
   },
-  "7": {
+  "6": {
     "model": "gpt-5-mini",
     "family": "gpt",
     "max_context_input": 272000,
     "max_context_output": 128000,
-    "max_context_window": 400000,
-    "detail": "low"
+    "max_context_window": 400000
   },
-  "8": {
+  "7": {
     "model": "claude-3-haiku",
     "family": "claude",
     "max_context_input": 196000,
     "max_context_output": 4000,
     "max_context_window": 200000
   },
-  "9": {
+  "8": {
     "model": "claude-3-5-sonnet",
     "family": "claude",
     "max_context_input": 136000,
     "max_context_output": 64000,
     "max_context_window": 200000
   },
-  "10": {
+  "9": {
     "model": "claude-3-7-sonnet",
     "family": "claude",
     "max_context_input": 136000,
     "max_context_output": 64000,
     "max_context_window": 200000
   },
-  "11": {
+  "10": {
     "model": "claude-4-sonnet",
     "family": "claude",
     "max_context_input": 136000,
     "max_context_output": 64000,
     "max_context_window": 200000
   },
-  "12": {
+  "11": {
     "model": "gemini-2.0-flash-001",
     "family": "gemini",
     "max_context_input": 1048576,
@@ -88,7 +82,7 @@
     "max_context_window": 1056768,
     "media_resolution": "MEDIA_RESOLUTION_LOW"
   },
-  "13": {
+  "12": {
     "model": "gemini-2.0-flash-lite-001",
     "family": "gemini",
     "max_context_input": 1048576,
@@ -96,7 +90,7 @@
     "max_context_window": 1056768,
     "media_resolution": "MEDIA_RESOLUTION_LOW"
   },
-  "14": {
+  "13": {
     "model": "gemini-2.5-pro",
     "family": "gemini",
     "max_context_input": 1048576,
@@ -104,12 +98,11 @@
     "max_context_window": 1114111,
     "media_resolution": "MEDIA_RESOLUTION_LOW"
   },
-  "15": {
+  "14": {
     "model": "o1",
     "family": "gpt",
     "max_context_input": 200000,
     "max_context_output": 100000,
-    "max_context_window": 300000,
-    "detail": "low"
+    "max_context_window": 300000
   }
 }
