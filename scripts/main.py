@@ -24,10 +24,10 @@ from pathlib import Path
 import sys
 
 # Task selection from slurm array
-task_selection = sys.argv[1]
+# task_selection = sys.argv[1]
 # cast to int so we can use this to index mapping.csv
-task_selection = int(task_selection)
-# task_selection = 1
+# task_selection = int(task_selection)
+task_selection = 158
 
 # Load environment variables from .env file
 load_dotenv("/zfs/projects/students/ltdarc-usf-intern-2025/.env")
@@ -53,7 +53,7 @@ with open("/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/b
 with open("/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/models.json", "r") as f:
     models = json.load(f)
 
-with open("/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/mapping_shuffled.csv", "r") as file:
+with open("/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/mapping.csv", "r") as file:
     reader = csv.reader(file)
     header = next(reader)
     mapping = list(reader)
@@ -76,56 +76,13 @@ def run_model(model_name: str, test_b64):
     # Build payload
     # ---------------------------------------------
 
-    if model_family == "gpt":
-        # Adjusting detail level for GPT models
-        payload = {
-            "model": model_name,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/png;base64,{test_b64}"
-                            }
-                            # ,"detail": detail_level
-                        }
-                    ],
-                },
-                {
-                    "role": "system",
-                    "content": SYSTEM_PROMPT,
-                },
-                {
-                    "role": "user",
-                    "content": USER_PROMPT,
-                },
-            ],
-            "temperature": 0,
-            "response_format": {
-                "type": "json_schema",
-                "json_schema": {
-                        "name": "DynamicModel",
-                        "schema": {
-                            "type": "object",
-                            "properties": properties,
-                            "required": required,
-                            "additionalProperties": False,
-                        },
-                },
-            },
-        }
-
-    else:
-        # All other vision-capable models
-        payload = {
-            "model": model_name,
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {
-                    "role": "user",
-                    "content": [
+    payload = {
+        "model": model_name,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {
+                "role": "user",
+                "content": [
                         {"type": "text", "text": USER_PROMPT},
                         {
                             "type": "image_url",
@@ -133,13 +90,13 @@ def run_model(model_name: str, test_b64):
                                 "url": f"data:image/png;base64,{test_b64}"
                             },
                         },
-                    ],
-                },
-            ],
-            "temperature": 0,
-            "response_format": {
-                "type": "json_schema",
-                "json_schema": {
+                ],
+            },
+        ],
+        "temperature": 0,
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
                     "name": "DynamicModel",
                     "schema": {
                         "type": "object",
@@ -147,9 +104,9 @@ def run_model(model_name: str, test_b64):
                         "required": required,
                         "additionalProperties": False,
                     },
-                },
             },
-        }
+        },
+    }
 
     # ---------------------------------------------
     # Send request
@@ -157,66 +114,72 @@ def run_model(model_name: str, test_b64):
 
     output_dict = dict()
 
-    try:
-        r = requests.post(
-            ENDPOINT,
-            headers={
-                "Authorization": f"Bearer {STANFORD_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=60,
-        )
-        r.raise_for_status()
+    max_retries = 3
+    last_exception = None
 
-        resp_json = r.json()
+    for attempt in range(max_retries):
 
-        # -----------------------------------------
-        # Extract usage (context accounting)
-        # -----------------------------------------
-        usage = resp_json.get("usage")
+        try:
+            r = requests.post(
+                ENDPOINT,
+                headers={
+                    "Authorization": f"Bearer {STANFORD_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=600,
+            )
 
-        message = resp_json["choices"][0]["message"]
-        content = message.get("content")
+            # return r.text
 
-        if not content or not isinstance(content, str):
-            raise ValueError("Empty or non-text content returned")
+            resp_json = r.json()
 
-        # -----------------------------------------
-        # Parse output
-        # -----------------------------------------
-        cleaned = (
-            content
-            .strip()
-            .removeprefix("```json")
-            .removesuffix("```")
-            .strip()
-        )
-        llm_output = json.loads(cleaned)
+            # -----------------------------------------
+            # Extract usage (context accounting)
+            # -----------------------------------------
+            usage = resp_json.get("usage")
 
-        # -----------------------------------------
-        # Attach metadata
-        # -----------------------------------------
+            message = resp_json["choices"][0]["message"]
+            content = message.get("content")
 
-        output_dict["output"] = llm_output[benchmark_name]
-        output_dict["model_name"] = model_name
-        output_dict["image_id"] = image_id
-        output_dict["benchmark_name"] = benchmark_name
-        output_dict["benchmark_id"] = benchmark_id
+            if not content or not isinstance(content, str):
+                raise ValueError("Empty or non-text content returned")
 
-        if usage:
-            output_dict["completion_tokens"] = usage["completion_tokens"]
-            output_dict["total_tokens"] = usage["total_tokens"]
+            # -----------------------------------------
+            # Parse output
+            # -----------------------------------------
+            cleaned = (
+                content
+                .strip()
+                .removeprefix("```json")
+                .removesuffix("```")
+                .strip()
+            )
+            llm_output = json.loads(cleaned)
 
-        # for field in list(properties.keys()):
-            # output[field] = data[field]
+            # -----------------------------------------
+            # Attach metadata
+            # -----------------------------------------
 
-        # print(json.dumps(data, indent=2))
+            output_dict["output"] = llm_output[benchmark_name]
+            output_dict["model_name"] = model_name
+            output_dict["image_path"] = image_path
+            output_dict["benchmark_name"] = benchmark_name
+            output_dict["benchmark_id"] = benchmark_id
 
-    except Exception as e:
-        output_dict["error"] = str(e)
+            if usage:
+                output_dict["completion_tokens"] = usage["completion_tokens"]
+                output_dict["total_tokens"] = usage["total_tokens"]
 
-    return output_dict
+            return output_dict  # if success exit loop and return output_dict
+
+        except Exception as e:
+            last_exception = e
+            if attempt < max_retries - 1:
+                continue  # try again
+            else:
+                output_dict["error"] = str(e)
+                return output_dict  # all retries failed, exit loop
 
 # Process Images
 
@@ -282,6 +245,7 @@ model_output = run_model(model_name, b64)
 
 results = dict()
 results[task_id] = model_output
+print(results)
 
 # save result to outputs
 
