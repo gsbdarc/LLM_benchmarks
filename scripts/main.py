@@ -25,8 +25,9 @@ import sys
 
 # Task selection from slurm array
 task_selection = sys.argv[1]
-task_selection = int(task_selection) #cast to int so we can use this to index mapping.csv
-#task_selection = 1
+# cast to int so we can use this to index mapping.csv
+task_selection = int(task_selection)
+# task_selection = 1
 
 # Load environment variables from .env file
 load_dotenv("/zfs/projects/students/ltdarc-usf-intern-2025/.env")
@@ -38,7 +39,7 @@ ENDPOINT = "https://aiapi-prod.stanford.edu/v1/chat/completions"
 # create dictionary to convert strings to actual python types
 
 type_map = {
-    "str" : [str, "string"]
+    "str": [str, "string"]
 }
 
 # Load JSON's and CSV's
@@ -61,11 +62,13 @@ selected_task = mapping[task_selection]
 
 # Helper Functions
 
+
 def encode_image(image_path: str) -> str:
     # converts PNG image into b64
-    
+
     with open(image_path, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")
+
 
 def run_model(model_name: str, test_b64):
 
@@ -86,7 +89,7 @@ def run_model(model_name: str, test_b64):
                             "image_url": {
                                 "url": f"data:image/png;base64,{test_b64}"
                             }
-                            #,"detail": detail_level
+                            # ,"detail": detail_level
                         }
                     ],
                 },
@@ -101,8 +104,8 @@ def run_model(model_name: str, test_b64):
             ],
             "temperature": 0,
             "response_format": {
-                    "type": "json_schema",
-                    "json_schema": {
+                "type": "json_schema",
+                "json_schema": {
                         "name": "DynamicModel",
                         "schema": {
                             "type": "object",
@@ -110,9 +113,9 @@ def run_model(model_name: str, test_b64):
                             "required": required,
                             "additionalProperties": False,
                         },
-                    },
                 },
-            }
+            },
+        }
 
     else:
         # All other vision-capable models
@@ -153,7 +156,7 @@ def run_model(model_name: str, test_b64):
     # ---------------------------------------------
 
     output_dict = dict()
-    
+
     try:
         r = requests.post(
             ENDPOINT,
@@ -163,7 +166,7 @@ def run_model(model_name: str, test_b64):
             },
             json=payload,
             timeout=60,
-        )        
+        )
         r.raise_for_status()
 
         resp_json = r.json()
@@ -195,7 +198,7 @@ def run_model(model_name: str, test_b64):
         # Attach metadata
         # -----------------------------------------
 
-        output_dict["output"] =  llm_output[benchmark_name]
+        output_dict["output"] = llm_output[benchmark_name]
         output_dict["model_name"] = model_name
         output_dict["image_id"] = image_id
         output_dict["benchmark_name"] = benchmark_name
@@ -205,12 +208,11 @@ def run_model(model_name: str, test_b64):
             output_dict["completion_tokens"] = usage["completion_tokens"]
             output_dict["total_tokens"] = usage["total_tokens"]
 
-        #for field in list(properties.keys()):
-            #output[field] = data[field]
-            
+        # for field in list(properties.keys()):
+            # output[field] = data[field]
 
-        #print(json.dumps(data, indent=2))
-    
+        # print(json.dumps(data, indent=2))
+
     except Exception as e:
         output_dict["error"] = str(e)
 
@@ -218,13 +220,15 @@ def run_model(model_name: str, test_b64):
 
 # Process Images
 
-task_id = selected_task[0] # extract unique task id from mapping
 
-results_json = f"/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/outputs/results_{task_id}.json"
+task_id = selected_task[0]  # extract unique task id from mapping
+
+results_json = f"/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/outputs/results/results_{task_id}.json"
 
 if os.path.exists(results_json):
-    sys.exit(0) # if the task has already been completed than the program should terminate
-    
+    # if the task has already been completed than the program should terminate
+    sys.exit(0)
+
 benchmark_id = selected_task[1]
 benchmark_name = selected_task[2]
 model_id = selected_task[3]
@@ -239,13 +243,14 @@ USER_PROMPT = benchmarks[benchmark_id]['user_prompt']
 class_name = benchmarks[benchmark_id]['schema']['class_name']
 fields = benchmarks[benchmark_id]['schema']['fields']
 
-#create pydantic model and other prompt related model inputs
+# create pydantic model and other prompt related model inputs
 
 pydantic_fields = {}
 
 for field_name, field_type in fields.items():
-    python_type = type_map[field_type][0] # converts "str" to str
-    pydantic_fields[field_name] = (python_type, ...) # "..." makes the python type mandatory vs optional
+    python_type = type_map[field_type][0]  # converts "str" to str
+    # "..." makes the python type mandatory vs optional
+    pydantic_fields[field_name] = (python_type, ...)
 
 DynamicModel = create_model(
     class_name,
@@ -256,7 +261,7 @@ properties = {}
 required = []
 
 for field_name, field_type in fields.items():
-    json_type = type_map[field_type][1] # converts "str" to "string"
+    json_type = type_map[field_type][1]  # converts "str" to "string"
     properties[field_name] = {"type": json_type}
     required.append(field_name)
 
@@ -282,4 +287,3 @@ results[task_id] = model_output
 
 with open(results_json, "w") as f:
     json.dump(results, f, indent=2)
-    
