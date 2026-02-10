@@ -345,6 +345,12 @@ Create a mapping file that:
 (2) assigns a unique task id to each one
 (3) saves these results into a csv file to be used in main.py
 
+### `pdf_to_png.py`
+
+Converts all PDFs in a given directoy to greyscale PNGs.
+Saves PNGS to LLM_Benchmarks/iputs/data/pngs/ directory.
+Prints PNG paths and file sizes in MBs.
+
 ### `main.py`
 
 Orchestrates benchmark runs across the entire dataset.
