@@ -26,7 +26,7 @@ cd LLM_benchmarks
 
 ---
 
-### Create and Activate a Virtual Environment
+### Create and Activate a Virtual Environment (YENs)
 
 ```bash
 /usr/bin/python3 -m venv venv
@@ -34,7 +34,22 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
----
+### Create and Activate a Virtual Environment (Sherlock)
+
+Recommended: create new git branch for Sherlock
+
+```
+git checkout -b sherlock
+```
+
+Request a compute resources to create a venv via a slurm script
+
+```
+module load python/3.12
+/usr/bin/python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
 ### (Optional but Recommended) Create a Jupyter Kernel
 

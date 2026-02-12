@@ -36,10 +36,12 @@ metrics_json = "metrics_2"
 
 
 def sort_outputs(s):
-    # opens all JSON files within a file path
-    # if JSON file has an "error" output then it will add output to "investigate" DF
-    # otherwise it will add the result to the "llm_results" DF
-    # return 2 dataframes
+    """
+    Opens all JSON files within a file path.
+    If JSON file has an "error" output then it will add output to "investigate" DF.
+    Otherwise it will add the result to the "llm_results" DF.
+    Returns 2 dataframes.
+    """
 
     investigate = []
     llm_results = []
@@ -82,8 +84,10 @@ def find_missing_tasks(
         investigate_df,
         array_size: int,
         mapping_path: str):
-    # finds any task id's that were the slurm array but haven't been processed or triggered an error
-    # returns updated investigate_df and prints the number of missing tasks
+    """
+    Finds any task id's that were the slurm array but haven't been processed or triggered an error.
+    Returns updated investigate_df and prints the number of missing tasks.
+    """
 
     # list of all task id's that were processed
     processed_tasks = list(llm_results_df['task_id'])
@@ -113,70 +117,59 @@ def find_missing_tasks(
     return full_investigate_df
 
 
-def lookup_truth(row):
-    # looks up ground truth for a given row based on the benchmark name and
-    # image id
+def lookup_truth(results_df: pd.DataFrame, ground_truth_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Takes in DataFrame on llm_results and ground truth DataFrame.
+    Returns new DataFrame that has original results_df data and a new ground_truth column on benchmark_name and image_id.
+    """
+    results_copy = results_df.copy(deep = True) # copy results_df so orignal is untouched
+    merged_df = results_copy.merge(ground_truth_df, on='image_id', how = 'left') # create a merged df
 
-    col_name = row['benchmark_name']  # extract benchmark name from df
-    img_id = row['image_id']  # extract img id from df
+    results_copy['ground_truth'] = merged_df.apply(lambda row: row.get(row['benchmark_name']), axis = 1) # which column ground_truth comes from depends on benchmark_name
 
-    # find the corresponding row for that image_id in ground_truth_df
-    match = ground_truth_df[ground_truth_df['image_id'] == img_id]
+    return results_copy
 
-    if not match.empty and col_name in ground_truth_df.columns:
-        # return the ground_truth_df value that corresponds to the benchmark
-        # name
-        return match[col_name].values[0]
-    return None
+def compare_simple(llm_output: str, ground_truth: str) -> int:
+    """
+    Compares simple string outputs.
+    """
+    return int(llm_output.strip().lower() == ground_truth.strip().lower())
 
+def compare_cleaned_name(llm_output: str, ground_truth: str) -> int:
+    """
+    Compares strings excluding parantheses.
+    """
+    cleaned = re.sub(r'\s*\(.*\)', '', llm_output)
+    return int(cleaned == ground_truth)
 
-def compute_accuracy(row):
-    # compares accuracy of llm output to ground_truth based on benchmark_name
+def compare_date(llm_output: str, ground_truth: str) -> int:
+    """
+    Converts inputs to datetime objects and compares them.
+    If input can not be converted into a datetime object then return 0.
+    """
+    try:
+        return int(pd.to_datetime(llm_output) == pd.to_datetime(ground_truth))
+    except:
+        return 0
 
-    benchmark = row['benchmark_name']
-    llm_output = row['output']
-    ground_truth = row['ground_truth']
+# use dictionary to define how each benchmark metric should be computed
 
-    if benchmark == "day_of_week":
-        if llm_output.strip().lower() == ground_truth.strip().lower():
-            return 1
-        else:
-            return 0
-    elif benchmark == "newspaper_name":
-        cleaned_name = re.sub(r'\s*\(.*\)', '', llm_output)
-        if cleaned_name == ground_truth:
-            return 1
-        else:
-            return 0
-    elif benchmark == "newspaper_date":
-        llm_date = pd.to_datetime(llm_output)
-        ground_truth_date = pd.to_datetime(ground_truth)
-        if llm_date == ground_truth_date:
-            return 1
-        else:
-            return 0
-    elif benchmark == "tv_guide_date":
-        try:
-            llm_date = pd.to_datetime(llm_output)
-            ground_truth_date = pd.to_datetime(ground_truth)
-            if llm_date == ground_truth_date:
-                return 1
-            else:
-                return 0
-        except BaseException:
-            return 0  # assign 0 if unable to be parsed
+benchmark_comparisons = {
+    "day_of_week": compare_simple,
+    "newspaper_name": compare_cleaned_name,
+    "newspaper_date": compare_date,
+    "tv_guide_date": compare_date,
+    "first_program": compare_simple,
+    "first_channel": compare_simple
+}
 
-    elif benchmark == "first_program":
-        if llm_output.strip().lower() == ground_truth.strip().lower():
-            return 1
-        else:
-            return 0
-
-    else:
-        if llm_output.strip().lower() == ground_truth.strip().lower():
-            return 1
-        else:
-            return 0
+def compute_accuracy(row: pd.Series) -> int:
+    """
+    Uses benchmark_comparison dictionary to calculate accuarcy based on benchmark_name.
+    """
+    benchmark = row['benchmark_name'] # identify benchmark of row
+    compare_fn = benchmark_comparisons.get(benchmark) # finds the appropriate comparison function
+    return compare_fn(row['output'], row['ground_truth']) # compute the function
 
 # load llm results
 
@@ -213,11 +206,11 @@ ground_truth_df = pd.DataFrame(ground_truth)
 
 # add ground truth to llm_results
 
-llm_results_df['ground_truth'] = llm_results_df.apply(lookup_truth, axis=1)
+merged_df = lookup_truth(llm_results_df, ground_truth_df)
 
 # compute accuracy
 
-llm_results_df['accuracy'] = llm_results_df.apply(compute_accuracy, axis=1)
+merged_df['accuracy'] = merged_df.apply(compute_accuracy, axis = 1)
 
 # save dataframe as json
 
