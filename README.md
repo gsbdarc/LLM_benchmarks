@@ -368,15 +368,14 @@ Prints PNG paths and file sizes in MBs.
 
 ### `main.py`
 
-Orchestrates benchmark runs across the entire dataset.
+Orchestrates processing of a single task.
 Tasks are loaded via the mapping.csv file
-If the task has not already been completed then the corresponding benchmark, model, and image data is loaded from their respective JSONs.
+If the task has not already been processed then the corresponding benchmark, model, and image data is loaded from their respective JSONs.
 A pydantic model is dynamically generated and inputs are passed into an LLM via Stanford API.
 The following outputs are saved as an individual JSON file
 
 - Task ID
 - Image ID
-- Image path
 - LLM output
 - Completion tokens
 - Total tokens
@@ -384,6 +383,7 @@ The following outputs are saved as an individual JSON file
 - Model Name
 - Benchmark ID
 - Benchmark Name
+- Status
 
 ### `compute.py`
 
