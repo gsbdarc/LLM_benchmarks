@@ -26,7 +26,7 @@ cd LLM_benchmarks
 
 ---
 
-### Create and Activate a Virtual Environment
+### Create and Activate a Virtual Environment (YENs)
 
 ```bash
 /usr/bin/python3 -m venv venv
@@ -34,7 +34,22 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
----
+### Create and Activate a Virtual Environment (Sherlock)
+
+Recommended: create new git branch for Sherlock
+
+```
+git checkout -b sherlock
+```
+
+Request a compute resources to create a venv via a slurm script
+
+```
+module load python/3.12
+/usr/bin/python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
 ### (Optional but Recommended) Create a Jupyter Kernel
 
@@ -73,6 +88,8 @@ STANFORD_API_KEY=your_key_here
     │       ├── pngs/
     │       └── csvs/
     ├── outputs/
+    │   ├── results/
+    │   └── metrics/
     └── scripts/
 ```
 
@@ -165,7 +182,7 @@ Adding a new benchmark task typically requires **no changes to core code**, only
 
 ### `image_index.json`
 
-Defines **png images** to be processed by LLMs.
+Defines **png images** to be processed by LLMs, creates a snapshot of all images to be processed.
 
 Each benchmark includes:
 - A unique ID
@@ -185,6 +202,11 @@ Example:
 
 Defines combinations of **benchmark tasks, models, and images** to be evaluted in the pipeline.
 
+Dependencies (the following must be created prior to this file):
+- models.json
+- benchmarks.json
+- image_index.json
+
 Each combination includes:
 - A unique ID
 - Benchmark ID
@@ -197,6 +219,33 @@ Each combination includes:
 Example:
 ```csv
 ['0', 'newspaper_name', '2', 'gpt-4', '0', '/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Arizona_Republic_Sun__Dec_17__2000_ (15).png']
+```
+
+### `mapping_shuffled.csv`
+
+Copy of mapping.csv where rows have been shuffled randomly.
+Used to get a sample of results rather than all tasks in one go.
+Same dependencies and file structure as mapping.csv.
+
+### `ground_truth.json`
+
+Stores **ground truth values** per image id.
+
+Dependencies (the following must be created prior to this file):
+- image_index.csv
+
+Example:
+```json
+{
+  "0": {
+    "newspaper_name": "Arizona Republic",
+    "newspaper_date": "Dec 17 2000",
+    "day_of_week": "Wednesday",
+    "tv_guide_date": "December 20 2000",
+    "first_program": "Good Morning Arizona 94204",
+    "first_channel": "3"
+    }
+}
 ```
 
 ## Data Overview (`LLM_benchmarks/inputs/data/`)
@@ -217,31 +266,15 @@ This directory contains **all raw and processed data assets** used during benchm
 
 ---
 
-### `ground_truth.json`
-
-Stores **ground truth values** per image id.
-
-Example:
-```json
-{
-  "0": {
-    "newspaper_name": "Arizona Republic",
-    "newspaper_date": "Dec 17 2000",
-    "day_of_week": "Wednesday",
-    "tv_guide_date": "December 20 2000",
-    "first_program": "Good Morning Arizona 94204",
-    "first_channel": "3"
-    }
-}
-```
-
----
-
 ## Outputs (`LLM_benchmarks/outputs/`)
 
-This directory is populated automatically after benchmark runs.
+This directory stores the results and metrics from the pipeline.
 
-### `results_{task_id}.json`
+### Results (`LLM_benchmarks/outputs/results`)
+
+This directory stores the results of each run.
+
+#### `results_{task_id}.json`
 
 Stores raw model outputs and metadata by task id.
 
@@ -266,6 +299,54 @@ This file enables:
 - Debugging failed runs
 - Cross-model comparison
 
+### Metrics (`LLM_benchmarks/outputs/metrics`)
+
+This directory stores metrics from successful runs and, separately, unsuccesful tasks that need further investigation.
+
+#### `metrics_{version_number}.json`
+
+Stores successful taski_id's, LLM outputs, ground truth, and accuracy results in "records" orient for easy conversion to DataFrames. Note that the keys are indices and not the task_id's.
+
+Example:
+```json
+{
+  "0": {
+      "task_id" : "0",
+      "output": "Arizona Republic",
+      "completion_tokens": 9,
+      "total_tokens": 1,
+      "model": "gpt-4",
+      "image_id": "0",
+      "image_path": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Arizona_Republic_Sun__Dec_17__2000_ (15).png",
+      "task_id": "1",
+      "task_name": "newspaper_name",
+      "ground_truth": "Arizona Republic",
+      "accuracy":  1
+  }
+}
+```
+
+This file enables:
+- Analysis of LLM results
+
+#### `investigate_{version_number}.json`
+
+Stores unsuccesful task_id's and error reasons in "records" orient for easy conversion to DataFrames. Note that the keys are indices and not the task_id's.
+
+Example:
+```json
+{
+  "0": {
+      "task_id": "1213",
+      "error": "400 Client Error: Bad Request for url: https://aiapi-prod.stanford.edu/v1/chat/completions"
+  }
+}
+```
+
+This file enables:
+- Investigation of unsuccessful tasks
+- Resolve and rerun pipeline as needed
+
 ---
 
 ## Scripts (`LLM_benchmarks/scripts/`)
@@ -273,10 +354,17 @@ This file enables:
 Contains **production-ready Python scripts**, including:
 
 ### `create_mapping.py`
+
 Create a mapping file that: 
 (1) finds all unique combinations of selected benchmarks, models, and images
 (2) assigns a unique task id to each one
 (3) saves these results into a csv file to be used in main.py
+
+### `pdf_to_png.py`
+
+Converts all PDFs in a given directoy to greyscale PNGs.
+Saves PNGS to LLM_Benchmarks/iputs/data/pngs/ directory.
+Prints PNG paths and file sizes in MBs.
 
 ### `main.py`
 
@@ -297,8 +385,13 @@ The following outputs are saved as an individual JSON file
 - Benchmark ID
 - Benchmark Name
 
+### `compute.py`
 
-- `compute_metrics.py` — evaluates model outputs against ground truth
+Loads all results within a directory.
+Separates unsuccessful tasks into a "investigate_df", saved as a JSON.
+Loads ground truth file.
+Evaluates model outputs compared to ground truth, assigns a accuracy score.
+Saves results as a JSON.
 
 ---
 
@@ -322,13 +415,8 @@ The following outputs are saved as an individual JSON file
 4. **Model inference**
    - LLM responses are captured
    - Metadata (tokens, errors, timing) is recorded
-   - Results are saved to `results.json`
+   - Results are saved to `results_{task_id}.json`
 
 5. **Evaluation**
    - `compute_metrics.py` compares outputs to `ground_truth.json`
    - Metrics are computed per task and model
-
-
-
-
-  

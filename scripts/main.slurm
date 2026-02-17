@@ -12,4 +12,4 @@
 source /zfs/projects/students/ltdarc-usf-intern-2025/venv/bin/activate
 
 # Run python script
-python main.py $(sed -n "${SLURM_ARRAY_TASK_ID}p" config_2.txt)
+python main.py ${SLURM_ARRAY_TASK_ID}
