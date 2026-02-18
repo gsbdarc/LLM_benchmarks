@@ -24,7 +24,7 @@ import sys
 # task_selection = sys.argv[1]
 # cast to int so we can use this to index mapping.csv
 # task_selection = int(task_selection)
-task_selection = 8
+task_selection = 6
 
 # Load environment variables from .env file
 load_dotenv("/zfs/projects/students/ltdarc-usf-intern-2025/.env")
@@ -109,7 +109,8 @@ def encode_image(image_path: str) -> str:
 
 def run_model(model_name: str, b64: str, SYSTEM_PROMPT: str,
               USER_PROMPT: str, properties: dict, required: list,
-              benchmark_name: str, benchmark_id: str, model_id: str) -> dict:
+              benchmark_name: str, benchmark_id: str, model_id: str,
+             image_id: str) -> dict:
     """
     Builds payload and sends request to Stanford AI API.
     Parses output and returns a dictionary.
@@ -208,6 +209,7 @@ def run_model(model_name: str, b64: str, SYSTEM_PROMPT: str,
                 output_dict["output"] = llm_output[benchmark_name]
                 output_dict["model_name"] = model_name
                 output_dict["model_id"] = model_id
+                output_dict["image_id"] = image_id
                 output_dict["benchmark_name"] = benchmark_name
                 output_dict["benchmark_id"] = benchmark_id
 
@@ -281,7 +283,8 @@ def main():
 
     model_output = run_model(model_name, b64, system_prompt,
                              user_prompt, properties, required,
-                             benchmark_name, benchmark_id, model_id)
+                             benchmark_name, benchmark_id, model_id,
+                            image_id)
 
     # assign LLM results to a dictionary
 

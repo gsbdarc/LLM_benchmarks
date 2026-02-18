@@ -304,7 +304,7 @@ This file enables:
 
 This directory stores metrics from successful runs and, separately, unsuccesful tasks that need further investigation.
 
-#### `metrics_combined_results.json`
+#### `combined_results.json`
 
 Stores all combined task outputs in "records" orient for easy conversion to DataFrames.
 
@@ -320,17 +320,16 @@ Example:
       "model": "gpt-4",
       "model_id": "1",
       "image_id": "0",
-      "task_id": "1",
-      "task_name": "newspaper_name",
-      "ground_truth": "Arizona Republic",
+      "benchmark_name": "newspaper_name",
+      "error": null,
       "accuracy":  1
   }
 }
 ```
 
-#### `metrics_{version_number}.json`
+#### `metrics.json`
 
-Stores successful task_id's, LLM outputs, ground truth, and accuracy results in "records" orient for easy conversion to DataFrames. Note that the keys are indices and not the task_id's.
+Combines, calculates, and stores successful outputs from processed LLM tasks, ground truth values, and accuracy results in "records" orient for easy conversion to DataFrames. Note that the keys are indices and not the task_id's.
 
 Example:
 ```json
@@ -338,10 +337,14 @@ Example:
   "0": {
       "task_id" : "0",
       "output": "Arizona Republic",
+      "status": "processed",
       "completion_tokens": 9,
       "total_tokens": 1,
       "model": "gpt-4",
+      "model_id": "1",
       "image_id": "0",
+      "benchmark_name": "newspaper_name",
+      "error": null,
       "ground_truth": "Arizona Republic",
       "accuracy":  1
   }
@@ -399,9 +402,7 @@ Prints the total number of successful and unsuccessful tasks, returns dictionary
 
 ### `compute.py`
 
-Loads all results within a directory.
-Separates unsuccessful tasks into a "investigate_df", saved as a JSON.
-Loads ground truth file.
+Loads combined_results.json and filters for tasks that have been processed.
 Evaluates model outputs compared to ground truth, assigns a accuracy score.
 Saves results as a JSON.
 
