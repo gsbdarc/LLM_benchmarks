@@ -395,6 +395,7 @@ The following outputs are saved as an individual JSON file
 Loads all results within a directory.
 Combines results into a single DataFrame.
 Saves DataFrame as a JSON.
+Prints the total number of successful and unsuccessful tasks, returns dictionary of error messages with counts.
 
 ### `compute.py`
 

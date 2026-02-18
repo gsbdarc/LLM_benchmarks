@@ -42,8 +42,20 @@ def compile_results(results_path: str, output_path: str) -> None:
 
     llm_results_df = pd.DataFrame(llm_results)
 
-    llm_results_df.to_json(output_path,
-                           orient='records')
+    return llm_results_df
+
+
+def check_results(llm_results_df: pd.DataFrame) -> tuple[str, dict]:
+    """
+    Returns
+    - The count of tasks with errors.
+    - Dictionary of unique errors and how frequently they appeared.
+    """
+
+    error_count = llm_results_df["error"].notna().sum()
+    error_dict = llm_results_df["error"].value_counts().to_dict()
+
+    return error_count, error_dict
 
 # main
 
@@ -51,7 +63,17 @@ def compile_results(results_path: str, output_path: str) -> None:
 def main():
     results_path = "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/outputs/results/"
     output_path = "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/outputs/metrics/combined_results.json"
-    compile_results(results_path, output_path)
+    llm_results_df = compile_results(results_path, output_path)
+    error_count, error_dict = check_results(llm_results_df)
+    total_results = len(llm_results_df)
+    processed_results = total_results - error_count
+
+    print(f"{error_count} tasks had errors, {processed_results} processed succesfully.")
+    print("===== Error Breakdown =====")
+    print(error_dict)
+
+    llm_results_df.to_json(output_path,
+                           orient='records')
 
 
 if __name__ == "__main__":
