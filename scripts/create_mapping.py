@@ -1,24 +1,37 @@
-# Goal: create a mapping file that:
-# (1) finds all unique combinations of benchmarks, models, and images
-# (2) assigns a unique task id to each one
-# (3) saves these results into a csv file to be used in main.py
+"""
+Goal: create a mapping file that:
+(1) finds all unique combinations of benchmarks, models, and images
+(2) assigns a unique task id to each one
+(3) saves these results into a csv file to be used in main.py
+"""
 
 # Setup
 
 from pathlib import Path
+from dotenv import load_dotenv
 import json
 import csv
 import os
 
+# Load environment variables from .env file
+load_dotenv("/zfs/projects/students/ltdarc-usf-intern-2025/.env")
+BASE_DIR = os.getenv("BASE_DIR")
+
 # Load JSON mapping files for images, benchmarks, and models
 
-with open("/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/image_index.json", "r") as f:
+image_index_path = os.path.join(BASE_DIR, "inputs", "image_index.json")
+
+with open(image_index_path, "r") as f:
     image_index = json.load(f)
 
-with open("/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/benchmarks.json", "r") as f:
+benchmark_path = os.path.join(BASE_DIR, "inputs", "benchmarks.json")
+
+with open(benchmark_path, "r") as f:
     benchmarks = json.load(f)
 
-with open("/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/models.json", "r") as f:
+model_path = os.path.join(BASE_DIR, "inputs", "models.json")
+
+with open(model_path, "r") as f:
     models = json.load(f)
     model_keys = list(models.keys())
     model_keys = model_keys[1:15]  # take out llama
@@ -32,20 +45,20 @@ for benchmark_id in benchmarks.keys():
         for image_id in image_index.keys():
             benchmark_name = benchmarks[benchmark_id]["task_name"]
             model_name = models[model_id]["model"]
-            image_path = image_index[image_id]['png']
+            image_name = image_index[image_id]['png']
             row = [
                 benchmark_id,
                 benchmark_name,
                 model_id,
                 model_name,
                 image_id,
-                image_path]
+                image_name]
             if row not in mapping:
                 mapping.append(row)
 
 # Create or append mapping file
 
-filename = "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/mapping.csv"
+filename = os.path.join(BASE_DIR, "inputs", "mapping.csv")
 
 headers = [
     "task_id",
@@ -54,9 +67,9 @@ headers = [
     "model_id",
     "model_name",
     "image_id",
-    "image_path"]
+    "image_name"]
 
-if os.path.exists(filename):
+if os.path.exists(filename) and os.path.getsize(filename) > 0:
     # Read existing data
     with open(filename, "r") as file:
         reader = csv.reader(file)
@@ -94,13 +107,15 @@ else:
         writer = csv.writer(file)
         writer.writerow(headers)
 
-        for i, row in enumerate(mapping, start=1):
-            # Check for duplicates within the new data itself
-            if row not in mapping[:new_rows.index(row)]:
-                full_row = [i] + row
+        seen = []  # Track what we've already added
+        task_id = 0
+
+        for row in mapping:
+            if row not in seen:
+                full_row = [task_id] + row
                 writer.writerow(full_row)
-                print(f"Added with task_id {i}: {row}")
-            else:
-                print(f"Skipped (duplicate in new data): {row}")
+                # print(f"Added with task_id {task_id}: {row}")
+                seen.append(row)
+                task_id += 1
 
 print("Done!")

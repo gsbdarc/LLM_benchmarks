@@ -68,6 +68,7 @@ Create a `.env` file in the project root with:
 ```text
 OPENAI_API_KEY=your_key_here
 STANFORD_API_KEY=your_key_here
+BASE_DIR = "your/base/directory/LLM_Benchmarks"
 ```
 ---
 
@@ -186,15 +187,15 @@ Defines **png images** to be processed by LLMs, creates a snapshot of all images
 
 Each benchmark includes:
 - A unique ID
-- Image PNG Path
-- Ground Truth CSV Path
+- Image PNG Name
+- Ground Truth CSV Name
 
 Example:
 ```json
 {
     "0" : {
-        "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Austin_American_Statesman_Sun__Aug_3__2014_ (10).png",
-        "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Austin_American_Statesman_Sun__Aug_3__2014_ (10).csv"
+        "png": "Austin_American_Statesman_Sun__Aug_3__2014_ (10).png",
+        "csv": "Austin_American_Statesman_Sun__Aug_3__2014_ (10).csv"
 }
 ```
 
@@ -218,7 +219,7 @@ Each combination includes:
 
 Example:
 ```csv
-['0', 'newspaper_name', '2', 'gpt-4', '0', '/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Arizona_Republic_Sun__Dec_17__2000_ (15).png']
+['12', '0', 'newspaper_name', '2', 'gpt-4', '0', 'Arizona_Republic_Sun__Dec_17__2000_ (15).png']
 ```
 
 ### `mapping_shuffled.csv`
@@ -257,7 +258,7 @@ This directory contains **all raw and processed data assets** used during benchm
 - Treated as immutable source files
 
 ### `pngs/`
-- PNG images converted from PDFs
+- Greyscale PNG images converted from PDFs
 - Used as inputs for multimodal LLM calls
 
 ### `csvs/`
@@ -287,9 +288,9 @@ Example:
       "total_tokens": 1,
       "model": "gpt-4",
       "image_id": "0",
-      "image_path": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Arizona_Republic_Sun__Dec_17__2000_ (15).png",
       "task_id": "1",
-      "task_name": "newspaper_name"
+      "task_name": "newspaper_name",
+      "status": "processed"
   }
 }
 ```
@@ -303,9 +304,9 @@ This file enables:
 
 This directory stores metrics from successful runs and, separately, unsuccesful tasks that need further investigation.
 
-#### `metrics_{version_number}.json`
+#### `combined_results.json`
 
-Stores successful taski_id's, LLM outputs, ground truth, and accuracy results in "records" orient for easy conversion to DataFrames. Note that the keys are indices and not the task_id's.
+Stores all combined task outputs in "records" orient for easy conversion to DataFrames.
 
 Example:
 ```json
@@ -313,13 +314,37 @@ Example:
   "0": {
       "task_id" : "0",
       "output": "Arizona Republic",
+      "status": "processed",
       "completion_tokens": 9,
       "total_tokens": 1,
       "model": "gpt-4",
+      "model_id": "1",
       "image_id": "0",
-      "image_path": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Arizona_Republic_Sun__Dec_17__2000_ (15).png",
-      "task_id": "1",
-      "task_name": "newspaper_name",
+      "benchmark_name": "newspaper_name",
+      "error": null,
+      "accuracy":  1
+  }
+}
+```
+
+#### `metrics.json`
+
+Combines, calculates, and stores successful outputs from processed LLM tasks, ground truth values, and accuracy results in "records" orient for easy conversion to DataFrames. Note that the keys are indices and not the task_id's.
+
+Example:
+```json
+{
+  "0": {
+      "task_id" : "0",
+      "output": "Arizona Republic",
+      "status": "processed",
+      "completion_tokens": 9,
+      "total_tokens": 1,
+      "model": "gpt-4",
+      "model_id": "1",
+      "image_id": "0",
+      "benchmark_name": "newspaper_name",
+      "error": null,
       "ground_truth": "Arizona Republic",
       "accuracy":  1
   }
@@ -329,23 +354,6 @@ Example:
 This file enables:
 - Analysis of LLM results
 
-#### `investigate_{version_number}.json`
-
-Stores unsuccesful task_id's and error reasons in "records" orient for easy conversion to DataFrames. Note that the keys are indices and not the task_id's.
-
-Example:
-```json
-{
-  "0": {
-      "task_id": "1213",
-      "error": "400 Client Error: Bad Request for url: https://aiapi-prod.stanford.edu/v1/chat/completions"
-  }
-}
-```
-
-This file enables:
-- Investigation of unsuccessful tasks
-- Resolve and rerun pipeline as needed
 
 ---
 
@@ -368,15 +376,14 @@ Prints PNG paths and file sizes in MBs.
 
 ### `main.py`
 
-Orchestrates benchmark runs across the entire dataset.
+Orchestrates processing of a single task.
 Tasks are loaded via the mapping.csv file
-If the task has not already been completed then the corresponding benchmark, model, and image data is loaded from their respective JSONs.
+If the task has not already been processed then the corresponding benchmark, model, and image data is loaded from their respective JSONs.
 A pydantic model is dynamically generated and inputs are passed into an LLM via Stanford API.
 The following outputs are saved as an individual JSON file
 
 - Task ID
 - Image ID
-- Image path
 - LLM output
 - Completion tokens
 - Total tokens
@@ -384,12 +391,18 @@ The following outputs are saved as an individual JSON file
 - Model Name
 - Benchmark ID
 - Benchmark Name
+- Status
+
+### `combine_results.py`
+
+Loads all results within a directory.
+Combines results into a single DataFrame.
+Saves DataFrame as a JSON.
+Prints the total number of successful and unsuccessful tasks, returns dictionary of error messages with counts.
 
 ### `compute.py`
 
-Loads all results within a directory.
-Separates unsuccessful tasks into a "investigate_df", saved as a JSON.
-Loads ground truth file.
+Loads combined_results.json and filters for tasks that have been processed.
 Evaluates model outputs compared to ground truth, assigns a accuracy score.
 Saves results as a JSON.
 
@@ -402,21 +415,23 @@ Saves results as a JSON.
 ### Execution Steps
 
 1. **User runs `main.py`**
-   - Selects images, models, and tasks via arguments
+   - Selects images, models, and tasks from `mapping.csv` via task_id
 
 2. **Configuration loading**
-   - Model details from `models.json`
    - Task definitions from `benchmarks.json`
 
 3. **Image preprocessing**
    - Images are encoded into Base64
-   - Model- and task-specific payloads are created
+   - Task-specific payloads are created
 
 4. **Model inference**
    - LLM responses are captured
-   - Metadata (tokens, errors, timing) is recorded
+   - Metadata (tokens, errors, status) is recorded
    - Results are saved to `results_{task_id}.json`
 
-5. **Evaluation**
+5. **Combining results**
+   - `combine_results.py` compiles all results into a single JSON.
+
+6. **Evaluation**
    - `compute_metrics.py` compares outputs to `ground_truth.json`
    - Metrics are computed per task and model

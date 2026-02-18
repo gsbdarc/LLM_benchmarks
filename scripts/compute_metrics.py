@@ -1,120 +1,34 @@
-# Objectives
-
-# - Load results.json file from outputs folder
-# - Determine if all tasks were completed successfully
-# - For unsuccesful/incomplete tasks:
-# - Add to "investigation" db and save
-# - For succesful tasks:
-# - Load ground_truth.csv and join based on image_id and benchmark_name
-# - Designate if output was correct or not
+"""
+- Load combined_results.json file from outputs/metric folder
+- Load ground_truth.csv and join based on image_id and benchmark_name
+- Designate if output was correct or not
+"""
 
 # Set up
 
 import pandas as pd
-import os
 import json
-import csv
 import re
+from dotenv import load_dotenv
 
-# Key Inputs
+# Load environment variables from .env file
+load_dotenv("/zfs/projects/students/ltdarc-usf-intern-2025/.env")
 
-# update with the same mapping file used in main.py
-mapping_path = "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/mapping_shuffled.csv"
+BASE_DIR = os.getenv("BASE_DIR")
 
-# update based on the array used in the slurm script
-array_size = 1000
-
-# what name should the investigate_df be saved under? change each time you
-# run this script to avoid overriding
-investigate_json = "investigate_2"
-
-# what name should the investigate_df be saved under? change each time you
-# run this script to avoid overriding
-metrics_json = "metrics_2"
-
-# Functions
+# Helper Functions
 
 
-def sort_outputs(s):
+def load_and_filter(combined_results: str) -> pd.DataFrame:
     """
-    Opens all JSON files within a file path.
-    If JSON file has an "error" output then it will add output to "investigate" DF.
-    Otherwise it will add the result to the "llm_results" DF.
-    Returns 2 dataframes.
+    Loads file and returns DataFrame of tasks where the status is "processed"
     """
+    with open(combined_results, "r") as f:
+        llm_outputs = json.load(f)
 
-    investigate = []
-    llm_results = []
-
-    for filename in os.listdir(s):
-        if filename.endswith(".json"):
-            with open(os.path.join(s, filename)) as f:
-                llm_output = json.load(f)
-                # extract tasks outputs as a list
-                llm_output_values = list(llm_output.values())
-                llm_output_fields = list(
-                    llm_output_values[0].keys())  # get a list of keys
-                if 'error' in llm_output_fields:  # if there was an error processing the task
-                    key = llm_output.keys()
-                    task_id = list(key)[0]  # extract task_id from keys
-                    row = {'task_id': task_id}
-                    value = llm_output.values()
-                    task_output = list(value)[0]  # extract output from values
-                    # now task_id and output are on the same level
-                    row.update(task_output)
-                    investigate.append(row)  # add row to "investigate" df
-                else:
-                    key = llm_output.keys()
-                    task_id = list(key)[0]  # extract task_id from keys
-                    row = {'task_id': task_id}
-                    value = llm_output.values()
-                    task_output = list(value)[0]  # extract output from values
-                    # now task_id and output are on the same level
-                    row.update(task_output)
-                    llm_results.append(row)  # add row to "llm_results" df
-
-    investigate_df = pd.DataFrame(investigate)
-    llm_results_df = pd.DataFrame(llm_results)
-
-    return investigate_df, llm_results_df
-
-
-def find_missing_tasks(
-        llm_results_df,
-        investigate_df,
-        array_size: int,
-        mapping_path: str):
-    """
-    Finds any task id's that were the slurm array but haven't been processed or triggered an error.
-    Returns updated investigate_df and prints the number of missing tasks.
-    """
-
-    # list of all task id's that were processed
-    processed_tasks = list(llm_results_df['task_id'])
-    # list of all task id's that had an error
-    error_tasks = list(investigate_df['task_id'])
-
-    with open(mapping_path, "r") as file:
-        reader = csv.reader(file)
-        header = next(reader)
-        n = array_size + 1
-        mapping = list(reader)[0:n]  # get a list of tasks in the slurm array
-        missing_tasks = 0
-
-        for row in mapping:
-            task = row[0]
-            # for each task see if it exists in either list
-            if (task not in processed_tasks and task not in error_tasks):
-                # if not, add it to investigate df
-                entry = pd.DataFrame(
-                    {'task_id': [task], 'error': ['task did not process']})
-                full_investigate_df = pd.concat(
-                    [investigate_df, entry], ignore_index=True)
-                missing_tasks += 1
-            else:
-                continue
-
-    return full_investigate_df
+    results_df = pd.DataFrame(llm_outputs)
+    filtered_df = results_df[results_df["status"] == "processed"]
+    return filtered_df
 
 
 def lookup_truth(results_df: pd.DataFrame,
@@ -163,20 +77,8 @@ def compare_date(llm_output: str, ground_truth: str) -> int:
     except BaseException:
         return 0
 
-# use dictionary to define how each benchmark metric should be computed
 
-
-benchmark_comparisons = {
-    "day_of_week": compare_simple,
-    "newspaper_name": compare_cleaned_name,
-    "newspaper_date": compare_date,
-    "tv_guide_date": compare_date,
-    "first_program": compare_simple,
-    "first_channel": compare_simple
-}
-
-
-def compute_accuracy(row: pd.Series) -> int:
+def compute_accuracy(row: pd.Series, benchmark_comparisons: dict) -> int:
     """
     Uses benchmark_comparison dictionary to calculate accuarcy based on benchmark_name.
     """
@@ -187,43 +89,55 @@ def compute_accuracy(row: pd.Series) -> int:
         row['output'],
         row['ground_truth'])  # compute the function
 
-# load llm results
+
+def main():
+
+    # set variables
+
+    combined_results = os.path.join(
+        BASE_DIR,
+        "outputs",
+        "metrics",
+        "combined_results.json")
+    ground_truth = os.path.join(BASE_DIR, "inputs", "ground_truth.json")
+    save_path = os.path.join(BASE_DIR, "outputs", "metrics", "metrics.json")
+
+    # load llm_results
+
+    filtered_df = load_and_filter(combined_results)
+
+    # load ground truth
+
+    with open(ground_truth, "r") as f:
+        truth = json.load(f)
+
+    ground_truth_df = pd.DataFrame.from_dict(truth, orient='index')
+
+    # add ground truth to llm_results
+
+    merged_df = lookup_truth(filtered_df, ground_truth_df)
+
+    # use dictionary to define how each benchmark metric should be computed
+
+    benchmark_comparisons = {
+        "day_of_week": compare_simple,
+        "newspaper_name": compare_cleaned_name,
+        "newspaper_date": compare_date,
+        "tv_guide_date": compare_date,
+        "first_program": compare_simple,
+        "first_channel": compare_simple
+    }
+
+    # compute accuracy
+
+    merged_df['accuracy'] = merged_df.apply(
+        lambda row: compute_accuracy(row, benchmark_comparisons), axis=1
+    )
+
+    # save dataframe as json
+
+    merged_df.to_json(save_path, orient='records')
 
 
-folder = "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/outputs/results"
-
-# sort results
-
-investigate_df, llm_results_df = sort_outputs(folder)
-
-full_investigate_df = find_missing_tasks(
-    llm_results_df, investigate_df, array_size, mapping_path)
-
-# save investigate_db
-
-full_investigate_df.to_json(
-    f"/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/outputs/metrics/{investigate_json}.json",
-    orient='records')
-
-# load ground truth
-
-ground_truth = list()
-
-with open("/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/ground_truth.json", "r") as f:
-    truth = json.load(f)
-
-ground_truth_df = pd.DataFrame.from_dict(truth, orient='index')
-
-# add ground truth to llm_results
-
-merged_df = lookup_truth(llm_results_df, ground_truth_df)
-
-# compute accuracy
-
-merged_df['accuracy'] = merged_df.apply(compute_accuracy, axis=1)
-
-# save dataframe as json
-
-llm_results_df.to_json(
-    f"/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/outputs/metrics/{metrics_json}.json",
-    orient='records')
+if __name__ == "__main__":
+    main()
