@@ -24,12 +24,13 @@ import sys
 # task_selection = sys.argv[1]
 # cast to int so we can use this to index mapping.csv
 # task_selection = int(task_selection)
-task_selection = 6
+task_selection = 16
 
 # Load environment variables from .env file
 load_dotenv("/zfs/projects/students/ltdarc-usf-intern-2025/.env")
 
 STANFORD_API_KEY = os.getenv("STANFORD_API_KEY")
+BASE_DIR = os.getenv("BASE_DIR")
 
 ENDPOINT = "https://aiapi-prod.stanford.edu/v1/chat/completions"
 
@@ -69,7 +70,8 @@ def create_pydantic_model(
         user_prompt: The user prompt string
     """
 
-    with open("/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/benchmarks.json", "r") as f:
+    benchmark_path = os.path.join(BASE_DIR, "inputs", "benchmarks.json")
+    with open(benchmark_path, "r") as f:
         benchmarks = json.load(f)
 
     SYSTEM_PROMPT = benchmarks[benchmark_id]['system_prompt']
@@ -110,7 +112,7 @@ def encode_image(image_path: str) -> str:
 def run_model(model_name: str, b64: str, SYSTEM_PROMPT: str,
               USER_PROMPT: str, properties: dict, required: list,
               benchmark_name: str, benchmark_id: str, model_id: str,
-             image_id: str) -> dict:
+              image_id: str) -> dict:
     """
     Builds payload and sends request to Stanford AI API.
     Parses output and returns a dictionary.
@@ -247,7 +249,9 @@ def run_model(model_name: str, b64: str, SYSTEM_PROMPT: str,
 def main():
     """Load a task from the mapping, process it through the LLM pipeline, and save results."""
 
-    with open("/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/mapping.csv", "r") as file:
+    mapping_path = os.path.join(BASE_DIR, "inputs", "mapping.csv")
+
+    with open(mapping_path, "r") as file:
         reader = csv.reader(file)
         header = next(reader)
         mapping = list(reader)
@@ -256,7 +260,11 @@ def main():
 
     task_id = selected_task[0]  # extract unique task id from mapping
 
-    results_json = f"/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/outputs/results/results_{task_id}.json"
+    results_json = os.path.join(
+        BASE_DIR,
+        "outputs",
+        "results",
+        f"results_{task_id}.json")
 
     # check if we need to process this task
 
@@ -270,7 +278,9 @@ def main():
     model_id = selected_task[3]
     model_name = selected_task[4]
     image_id = selected_task[5]
-    image_path = selected_task[6]
+    image_name = selected_task[6]
+
+    image_path = os.path.join(BASE_DIR, "inputs", "data", "pngs", image_name)
 
     # built prompt based model inputs
 
@@ -284,7 +294,7 @@ def main():
     model_output = run_model(model_name, b64, system_prompt,
                              user_prompt, properties, required,
                              benchmark_name, benchmark_id, model_id,
-                            image_id)
+                             image_id)
 
     # assign LLM results to a dictionary
 

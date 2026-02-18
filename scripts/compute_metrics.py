@@ -9,6 +9,12 @@
 import pandas as pd
 import json
 import re
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv("/zfs/projects/students/ltdarc-usf-intern-2025/.env")
+
+BASE_DIR = os.getenv("BASE_DIR")
 
 # Helper Functions
 
@@ -85,11 +91,16 @@ def compute_accuracy(row: pd.Series, benchmark_comparisons: dict) -> int:
 
 
 def main():
+
     # set variables
 
-    combined_results = "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/outputs/metrics/combined_results.json"
-    ground_truth = "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/ground_truth.json"
-    save_path = "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/outputs/metrics/metrics.json"
+    combined_results = os.path.join(
+        BASE_DIR,
+        "outputs",
+        "metrics",
+        "combined_results.json")
+    ground_truth = os.path.join(BASE_DIR, "inputs", "ground_truth.json")
+    save_path = os.path.join(BASE_DIR, "outputs", "metrics", "metrics.json")
 
     # load llm_results
 

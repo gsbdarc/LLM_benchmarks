@@ -1,142 +1,142 @@
 {
   "0": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Arizona_Republic_Sun__Dec_17__2000_ (15).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Arizona_Republic_Sun__Dec_17__2000_ (15).csv"
+    "png": "Arizona_Republic_Sun__Dec_17__2000_ (15).png",
+    "csv": "Arizona_Republic_Sun__Dec_17__2000_ (15).csv"
   },
   "1": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Austin_American_Statesman_Sun__Aug_3__2014_ (10).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Austin_American_Statesman_Sun__Aug_3__2014_ (10).csv"
+    "png": "Austin_American_Statesman_Sun__Aug_3__2014_ (10).png",
+    "csv": "Austin_American_Statesman_Sun__Aug_3__2014_ (10).csv"
   },
   "2": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Austin_American_Statesman_Sun__Feb_22__2015_ (1).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Austin_American_Statesman_Sun__Feb_22__2015_ (1).csv"
+    "png": "Austin_American_Statesman_Sun__Feb_22__2015_ (1).png",
+    "csv": "Austin_American_Statesman_Sun__Feb_22__2015_ (1).csv"
   },
   "3": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Austin_American_Statesman_Sun__Jan_12__2014_ (10).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Austin_American_Statesman_Sun__Jan_12__2014_ (10).csv"
+    "png": "Austin_American_Statesman_Sun__Jan_12__2014_ (10).png",
+    "csv": "Austin_American_Statesman_Sun__Jan_12__2014_ (10).csv"
   },
   "4": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Austin_American_Statesman_Sun__Nov_23__2014_ (11).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Austin_American_Statesman_Sun__Nov_23__2014_ (11).csv"
+    "png": "Austin_American_Statesman_Sun__Nov_23__2014_ (11).png",
+    "csv": "Austin_American_Statesman_Sun__Nov_23__2014_ (11).csv"
   },
   "5": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Chicago_Tribune_Sun__May_28__1995_ (30).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Chicago_Tribune_Sun__May_28__1995_ (30).csv"
+    "png": "Chicago_Tribune_Sun__May_28__1995_ (30).png",
+    "csv": "Chicago_Tribune_Sun__May_28__1995_ (30).csv"
   },
   "6": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Chicago_Tribune_Sun__Oct_30__1994_ (29).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Chicago_Tribune_Sun__Oct_30__1994_ (29).csv"
+    "png": "Chicago_Tribune_Sun__Oct_30__1994_ (29).png",
+    "csv": "Chicago_Tribune_Sun__Oct_30__1994_ (29).csv"
   },
   "7": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Daily_News_Sun__Apr_13__2008_ (6).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Daily_News_Sun__Apr_13__2008_ (6).csv"
+    "png": "Daily_News_Sun__Apr_13__2008_ (6).png",
+    "csv": "Daily_News_Sun__Apr_13__2008_ (6).csv"
   },
   "8": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Daily_News_Sun__Apr_25__2010_ (11).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Daily_News_Sun__Apr_25__2010_ (11).csv"
+    "png": "Daily_News_Sun__Apr_25__2010_ (11).png",
+    "csv": "Daily_News_Sun__Apr_25__2010_ (11).csv"
   },
   "9": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Daily_News_Sun__Jun_17__2012_ (2).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Daily_News_Sun__Jun_17__2012_ (2).csv"
+    "png": "Daily_News_Sun__Jun_17__2012_ (2).png",
+    "csv": "Daily_News_Sun__Jun_17__2012_ (2).csv"
   },
   "10": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Daily_News_Sun__Jun_9__2013_.png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Daily_News_Sun__Jun_9__2013_.csv"
+    "png": "Daily_News_Sun__Jun_9__2013_.png",
+    "csv": "Daily_News_Sun__Jun_9__2013_.csv"
   },
   "11": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Daily_News_Sun__Mar_11__2012_ (17).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Daily_News_Sun__Mar_11__2012_ (17).csv"
+    "png": "Daily_News_Sun__Mar_11__2012_ (17).png",
+    "csv": "Daily_News_Sun__Mar_11__2012_ (17).csv"
   },
   "12": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Daily_News_Sun__Mar_30__2014_ (2).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Daily_News_Sun__Mar_30__2014_ (2).csv"
+    "png": "Daily_News_Sun__Mar_30__2014_ (2).png",
+    "csv": "Daily_News_Sun__Mar_30__2014_ (2).csv"
   },
   "13": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Daily_News_Sun__May_15__2016_ (12).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Daily_News_Sun__May_15__2016_ (12).csv"
+    "png": "Daily_News_Sun__May_15__2016_ (12).png",
+    "csv": "Daily_News_Sun__May_15__2016_ (12).csv"
   },
   "14": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Daily_News_Sun__Oct_14__2007_ (8).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Daily_News_Sun__Oct_14__2007_ (8).csv"
+    "png": "Daily_News_Sun__Oct_14__2007_ (8).png",
+    "csv": "Daily_News_Sun__Oct_14__2007_ (8).csv"
   },
   "15": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Daily_News_Sun__Oct_18__2009_ (33).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Daily_News_Sun__Oct_18__2009_ (33).csv"
+    "png": "Daily_News_Sun__Oct_18__2009_ (33).png",
+    "csv": "Daily_News_Sun__Oct_18__2009_ (33).csv"
   },
   "16": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Honolulu_Star_Advertiser_Sun__Oct_9__2016_ (4).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Honolulu_Star_Advertiser_Sun__Oct_9__2016_ (4).csv"
+    "png": "Honolulu_Star_Advertiser_Sun__Oct_9__2016_ (4).png",
+    "csv": "Honolulu_Star_Advertiser_Sun__Oct_9__2016_ (4).csv"
   },
   "17": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Messenger_Inquirer_Sun__Oct_12__1997_ (5).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Messenger_Inquirer_Sun__Oct_12__1997_ (5).csv"
+    "png": "Messenger_Inquirer_Sun__Oct_12__1997_ (5).png",
+    "csv": "Messenger_Inquirer_Sun__Oct_12__1997_ (5).csv"
   },
   "18": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Statesman_Journal_Sun__Jan_17__1999_ (22).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Statesman_Journal_Sun__Jan_17__1999_ (22).csv"
+    "png": "Statesman_Journal_Sun__Jan_17__1999_ (22).png",
+    "csv": "Statesman_Journal_Sun__Jan_17__1999_ (22).csv"
   },
   "19": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Statesman_Journal_Sun__Nov_8__1998_ (24).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Statesman_Journal_Sun__Nov_8__1998_ (24).csv"
+    "png": "Statesman_Journal_Sun__Nov_8__1998_ (24).png",
+    "csv": "Statesman_Journal_Sun__Nov_8__1998_ (24).csv"
   },
   "20": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Statesman_Journal_Sun__Sep_5__1999_ (16).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Statesman_Journal_Sun__Sep_5__1999_ (16).csv"
+    "png": "Statesman_Journal_Sun__Sep_5__1999_ (16).png",
+    "csv": "Statesman_Journal_Sun__Sep_5__1999_ (16).csv"
   },
   "21": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/The_Arizona_Republic_Sun__Mar_5__2000_ (32).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/The_Arizona_Republic_Sun__Mar_5__2000_ (32).csv"
+    "png": "The_Arizona_Republic_Sun__Mar_5__2000_ (32).png",
+    "csv": "The_Arizona_Republic_Sun__Mar_5__2000_ (32).csv"
   },
   "22": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/The_Californian_Sun__May_31__1998_ (7).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/The_Californian_Sun__May_31__1998_ (7).csv"
+    "png": "The_Californian_Sun__May_31__1998_ (7).png",
+    "csv": "The_Californian_Sun__May_31__1998_ (7).csv"
   },
   "23": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/The_Honolulu_Advertiser_Sun__Feb_9__1997_ (11).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/The_Honolulu_Advertiser_Sun__Feb_9__1997_ (11).csv"
+    "png": "The_Honolulu_Advertiser_Sun__Feb_9__1997_ (11).png",
+    "csv": "The_Honolulu_Advertiser_Sun__Feb_9__1997_ (11).csv"
   },
   "24": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/The_Honolulu_Advertiser_Sun__Mar_21__2004_ (15).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/The_Honolulu_Advertiser_Sun__Mar_21__2004_ (15).csv"
+    "png": "The_Honolulu_Advertiser_Sun__Mar_21__2004_ (15).png",
+    "csv": "The_Honolulu_Advertiser_Sun__Mar_21__2004_ (15).csv"
   },
   "25": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/The_Honolulu_Advertiser_Sun__Mar_9__2003_ (2).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/The_Honolulu_Advertiser_Sun__Mar_9__2003_ (2).csv"
+    "png": "The_Honolulu_Advertiser_Sun__Mar_9__2003_ (2).png",
+    "csv": "The_Honolulu_Advertiser_Sun__Mar_9__2003_ (2).csv"
   },
   "26": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/The_Honolulu_Advertiser_Sun__May_26__2002_ (1).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/The_Honolulu_Advertiser_Sun__May_26__2002_ (1).csv"
+    "png": "The_Honolulu_Advertiser_Sun__May_26__2002_ (1).png",
+    "csv": "The_Honolulu_Advertiser_Sun__May_26__2002_ (1).csv"
   },
   "27": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/The_Honolulu_Advertiser_Sun__Sep_28__1997_ (16).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/The_Honolulu_Advertiser_Sun__Sep_28__1997_ (16).csv"
+    "png": "The_Honolulu_Advertiser_Sun__Sep_28__1997_ (16).png",
+    "csv": "The_Honolulu_Advertiser_Sun__Sep_28__1997_ (16).csv"
   },
   "28": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/The_Kansas_City_Star_Sun__Apr_3__2005_ (2).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/The_Kansas_City_Star_Sun__Apr_3__2005_ (2).csv"
+    "png": "The_Kansas_City_Star_Sun__Apr_3__2005_ (2).png",
+    "csv": "The_Kansas_City_Star_Sun__Apr_3__2005_ (2).csv"
   },
   "29": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/The_Kansas_City_Star_Sun__Sep_15__2002_ (2).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/The_Kansas_City_Star_Sun__Sep_15__2002_ (2).csv"
+    "png": "The_Kansas_City_Star_Sun__Sep_15__2002_ (2).png",
+    "csv": "The_Kansas_City_Star_Sun__Sep_15__2002_ (2).csv"
   },
   "30": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/The_Monitor_Sun__Nov_6__1994_ (8).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/The_Monitor_Sun__Nov_6__1994_ (8).csv"
+    "png": "The_Monitor_Sun__Nov_6__1994_ (8).png",
+    "csv": "The_Monitor_Sun__Nov_6__1994_ (8).csv"
   },
   "31": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/The_News_Tribune_Sun__Mar_27__2011_ (17).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/The_News_Tribune_Sun__Mar_27__2011_ (17).csv"
+    "png": "The_News_Tribune_Sun__Mar_27__2011_ (17).png",
+    "csv": "The_News_Tribune_Sun__Mar_27__2011_ (17).csv"
   },
   "32": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/The_Palm_Beach_Post_Sun__May_22__1994_ (60).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/The_Palm_Beach_Post_Sun__May_22__1994_ (60).csv"
+    "png": "The_Palm_Beach_Post_Sun__May_22__1994_ (60).png",
+    "csv": "The_Palm_Beach_Post_Sun__May_22__1994_ (60).csv"
   },
   "33": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/The_Sentinel_Sun__Jun_29__1997_ (2).png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/The_Sentinel_Sun__Jun_29__1997_ (2).csv"
+    "png": "The_Sentinel_Sun__Jun_29__1997_ (2).png",
+    "csv": "The_Sentinel_Sun__Jun_29__1997_ (2).csv"
   },
   "34": {
-    "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/The_Sentinel_Sun__Nov_16__1997_.png",
-    "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/The_Sentinel_Sun__Nov_16__1997_.csv"
+    "png": "The_Sentinel_Sun__Nov_16__1997_.png",
+    "csv": "The_Sentinel_Sun__Nov_16__1997_.csv"
   }
 }

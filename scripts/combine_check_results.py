@@ -7,6 +7,11 @@ import pandas as pd
 import glob
 import json
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv("/zfs/projects/students/ltdarc-usf-intern-2025/.env")
+BASE_DIR = os.getenv("BASE_DIR")
 
 # Helper Functions
 
@@ -61,8 +66,8 @@ def check_results(llm_results_df: pd.DataFrame) -> tuple[str, dict]:
 
 
 def main():
-    results_path = "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/outputs/results/"
-    output_path = "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/outputs/metrics/combined_results.json"
+    results_path = os.path.join(BASE_DIR, "outputs", "results")
+    output_path = os.path.join(BASE_DIR, "outputs", "metrics", "combined_results.json")
     llm_results_df = compile_results(results_path, output_path)
     error_count, error_dict = check_results(llm_results_df)
     total_results = len(llm_results_df)

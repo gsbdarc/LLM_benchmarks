@@ -68,6 +68,7 @@ Create a `.env` file in the project root with:
 ```text
 OPENAI_API_KEY=your_key_here
 STANFORD_API_KEY=your_key_here
+BASE_DIR = "your/base/directory/LLM_Benchmarks"
 ```
 ---
 
@@ -186,15 +187,15 @@ Defines **png images** to be processed by LLMs, creates a snapshot of all images
 
 Each benchmark includes:
 - A unique ID
-- Image PNG Path
-- Ground Truth CSV Path
+- Image PNG Name
+- Ground Truth CSV Name
 
 Example:
 ```json
 {
     "0" : {
-        "png": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Austin_American_Statesman_Sun__Aug_3__2014_ (10).png",
-        "csv": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/csvs/Austin_American_Statesman_Sun__Aug_3__2014_ (10).csv"
+        "png": "Austin_American_Statesman_Sun__Aug_3__2014_ (10).png",
+        "csv": "Austin_American_Statesman_Sun__Aug_3__2014_ (10).csv"
 }
 ```
 
@@ -218,7 +219,7 @@ Each combination includes:
 
 Example:
 ```csv
-['0', 'newspaper_name', '2', 'gpt-4', '0', '/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Arizona_Republic_Sun__Dec_17__2000_ (15).png']
+['12', '0', 'newspaper_name', '2', 'gpt-4', '0', 'Arizona_Republic_Sun__Dec_17__2000_ (15).png']
 ```
 
 ### `mapping_shuffled.csv`
@@ -287,7 +288,6 @@ Example:
       "total_tokens": 1,
       "model": "gpt-4",
       "image_id": "0",
-      "image_path": "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs/Arizona_Republic_Sun__Dec_17__2000_ (15).png",
       "task_id": "1",
       "task_name": "newspaper_name",
       "status": "processed"
