@@ -381,6 +381,15 @@ Converts all PDFs in a given directoy to greyscale PNGs.
 Saves PNGS to LLM_Benchmarks/iputs/data/pngs/ directory.
 Prints PNG paths and file sizes in MBs.
 
+### `make_index.py`
+
+Creates a JSON snapshot of PNGs and their sourth of truth CSVs.
+
+### `extract_ground_truth.py`
+
+Iterates through all of the CSVs in the image_index.
+Creates/updates ground truth JSON with the correct benchmark values.
+
 ### `main.py`
 
 Orchestrates processing of a single task.
