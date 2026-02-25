@@ -42,7 +42,11 @@ Recommended: create new git branch for Sherlock
 git checkout -b sherlock
 ```
 
-Request a compute resources to create a venv via a slurm script
+Request a compute resources (normal, dev, or gsb) to create a venv via a slurm script
+
+```
+salloc -p normal -t 1:00:00 -c 1
+```
 
 ```
 module load python/3.12
@@ -70,6 +74,9 @@ OPENAI_API_KEY=your_key_here
 STANFORD_API_KEY=your_key_here
 BASE_DIR = "your/base/directory/LLM_Benchmarks"
 ```
+
+> ⚠️ Note: as models get added & removed from the Stanford AI API you will need to submit a ticket to update your API key.
+
 ---
 
 ## High-Level Directory Structure

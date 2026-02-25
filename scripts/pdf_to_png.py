@@ -10,12 +10,16 @@ from pathlib import Path
 
 # Inputs
 
+# Load environment variables from .env file
+load_dotenv("../.env")
+BASE_DIR = os.getenv("BASE_DIR")
+
 # where pdfs are located
-image_dir = Path(
-    "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pdfs")
+
+image_index_path = os.path.join(BASE_DIR, "inputs", "data", "pdfs")
 
 # where new pngs should be saved
-output_dir = "/zfs/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks/inputs/data/pngs"
+output_dir = os.path.join(BASE_DIR, "inputs", "data", "pngs")
 
 # Functions
 

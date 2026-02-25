@@ -24,10 +24,10 @@ import sys
 # task_selection = sys.argv[1]
 # cast to int so we can use this to index mapping.csv
 # task_selection = int(task_selection)
-task_selection = 16
+task_selection = 2087
 
 # Load environment variables from .env file
-load_dotenv("/zfs/projects/students/ltdarc-usf-intern-2025/.env")
+load_dotenv("../.env")
 
 STANFORD_API_KEY = os.getenv("STANFORD_API_KEY")
 BASE_DIR = os.getenv("BASE_DIR")
@@ -256,7 +256,11 @@ def main():
         header = next(reader)
         mapping = list(reader)
 
-    selected_task = mapping[task_selection]
+    try:
+        selected_task = mapping[task_selection]
+
+    except BaseException:
+        sys.exit(0)  # if the task_id is not in mapping then exit the program
 
     task_id = selected_task[0]  # extract unique task id from mapping
 

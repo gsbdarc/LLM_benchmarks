@@ -10,7 +10,7 @@ import os
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv("/zfs/projects/students/ltdarc-usf-intern-2025/.env")
+load_dotenv("../.env")
 BASE_DIR = os.getenv("BASE_DIR")
 
 # Helper Functions
@@ -75,7 +75,11 @@ def main():
 
     print(f"{error_count} tasks had errors, {processed_results} processed succesfully.")
     print("===== Error Breakdown =====")
-    print(error_dict)
+    for key, value in error_dict.items():
+        print("=====Error Message======")
+        print(key)
+        print("=====Error Count=====")
+        print(value)
 
     llm_results_df.to_json(output_path,
                            orient='records')

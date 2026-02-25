@@ -14,7 +14,7 @@ import csv
 import os
 
 # Load environment variables from .env file
-load_dotenv("/zfs/projects/students/ltdarc-usf-intern-2025/.env")
+load_dotenv("../.env")
 BASE_DIR = os.getenv("BASE_DIR")
 
 # Load JSON mapping files for images, benchmarks, and models
