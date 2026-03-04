@@ -44,7 +44,8 @@ def make_index(image_paths: str, index_file: str) -> None:
 
 
 def main():
-    load_dotenv("../.env")
+    project_root = Path(__file__).resolve().parents[1]
+    load_dotenv(project_root/".env")
     BASE_DIR = os.getenv("BASE_DIR")
 
     image_folder = os.path.join(BASE_DIR, "inputs", "data", "pngs")

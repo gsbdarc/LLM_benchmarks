@@ -21,13 +21,14 @@ from pathlib import Path
 import sys
 
 # Task selection from slurm array
-# task_selection = sys.argv[1]
+task_selection = sys.argv[1]
 # cast to int so we can use this to index mapping.csv
-# task_selection = int(task_selection)
-task_selection = 2087
+task_selection = int(task_selection)
+# task_selection = 2087
 
 # Load environment variables from .env file
-load_dotenv("../.env")
+project_root = Path(__file__).resolve().parents[1]
+load_dotenv(project_root/".env")
 
 STANFORD_API_KEY = os.getenv("STANFORD_API_KEY")
 BASE_DIR = os.getenv("BASE_DIR")

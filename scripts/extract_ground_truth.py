@@ -221,7 +221,8 @@ def manually_update_ground_truth(ground_truth: dict) -> dict:
 
 
 def main():
-    load_dotenv("../.env")
+    project_root = Path(__file__).resolve().parents[1]
+    load_dotenv(project_root/".env")
     BASE_DIR = os.getenv("BASE_DIR")
     image_index_path = os.path.join(BASE_DIR, "inputs", "image_index.json")
     ground_truth_path = os.path.join(
