@@ -9,11 +9,13 @@
 import pandas as pd
 import json
 import re
+import os
 from dotenv import load_dotenv
+from pathlib import Path
 
 # Load environment variables from .env file
-load_dotenv("/zfs/projects/students/ltdarc-usf-intern-2025/.env")
-
+project_root = Path(__file__).resolve().parents[1]
+load_dotenv(project_root/".env")
 BASE_DIR = os.getenv("BASE_DIR")
 
 # Helper Functions
@@ -31,14 +33,33 @@ def load_and_filter(combined_results: str) -> pd.DataFrame:
     return filtered_df
 
 
+def load_ground_truth(image_path: str) -> pd.DataFrame:
+    """
+    Loads ground truth JSON file, coverts to DF and adds column for image index.
+    """
+
+    ground_truth = list()
+
+    with open(image_path, "r") as f:
+        truth = json.load(f)
+        image_index = list(truth.keys())
+        for image in image_index:
+            row = {'image_id': image}
+            truths = truth[image]
+            row.update(truths)
+            ground_truth.append(row)
+
+    ground_truth_df = pd.DataFrame(ground_truth)
+    return ground_truth_df
+
+
 def lookup_truth(results_df: pd.DataFrame,
                  ground_truth_df: pd.DataFrame) -> pd.DataFrame:
     """
     Takes in DataFrame on llm_results and ground truth DataFrame.
     Returns new DataFrame that has original results_df data and a new ground_truth column on benchmark_name and image_id.
     """
-    results_copy = results_df.copy(
-        deep=True)  # copy results_df so orignal is untouched
+    results_copy = results_df.copy(deep=True).reset_index(drop=True)
     merged_df = results_copy.merge(
         ground_truth_df,
         on='image_id',
@@ -48,6 +69,9 @@ def lookup_truth(results_df: pd.DataFrame,
         lambda row: row.get(
             row['benchmark_name']),
         axis=1)  # which column ground_truth comes from depends on benchmark_name
+
+    columns_to_drop = ['status', 'error']
+    results_copy = results_copy.drop(columns=columns_to_drop)
 
     return results_copy
 
@@ -108,10 +132,7 @@ def main():
 
     # load ground truth
 
-    with open(ground_truth, "r") as f:
-        truth = json.load(f)
-
-    ground_truth_df = pd.DataFrame.from_dict(truth, orient='index')
+    ground_truth_df = load_ground_truth(ground_truth)
 
     # add ground truth to llm_results
 
