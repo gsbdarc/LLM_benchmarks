@@ -1,6 +1,7 @@
 """
 - Load combined_results.json file from outputs/metric folder
 - Load ground_truth.csv and join based on image_id and benchmark_name
+- Calculate dollar costs for input tokens, output tokens, and total tokens used
 - Designate if output was correct or not
 """
 
@@ -13,10 +14,8 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 
-# Load environment variables from .env file
+# Get project_root
 project_root = Path(__file__).resolve().parents[1]
-load_dotenv(project_root/".env")
-BASE_DIR = os.getenv("BASE_DIR")
 
 # Helper Functions
 
@@ -31,6 +30,34 @@ def load_and_filter(combined_results: str) -> pd.DataFrame:
     results_df = pd.DataFrame(llm_outputs)
     filtered_df = results_df[results_df["status"] == "processed"]
     return filtered_df
+
+
+def calculate_dollar_costs(
+        filtered_df: pd.DataFrame,
+        benchmarks: str) -> pd.DataFrame:
+    """
+    Converts token usage into input, output, and total dollar costs.
+    """
+    with open(benchmarks, "r") as f:
+        model_config = json.load(f)
+
+    model_config_df = pd.DataFrame(model_config)
+    config = model_config_df.T
+
+    df = filtered_df.merge(config[['model', 'input_cost', 'output_cost']].rename(
+        columns={'model': 'model_name'}), on='model_name', how='left')
+
+    df['input_tokens'] = df['total_tokens'] - df['completion_tokens']
+    df['input_dollar_cost'] = (df['input_tokens'] * df['input_cost'] / 1000000)
+    df['output_dollar_cost'] = (
+        df['completion_tokens'] *
+        df['output_cost'] /
+        1000000)
+    df['total_dollar_cost'] = (
+        (df['input_tokens'] * df['input_cost'] / 1000000)
+        + (df['completion_tokens'] * df['output_cost'] / 1000000))
+
+    return df
 
 
 def load_ground_truth(image_path: str) -> pd.DataFrame:
@@ -119,16 +146,25 @@ def main():
     # set variables
 
     combined_results = os.path.join(
-        BASE_DIR,
+        project_root,
         "outputs",
         "metrics",
         "combined_results.json")
-    ground_truth = os.path.join(BASE_DIR, "inputs", "ground_truth.json")
-    save_path = os.path.join(BASE_DIR, "outputs", "metrics", "metrics.json")
+    ground_truth = os.path.join(project_root, "inputs", "ground_truth.json")
+    save_path = os.path.join(
+        project_root,
+        "outputs",
+        "metrics",
+        "metrics.json")
+    model_config = os.path.join(project_root, "inputs", "models.json")
 
     # load llm_results
 
     filtered_df = load_and_filter(combined_results)
+
+    # calculated costs
+
+    filtered_df = calculate_dollar_costs(filtered_df, model_config)
 
     # load ground truth
 

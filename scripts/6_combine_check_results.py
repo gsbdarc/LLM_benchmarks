@@ -7,13 +7,11 @@ import pandas as pd
 import glob
 import json
 import os
-from dotenv import load_dotenv
 from pathlib import Path
 
 # Load environment variables from .env file
-project_root = Path(__file__).resolve().parents[1]
-load_dotenv(project_root/".env")
-BASE_DIR = os.getenv("BASE_DIR")
+BASE_DIR = Path(__file__).resolve().parents[1]
+
 
 # Helper Functions
 

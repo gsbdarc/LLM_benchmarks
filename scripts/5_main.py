@@ -24,14 +24,13 @@ import sys
 task_selection = sys.argv[1]
 # cast to int so we can use this to index mapping.csv
 task_selection = int(task_selection)
-# task_selection = 2087
+#task_selection = 14
 
 # Load environment variables from .env file
-project_root = Path(__file__).resolve().parents[1]
-load_dotenv(project_root/".env")
+BASE_DIR = Path(__file__).resolve().parents[1]
+load_dotenv(BASE_DIR/".env")
 
 STANFORD_API_KEY = os.getenv("STANFORD_API_KEY")
-BASE_DIR = os.getenv("BASE_DIR")
 
 ENDPOINT = "https://aiapi-prod.stanford.edu/v1/chat/completions"
 
@@ -113,7 +112,7 @@ def encode_image(image_path: str) -> str:
 def run_model(model_name: str, b64: str, SYSTEM_PROMPT: str,
               USER_PROMPT: str, properties: dict, required: list,
               benchmark_name: str, benchmark_id: str, model_id: str,
-              image_id: str) -> dict:
+              image_id: str, run_number: int) -> dict:
     """
     Builds payload and sends request to Stanford AI API.
     Parses output and returns a dictionary.
@@ -215,6 +214,7 @@ def run_model(model_name: str, b64: str, SYSTEM_PROMPT: str,
                 output_dict["image_id"] = image_id
                 output_dict["benchmark_name"] = benchmark_name
                 output_dict["benchmark_id"] = benchmark_id
+                output_dict["run_id"] = run_number
 
                 if usage:
                     output_dict["completion_tokens"] = usage["completion_tokens"]
@@ -250,12 +250,15 @@ def run_model(model_name: str, b64: str, SYSTEM_PROMPT: str,
 def main():
     """Load a task from the mapping, process it through the LLM pipeline, and save results."""
 
+    run_number = 2
+
     mapping_path = os.path.join(BASE_DIR, "inputs", "mapping.csv")
 
     with open(mapping_path, "r") as file:
         reader = csv.reader(file)
         header = next(reader)
         mapping = list(reader)
+        mapping = [row for row in mapping if row[4] not in ['claude-3-5-sonnet', 'claude-3-7-sonnet']] # filter out retired models
 
     try:
         selected_task = mapping[task_selection]
@@ -269,7 +272,7 @@ def main():
         BASE_DIR,
         "outputs",
         "results",
-        f"results_{task_id}.json")
+        f"results_{task_id}_{run_number}.json")
 
     # check if we need to process this task
 
@@ -299,7 +302,7 @@ def main():
     model_output = run_model(model_name, b64, system_prompt,
                              user_prompt, properties, required,
                              benchmark_name, benchmark_id, model_id,
-                             image_id)
+                             image_id, run_number)
 
     # assign LLM results to a dictionary
 

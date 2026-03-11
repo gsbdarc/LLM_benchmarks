@@ -12,4 +12,4 @@
 source /zfs/projects/students/ltdarc-usf-intern-2025/venv/bin/activate
 
 # Run python script
-python main.py ${SLURM_ARRAY_TASK_ID}
+python 5_main.py ${SLURM_ARRAY_TASK_ID}
