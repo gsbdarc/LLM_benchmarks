@@ -134,5 +134,41 @@
     "max_context_window": 300000,
     "input_cost": 15,
     "output_cost": 60
+  },
+  "15": {
+    "model": "claude-4-5-sonnet",
+    "family": "claude",
+    "max_context_input": 136000,
+    "max_context_output": 64000,
+    "max_context_window": 200000,
+    "input_cost": 3,
+    "output_cost": 15
+  },
+  "16": {
+    "model": "claude-opus-4-6",
+    "family": "claude",
+    "max_context_input": 872000,
+    "max_context_output": 128000,
+    "max_context_window": 1000000,
+    "input_cost": 5.5,
+    "output_cost": 27.5
+  },
+  "17": {
+    "model": "gpt-5.2",
+    "family": "gpt",
+    "max_context_input": 272000,
+    "max_context_output": 128000,
+    "max_context_window": 400000,
+    "input_cost": 1.25,
+    "output_cost": 10
+  },
+  "18": {
+    "model": "Llama-4",
+    "family": "llama",
+    "max_context_input": "TBU",
+    "max_context_output": "TBU",
+    "max_context_window": "TBU",
+    "input_cost": 0.35,
+    "output_cost": 1.15
   }
 }

@@ -115,6 +115,8 @@ def compare_cleaned_name(llm_output: str, ground_truth: str) -> int:
     Compares strings excluding parantheses.
     """
     cleaned = re.sub(r'\s*\(.*\)', '', llm_output)
+    cleaned = cleaned.replace('-', ' ')
+    ground_truth = ground_truth.replace('-', ' ')
     return int(cleaned == ground_truth)
 
 

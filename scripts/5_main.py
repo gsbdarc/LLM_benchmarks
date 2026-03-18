@@ -15,6 +15,7 @@ import requests
 from pydantic import BaseModel, ValidationError, create_model
 from typing import Literal, List, Dict, Any, Type
 import json
+import pandas as pd
 import csv
 import base64
 from pathlib import Path
@@ -24,7 +25,7 @@ import sys
 task_selection = sys.argv[1]
 # cast to int so we can use this to index mapping.csv
 task_selection = int(task_selection)
-#task_selection = 14
+#task_selection = 3713
 
 # Load environment variables from .env file
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -58,7 +59,7 @@ def already_processed(json_path: str) -> bool:
 
 
 def create_pydantic_model(
-        benchmark_id: str) -> tuple[Type[BaseModel], dict, list, str, str]:
+        benchmark_id: str) -> tuple[ dict, list, str, str]:
     """
     Builds pydantic model and other prompt related model inputs based off of benchmark_id.
 
@@ -79,18 +80,6 @@ def create_pydantic_model(
     class_name = benchmarks[benchmark_id]['schema']['class_name']
     fields = benchmarks[benchmark_id]['schema']['fields']
 
-    pydantic_fields = {}
-
-    for field_name, field_type in fields.items():
-        python_type = type_map[field_type][0]  # converts "str" to str
-        # "..." makes the python type mandatory vs optional
-        pydantic_fields[field_name] = (python_type, ...)
-
-    DynamicModel = create_model(
-        class_name,
-        **pydantic_fields
-    )
-
     properties = {}
     required = []
 
@@ -99,7 +88,7 @@ def create_pydantic_model(
         properties[field_name] = {"type": json_type}
         required.append(field_name)
 
-    return DynamicModel, properties, required, SYSTEM_PROMPT, USER_PROMPT
+    return properties, required, SYSTEM_PROMPT, USER_PROMPT
 
 
 def encode_image(image_path: str) -> str:
@@ -254,19 +243,16 @@ def main():
 
     mapping_path = os.path.join(BASE_DIR, "inputs", "mapping.csv")
 
-    with open(mapping_path, "r") as file:
-        reader = csv.reader(file)
-        header = next(reader)
-        mapping = list(reader)
-        mapping = [row for row in mapping if row[4] not in ['claude-3-5-sonnet', 'claude-3-7-sonnet']] # filter out retired models
+    mapping = pd.read_csv(mapping_path)
+    #mapping = mapping[~mapping['model_name'].isin(['claude-3-5-sonnet', 'claude-3-7-sonnet'])] # filter out retired models
+    mapping = mapping[mapping['model_name'].isin(['claude-4-5-sonnet', 'claude-opus-4-6', 'gpt-5.2', 'Llama-4'])] # filter for new models
 
-    try:
-        selected_task = mapping[task_selection]
+    selected_task = mapping[mapping['task_id'] == task_selection]
 
-    except BaseException:
+    if selected_task.empty:
         sys.exit(0)  # if the task_id is not in mapping then exit the program
 
-    task_id = selected_task[0]  # extract unique task id from mapping
+    task_id = int(selected_task['task_id'].iloc[0]) # extract unique task id from mapping
 
     results_json = os.path.join(
         BASE_DIR,
@@ -281,18 +267,18 @@ def main():
 
     # load inputs from mapping
 
-    benchmark_id = selected_task[1]
-    benchmark_name = selected_task[2]
-    model_id = selected_task[3]
-    model_name = selected_task[4]
-    image_id = selected_task[5]
-    image_name = selected_task[6]
+    benchmark_id = str(selected_task['benchmark_id'].iloc[0])
+    benchmark_name = str(selected_task['benchmark_name'].iloc[0])
+    model_id = str(selected_task['model_id'].iloc[0])
+    model_name = str(selected_task['model_name'].iloc[0])
+    image_id = str(selected_task['image_id'].iloc[0])
+    image_name = str(selected_task['image_name'].iloc[0])
 
     image_path = os.path.join(BASE_DIR, "inputs", "data", "pngs", image_name)
 
     # built prompt based model inputs
 
-    DynamicModel, properties, required, system_prompt, user_prompt = create_pydantic_model(
+    properties, required, system_prompt, user_prompt = create_pydantic_model(
         benchmark_id)
 
     # encode image
@@ -308,7 +294,6 @@ def main():
 
     results = dict()
     results[task_id] = model_output
-    # print(results)
 
     # save as a JSON file
 
