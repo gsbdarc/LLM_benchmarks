@@ -7,7 +7,9 @@
     "schema": {
       "class_name": "NewspaperName",
       "fields": {
-        "newspaper_name": "str"
+        "newspaper_name": {
+          "type": "string"
+        }
       }
     }
   },
@@ -19,7 +21,9 @@
     "schema": {
       "class_name": "NewspaperDate",
       "fields": {
-        "newspaper_date": "str"
+        "newspaper_date": {
+          "type": "string"
+        }
       }
     }
   },
@@ -31,7 +35,9 @@
     "schema": {
       "class_name": "DayOfWeek",
       "fields": {
-        "day_of_week": "str"
+        "day_of_week": {
+          "type": "string"
+        }
       }
     }
   },
@@ -43,7 +49,9 @@
     "schema": {
       "class_name": "TvGuideDate",
       "fields": {
-        "tv_guide_date": "str"
+        "tv_guide_date": {
+          "type": "string"
+        }
       }
     }
   },
@@ -55,7 +63,9 @@
     "schema": {
       "class_name": "FirstProgram",
       "fields": {
-        "first_program": "str"
+        "first_program": {
+          "type": "string"
+        }
       }
     }
   },
@@ -67,7 +77,9 @@
     "schema": {
       "class_name": "FirstChannel",
       "fields": {
-        "first_channel": "str"
+        "first_channel": {
+          "type": "string"
+        }
       }
     }
   }

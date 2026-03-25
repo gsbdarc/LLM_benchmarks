@@ -42,7 +42,7 @@ The unique combinations of images, models, and benchmarks amounted to 2,730 task
 
 ---
 
-### Pipeline Overview
+## Pipeline Overview
 
 We designed the pipeline to be modular so that changes to inputs (models, images, benchmarks) could be easily made with minimal changes to the main script. 
 
@@ -178,8 +178,8 @@ day_of_week = csv_df['Day'][0]
 - Orchestrates processing of a single task.
 - Tasks are loaded via the mapping.csv file.
 - If the task has not already been processed then the corresponding benchmark, model, and image are loaded from their respective JSONs.
-- A pydantic model is dynamically generated and inputs are passed into an LLM via the Stanford AI API.
-- The following outputs are saved as an individual JSON file to `LLM_Benchmarks/outputs/results/results_{task_id}.json`
+- A pydantic model and prompts are passed into an LLM via the Stanford AI API.
+- The following outputs are saved as an individual JSON file to `LLM_Benchmarks/outputs/results/results_{task_id}_{run_id}.json`
 
 ```json
 {
@@ -220,7 +220,7 @@ sbatch sherlock.slurm
 
 ## Findings
 
-After reviewings the results we found that gemini-2.5-pro was the most accurate multimodal model in the Stanford AI Playground API at the time of testing (February 25th, 2026). 
+We ran each task 3x with results showing that gemini-2.5-pro was the most accurate multimodal model in the Stanford AI Playground API at the time of testing (March 17th, 2026). We've now added Claude-4-5-Sonnet, Claude-Opus-4-6, Llama-4, and gpt-5.2 into our evaluation pipeline. 
 
 ### Accuracy by Model
 
@@ -234,11 +234,13 @@ Simple metadata extraction benchmarks (Newspaper Name, Newspaper Date) had the h
 
 ![benchmark_results](./images/benchmarks.png)
 
-Double clicking into these document scanning benchmarks we found that the Gemini models outperformed their peers.
+Double clicking into these document scanning benchmarks we found that the Gemini and Llama-4 models outperformed their peers.
 
 ![first_channel](./images/first_channel.png)
 
 ![first_program](./images/first_program.png)
+
+Across runs accuracy rates by both benchmark and model remained stable. Where we saw the most variablity was in specific combinations of benchmarks and models - ex. first program with gemini-2.0-flash-001 had a standard deviation of 5.7%. The model temperatures had been set to 0 (the most deterministic) and with 35 images changes in response to 1 or 2 can lead to noticeable fluctuations in accuracy rates.
 
 ### Accuracy by Image Id
 
@@ -246,13 +248,13 @@ When analyzing results by image id we found that there was about a 40% differenc
 
 ![image_results](./images/results_image.png)
 
-### Token Usage
+### Token Cost
 
-Looking at model accuracy alongside average token usage showed that even though gpt-4.omini was the 2nd to least accurate LLM it used almost 10x the amount of tokens as the most accurate model (gemini-2.5-pro) for a single task.
+Looking at model accuracy alongside total token cost showed that even though o1 was the 6th most accurate LLM it used almost 4.7x the amount of tokens as the most accurate model (gemini-2.5-pro).
 
-![model_tokens](./images/model_tokens.png)
+![model_cost](./images/token_cost.png)
 
-Double clicking into metadata extraction benchmarks Newspaper Name and Newspaper Date found similar results could be produced with varying token amounts. GPT-4 models returned Newspaper Name just as accurately as gemini-2.5-pro (82.9%) but only required 1/3 the amount of tokens (1203). Similarly o1 got Newspaper Date correct 100% of the time but only needed 1/4 the number of tokens as gemini-2.5-pro. 
+Double clicking into metadata extraction benchmarks Newspaper Name and Newspaper Date found similar results could be produced for varying costs. Claude-3-haiku models returned Newspaper Name and Newspaper Datejust as accurately as gemini-2.5-pro (100%) but only cost $0.06 or 1/24 as much. Similarly gemini-2.0-flash-lite-001 got Newspaper Date correct 100% of the time but only cost $0.03 vs $1.49 for gemini-2.5-pro. 
 
 ### Limitations
 

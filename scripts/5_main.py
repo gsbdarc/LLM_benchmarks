@@ -25,24 +25,18 @@ import sys
 task_selection = sys.argv[1]
 # cast to int so we can use this to index mapping.csv
 task_selection = int(task_selection)
-#task_selection = 3713
+# task_selection = 3713
 
 # Load environment variables from .env file
 BASE_DIR = Path(__file__).resolve().parents[1]
-load_dotenv(BASE_DIR/".env")
+load_dotenv(BASE_DIR / ".env")
 
 STANFORD_API_KEY = os.getenv("STANFORD_API_KEY")
 
 ENDPOINT = "https://aiapi-prod.stanford.edu/v1/chat/completions"
 
-# create dictionary to convert strings to actual python types
-
-type_map = {
-    "str": [str, "string"]
-}
-
-
 # Helper Functions
+
 
 def already_processed(json_path: str) -> bool:
     """Check if a task's result JSON already has status: processed."""
@@ -59,12 +53,11 @@ def already_processed(json_path: str) -> bool:
 
 
 def create_pydantic_model(
-        benchmark_id: str) -> tuple[ dict, list, str, str]:
+        benchmark_id: str) -> tuple[dict, list, str, str]:
     """
-    Builds pydantic model and other prompt related model inputs based off of benchmark_id.
+    Builds pydantic and other prompt related model inputs based off of benchmark_id.
 
     Returns:
-        DynamicModel: The constructed Pydantic model class
         properties: JSON schema properties dict
         required: List of required field names
         system_prompt: The system prompt string
@@ -75,18 +68,11 @@ def create_pydantic_model(
     with open(benchmark_path, "r") as f:
         benchmarks = json.load(f)
 
+    benchmark_name = benchmarks[benchmark_id]['task_name']
     SYSTEM_PROMPT = benchmarks[benchmark_id]['system_prompt']
     USER_PROMPT = benchmarks[benchmark_id]['user_prompt']
-    class_name = benchmarks[benchmark_id]['schema']['class_name']
-    fields = benchmarks[benchmark_id]['schema']['fields']
-
-    properties = {}
-    required = []
-
-    for field_name, field_type in fields.items():
-        json_type = type_map[field_type][1]  # converts "str" to "string"
-        properties[field_name] = {"type": json_type}
-        required.append(field_name)
+    properties = benchmarks[benchmark_id]['schema']['fields']
+    required = list(properties.keys())
 
     return properties, required, SYSTEM_PROMPT, USER_PROMPT
 
@@ -239,20 +225,23 @@ def run_model(model_name: str, b64: str, SYSTEM_PROMPT: str,
 def main():
     """Load a task from the mapping, process it through the LLM pipeline, and save results."""
 
-    run_number = 2
+    run_number = 2  # future iteration: add this as a slurm script variable, have a default
 
     mapping_path = os.path.join(BASE_DIR, "inputs", "mapping.csv")
 
     mapping = pd.read_csv(mapping_path)
-    #mapping = mapping[~mapping['model_name'].isin(['claude-3-5-sonnet', 'claude-3-7-sonnet'])] # filter out retired models
-    mapping = mapping[mapping['model_name'].isin(['claude-4-5-sonnet', 'claude-opus-4-6', 'gpt-5.2', 'Llama-4'])] # filter for new models
+    # mapping = mapping[~mapping['model_name'].isin(['claude-3-5-sonnet',
+    # 'claude-3-7-sonnet'])] # filter out retired models
+    mapping = mapping[mapping['model_name'].isin(
+        ['claude-4-5-sonnet', 'claude-opus-4-6', 'gpt-5.2', 'Llama-4'])]  # filter for new models
 
     selected_task = mapping[mapping['task_id'] == task_selection]
 
     if selected_task.empty:
         sys.exit(0)  # if the task_id is not in mapping then exit the program
 
-    task_id = int(selected_task['task_id'].iloc[0]) # extract unique task id from mapping
+    # extract unique task id from mapping
+    task_id = int(selected_task['task_id'].iloc[0])
 
     results_json = os.path.join(
         BASE_DIR,
