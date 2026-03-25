@@ -35,7 +35,7 @@ model_path = os.path.join(BASE_DIR, "inputs", "models.json")
 with open(model_path, "r") as f:
     models = json.load(f)
     model_keys = list(models.keys())
-    model_keys = model_keys[1:15]  # take out llama
+    model_keys = model_keys[1:]  # take out llama
 
 # Generate all combinations of benchmarks, models, and images
 

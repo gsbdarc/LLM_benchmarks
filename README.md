@@ -1,6 +1,6 @@
 # [DARC Intern Project] Building Customizable LLM Evaluation Pipelines for Research
 
-> Stanford's AI Playground allows researchers and staff to have access to almost 20 LLMs via their API. How do users determine which model is best suited for their needs? We built a pipeline that delivers a clear ranking of how different models perform on a set of benchmarks related to processing table based images.
+> Stanford's AI Playground allows researchers and staff access to almost 20 LLMs via their API. How do users determine which model is best suited for their needs? We built a pipeline that delivers a clear ranking of how different models perform on a set of benchmarks related to processing table based images.
 
 ---
 
@@ -20,7 +20,7 @@ Business and Social Science research, like the kind done at Stanford GSB, often 
 
 ### LLM Decision Fatigue
 
-Choosing the right LLM is a deceptively tough task. The best choice LLM often depends on what images are being processed, what information needs to be extracted, and how much of a priority efficient token usage takes. Researchers often don't have the time to test models individually. New versions of models come out rapidly and their predecessors get retired just as frequently, when is it worthwhile for user to modify their existing workflows with more recent LLMs?
+Choosing the right LLM is a deceptively tough task. The best choice LLM often depends on the images being processed, the information that needs to be extracted, and the budget for a project. Researchers often don't have the time to test models individually. New versions of models come out rapidly and their predecessors get retired just as frequently, when is it worthwhile for a user to modify their existing workflows with more recent LLMs?
 
 ### Our Approach
 
@@ -71,12 +71,6 @@ pip install -r requirements.txt
 
 ### Create and Activate a Virtual Environment (Sherlock)
 
-Recommended: create new git branch for Sherlock
-
-```
-git checkout -b sherlock
-```
-
 Request compute resources (normal, dev, or gsb) to create a venv.
 
 ```
@@ -93,9 +87,7 @@ pip install -r requirements.txt
 Create a `.env` file in the project root with:
 
 ```text
-OPENAI_API_KEY=your_key_here
 STANFORD_API_KEY=your_key_here
-BASE_DIR = "your/base/directory/LLM_Benchmarks"
 ```
 
 > ⚠️ Note: as models get added & removed from the Stanford AI API you will need to submit a ticket to update your API key.
@@ -148,39 +140,46 @@ Example:
 ```
 ### Run scripts (`LLM_benchmarks/scripts/`)
 
-#### `1.pdf_to_png.py`
+Scripts should be run in the order that they are numbered.
 
-Upload PDFs to `LLM_Benchmarks/inputs/data/pdfs/`
-Converts PDFS into grayscale PNGs, saves files to `LLM_Benchmarks/iputs/data/pngs/`.
-Prints PNG paths and file sizes in MBs.
+#### `1_pdf_to_png.py`
 
-#### `2.make_index.py`
+- Before running: upload PDFs to `LLM_Benchmarks/inputs/data/pdfs/`
+- Converts PDFS into grayscale PNGs, saves files to `LLM_Benchmarks/iputs/data/pngs/`.
+- Prints PNG paths and file sizes in MBs.
 
-Upload CSVs to `LLM_Benchmarks/inputs/data/csvs/`.
-There should be a source of truth CSV for each PDF, naming should be the same excluding .png/.csv.
-Creates a JSON snapshot of paths for PNGs and their source of truth CSVs.
+#### `2_make_index.py`
 
-#### `3.create_mapping.py`
+- Before running: upload CSVs to `LLM_Benchmarks/inputs/data/csvs/`.
+- There should be a source of truth CSV for each PDF, naming should be the same excluding .png/.csv.
+- Creates a JSON snapshot of paths for PNGs and their source of truth CSVs.
+
+#### `3_create_mapping.py`
 
 Creates a mapping file that: 
 (1) finds all unique combinations of selected benchmarks, models, and images
 (2) assigns a unique task id to each one
 (3) saves these results into a csv file to be used in main.py
 
-#### `4.extract_ground_truth.py`
+#### `4_extract_ground_truth.py`
 
-Iterates through all of the CSVs in the image_index.
-Creates/updates ground truth JSON with the correct benchmark values.
+- Context: ground truth csv files were created via human extraction. 
+- Iterates through all of the CSVs in the image_index.
+- Creates/updates ground truth JSON with the correct benchmark values.
 
-> ⚠️ Note: this script needs to be customized based on what the benchmarks are.
+> ⚠️ Note: this script needs to be customized based on what the benchmarks are. An example of how to extract the 'Day' field of the first row is below.
 
-#### `5.main.py`
+```python
+day_of_week = csv_df['Day'][0]
+```
 
-Orchestrates processing of a single task.
-Tasks are loaded via the mapping.csv file
-If the task has not already been processed then the corresponding benchmark, model, and image are loaded from their respective JSONs.
-A pydantic model is dynamically generated and inputs are passed into an LLM via Stanford API.
-The following outputs are saved as an individual JSON file to `LLM_Benchmarks/outputs/results/results_{task_id}.json`
+#### `5_main.py`
+
+- Orchestrates processing of a single task.
+- Tasks are loaded via the mapping.csv file.
+- If the task has not already been processed then the corresponding benchmark, model, and image are loaded from their respective JSONs.
+- A pydantic model is dynamically generated and inputs are passed into an LLM via the Stanford AI API.
+- The following outputs are saved as an individual JSON file to `LLM_Benchmarks/outputs/results/results_{task_id}.json`
 
 ```json
 {
@@ -193,7 +192,8 @@ The following outputs are saved as an individual JSON file to `LLM_Benchmarks/ou
     "benchmark_id": "0",
     "completion_tokens": 9,
     "total_tokens": 1196,
-    "status": "processed"
+    "status": "processed",
+    "run_number": 1
   }
 }
 ```
@@ -205,22 +205,22 @@ Example:
 sbatch sherlock.slurm
 ```
 
-#### `6.combine_check_results.py`
-Loads all results within the `LLM_Benchmarks/outputs/results/` directory.
-Combines results into a single DataFrame.
-Saves the results to `LLM_Benchmarks/outputs/results/metrics/combined_results.json`
-Prints the total number of successful and unsuccessful tasks, returns dictionary of error messages with counts.
+#### `6_combine_check_results.py`
+- Loads all results within the `LLM_Benchmarks/outputs/results/` directory.
+- Combines results into a single DataFrame.
+- Saves the results to `LLM_Benchmarks/outputs/results/metrics/combined_results.json`
+- Prints the total number of successful and unsuccessful tasks, returns dictionary of error messages with counts.
 
-#### `7.compute.py`
-Loads combined_results.json and filters for tasks that have been processed.
-Evaluates model outputs compared to ground truth, assigns a accuracy score.
-Saves results as a `LLM_Benchmarks/outputs/results/metrics/metrics.json`
+#### `7_compute.py`
+- Loads combined_results.json and filters for tasks that have been processed.
+- Evaluates model outputs compared to ground truth, assigns a accuracy score based on exact matching.
+- Saves results as a `LLM_Benchmarks/outputs/results/metrics/metrics.json`
 
 ---
 
 ## Findings
 
-After reviewings the results we found that gemini-2.5-pro was the most accurate multimodal model in the Stanford AI Playground API at the time of testing (February 25th 2026). 
+After reviewings the results we found that gemini-2.5-pro was the most accurate multimodal model in the Stanford AI Playground API at the time of testing (February 25th, 2026). 
 
 ### Accuracy by Model
 
@@ -259,8 +259,6 @@ Double clicking into metadata extraction benchmarks Newspaper Name and Newspaper
 While building and testing this pipeline we identified a couple of opportunties of improvement related to the Stanford AI Playground API. 
 
 Changes to avaiable models are not always consistently announced and often require manual combing through the ai-playground slack channel. Once these changes go into effect API keys need to be rerequested, otherwise they continue to reflect access to models that are no longer available. It would be helpful if API keys would automatically remove retired models and request forms would allow users to signal that they want access to all future models as well.
-
-Another method to increase transparency could be publishing the estimated cost of a token. Right now API cost reports are available on a monthly basis so it's difficult to get a real time sense of what a project may cost. Often times these are small amounts but for larger sets of task this could allow pipelines to run more efficiently.
 
 ---
 
