@@ -82,5 +82,47 @@
         }
       }
     }
+  },
+  "6": {
+    "task_name": "first_channel_2",
+    "system_prompt": "You are a precise OCR assistant specialized in extracting structured data from historical American newspaper TV guide grids. These are dense, low-resolution scans with small fonts, abbreviations, and tightly packed columns. Extract only text that is visibly present. Never guess, infer, or autocomplete.",
+    "user_prompt": "Analyze the provided image of a TV schedule grid from a newspaper. Each row represents one channel. The leftmost area of each row contains the channel information. Extract the channel information from ONLY the first data row of the grid (the first row immediately after the time-slot headers).",
+    "task_description": "Extraction: LLM should identify the name of the first channel of the TV guide (i.e. the first field within the leftmost column ).",
+    "schema": {
+      "class_name": "FirstChannel_2",
+      "fields": {
+        "first_channel": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "7": {
+    "task_name": "first_channel_3",
+    "system_prompt": "You are a precise OCR assistant specialized in extracting structured data from historical American newspaper TV guide grids. These are dense, low-resolution scans with small fonts, abbreviations, and tightly packed columns. Extract only text that is visibly present. Never guess, infer, or autocomplete. If a specific piece of information is illegible or missing, return null.",
+    "user_prompt": "Analyze the provided image of a TV schedule grid. Each horizontal row represents the programming for a single channel. Your Goal: Extract the channel identifying information from ONLY the very first data row of the grid (the row immediately below the time-slot headers).Definition of Channel Information: Channel information is typically found on the extreme left, extreme right, or both edges of the row. It may include: 1. Channel numbers (e.g., 2, 4, WND), 2. Network callsigns or abbreviations (e.g., CBS, WNBC, PBS), 3. City or station identifiers. Instructions: carefully examine the image and extract all channel information in the order they appear.",
+    "task_description": "Extraction: LLM should identify the name of the first channel of the TV guide (i.e. all channel related information in the first row).",
+    "schema": {
+      "class_name": "FirstChannel_3",
+      "fields": {
+        "first_channel": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "8": {
+    "task_name": "first_program_2",
+    "system_prompt": "You are a precise OCR assistant specialized in extracting structured data from historical American newspaper TV guide grids. These are dense, low-resolution scans with small fonts, abbreviations, and tightly packed columns. Extract only text that is visibly present. Never guess, infer, or autocomplete. If a specific piece of information is illegible or missing, return null.",
+    "user_prompt": "Analyze the provided image of a TV schedule grid. Channels are typically listed vertically (rows) and time slots horizontally (columns). Your task is to extract the program title for the FIRST channel listed at the EARLIEST time slot shown. Follow these steps carefully: 1. Scan the grid to identify the top-most row containing programming data. 2. Scan to the left-most time block within that specific row. 3. Identify the text inside this top-leftmost program block.  4. Transcribe the text exactly as printed. Include all numbers (e.g., episode numbers, parts, movie years) and abbreviations that appear immediately with the title.",
+    "task_description": "Extraction: LLM should identify the name of the first program of the TV guide (i.e. the name in the upper leftmost corner).",
+    "schema": {
+      "class_name": "FirstProgram_2",
+      "fields": {
+        "first_program": {
+          "type": "string"
+        }
+      }
+    }
   }
 }
