@@ -164,7 +164,7 @@ def main():
 
     filtered_df = load_and_filter(combined_results)
 
-    # calculated costs
+    # calculate costs
 
     filtered_df = calculate_dollar_costs(filtered_df, model_config)
 
