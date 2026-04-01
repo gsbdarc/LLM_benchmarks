@@ -105,7 +105,7 @@
     "schema": {
       "class_name": "FirstChannel_3",
       "fields": {
-        "all_channel_info": {
+        "first_channel": {
           "type": "string"
         },
         "channel_name_callsign": {
@@ -125,13 +125,21 @@
     "schema": {
       "class_name": "FirstProgram_2",
       "fields": {
-        "raw_text": {
+        "first_program": {
           "type": "string"
-        },
-        "program_name": {
-          "type": "string"
-        },
-        "program_numbers": {
+        }
+      }
+    }
+  },
+  "9": {
+    "task_name": "first_program_details",
+    "system_prompt": "You are a precise OCR assistant specialized in extracting structured data from historical American newspaper TV guide grids. These are dense, low-resolution scans with small fonts, abbreviations, and tightly packed columns. Extract only text that is visibly present. Never guess, infer, or autocomplete. If a specific piece of information is illegible or missing, return null.",
+    "user_prompt": "Analyze the provided image of a TV schedule grid. Channels are typically listed vertically (rows) and time slots horizontally (columns). ",
+    "task_description": "Extraction: LLM should identify the name of the first program of the TV guide (i.e. the name in the upper leftmost corner). Follow these steps carefully: 1. Scan the grid to identify the top-most row containing programming data. 2. Scan to the left-most time block within that specific row. 3. Identify the text inside this top-leftmost program block. Transcribe ONLY the text appearing immediately after the main program title. This usually consists of TV guide metadata such as closed captioning markers, rerun indicators, movie release years, or VCR Plus+ codes (numeric sequences). Do not include the program title. Extract the symbols, brackets, and parentheses exactly as printed. If there is no text following the title, output null.",
+    "schema": {
+      "class_name": "first_program_details",
+      "fields": {
+        "first_program_details": {
           "type": "string"
         }
       }
