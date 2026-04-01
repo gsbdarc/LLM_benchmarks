@@ -1,10 +1,10 @@
 # Goals
 
 # - Load mapping.csv for list of tasks
-# - Check if task has been processed succesfully, exit if so
+# - Check if task has been processed succesfully in MongoDB, exit if so
 # - Load inputs (benchmark, model, and image) based on mapping
 # - Process task
-# - Save results as json file in output folder
+# - Write results to MongoDB
 
 # Load Python packages and modules
 
@@ -20,20 +20,41 @@ import csv
 import base64
 from pathlib import Path
 import sys
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
+from datetime import datetime
 
 # Task selection from slurm array
-task_selection = sys.argv[1]
+# task_selection = sys.argv[1]
 # cast to int so we can use this to index mapping.csv
-task_selection = int(task_selection)
-# task_selection = 3713
+# task_selection = int(task_selection)
+task_selection = 147
 
 # Load environment variables from .env file
 BASE_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(BASE_DIR / ".env")
 
+# Stanford AI Gateway
 STANFORD_API_KEY = os.getenv("STANFORD_API_KEY")
-
 ENDPOINT = "https://aiapi-prod.stanford.edu/v1/chat/completions"
+
+# MongoDB
+username = os.getenv("MONGO_DB_USERNAME")
+password = os.getenv("MONGO_DB_PASSWORD")
+
+hosts = [
+    'darc-data-shard-00-00.9fjam.mongodb.net:27017',
+    'darc-data-shard-00-01.9fjam.mongodb.net:27017',
+    'darc-data-shard-00-02.9fjam.mongodb.net:27017'
+]
+setName = 'DARC-Data-shard-0'
+uri = (
+    f"mongodb://{username}:{password}@{','.join(hosts)}/"
+    f"?tls=true&replicaSet={setName}&authSource=admin&retryWrites=true&w=majority&appName=DARC-Data"
+)
+client = MongoClient(uri, server_api=ServerApi('1'))
+db = client["usf-internship"]
+collection = db["llm_outputs"]
 
 # Helper Functions
 
@@ -50,6 +71,18 @@ def already_processed(json_path: str) -> bool:
             return False
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
         return False
+
+
+def check_task_mongo(collection, task_id: str, run_id: int) -> bool:
+    """Check if tasks already exists in Mongo. If the task does exist, check if the status key has a value of processed."""
+    result = collection.find_one(
+        {"_id": f"{task_id}_{run_id}"},
+        {"status": "processed"}
+    )
+    if result is None:
+        return False
+    else:
+        return True
 
 
 def create_pydantic_model(
@@ -189,7 +222,6 @@ def run_model(model_name: str, b64: str, SYSTEM_PROMPT: str,
                 output_dict["image_id"] = image_id
                 output_dict["benchmark_name"] = benchmark_name
                 output_dict["benchmark_id"] = benchmark_id
-                output_dict["run_id"] = run_number
 
                 if usage:
                     output_dict["completion_tokens"] = usage["completion_tokens"]
@@ -219,7 +251,24 @@ def run_model(model_name: str, b64: str, SYSTEM_PROMPT: str,
                 output_dict["error"] = str(e)
                 output_dict["status"] = status
 
+        output_dict["run_id"] = run_number
+
         return output_dict  # all retries failed, exit loop
+
+
+def write_results_mongo(collection, task_id: str, result: dict) -> None:
+    """ Writes a single result ot MongoDB, replaces existing record if it already exists."""
+    doc = {
+        "_id": f"{task_id}_{run_id}",
+        "task_id": task_id,
+        **result,
+        "updated_at": datetime.now(),
+    }
+    collection.replace_one(
+        {"_id": doc["_id"]},
+        doc,
+        upsert=True
+    )
 
 
 def main():
@@ -232,26 +281,24 @@ def main():
     mapping = pd.read_csv(mapping_path)
     # mapping = mapping[~mapping['model_name'].isin(['claude-3-5-sonnet',
     # 'claude-3-7-sonnet'])] # filter out retired models
-    mapping = mapping[mapping['model_name'].isin(
-        ['claude-4-5-sonnet', 'claude-opus-4-6', 'gpt-5.2', 'Llama-4'])]  # filter for new models
+    # mapping = mapping[mapping['model_name'].isin(
+    # ['claude-4-5-sonnet', 'claude-opus-4-6', 'gpt-5.2', 'Llama-4'])]  # filter for new models
 
     selected_task = mapping[mapping['task_id'] == task_selection]
 
     if selected_task.empty:
         sys.exit(0)  # if the task_id is not in mapping then exit the program
 
-    # extract unique task id from mapping
-    task_id = int(selected_task['task_id'].iloc[0])
-
     results_json = os.path.join(
         BASE_DIR,
         "outputs",
         "results",
-        f"results_{task_id}_{run_number}.json")
+        f"results_{task_selection}_{run_number}.json")
 
     # check if we need to process this task
 
-    if already_processed(results_json):
+    if check_task_mongo(collection, str(task_selection), run_number):
+        print("Task has already been processed.")
         sys.exit(0)
 
     # load inputs from mapping
@@ -279,15 +326,9 @@ def main():
                              benchmark_name, benchmark_id, model_id,
                              image_id, run_number)
 
-    # assign LLM results to a dictionary
+    # write LLM results to MongoDB
 
-    results = dict()
-    results[task_id] = model_output
-
-    # save as a JSON file
-
-    with open(results_json, "w") as f:
-        json.dump(results, f, indent=2)
+    write_results_mongo(collection, str(task_selection), model_output)
 
 
 if __name__ == "__main__":
