@@ -58,26 +58,10 @@ collection = db["llm_outputs"]
 
 # Helper Functions
 
-
-def already_processed(json_path: str) -> bool:
-    """Check if a task's result JSON already has status: processed."""
-    try:
-        with open(json_path, "r") as f:
-            result = json.load(f)
-            for task_data in result.values():
-                if isinstance(task_data, dict) and task_data.get(
-                        "status") == "processed":
-                    return True
-            return False
-    except (FileNotFoundError, json.JSONDecodeError, KeyError):
-        return False
-
-
 def check_task_mongo(collection, task_id: str, run_id: int) -> bool:
     """Check if tasks already exists in Mongo. If the task does exist, check if the status key has a value of processed."""
     result = collection.find_one(
-        {"_id": f"{task_id}_{run_id}"},
-        {"status": "processed"}
+        {"_id": f"{task_id}_{run_id}_processed"},
     )
     if result is None:
         return False
@@ -258,8 +242,9 @@ def run_model(model_name: str, b64: str, SYSTEM_PROMPT: str,
 
 def write_results_mongo(collection, task_id: str, result: dict) -> None:
     """ Writes a single result ot MongoDB, replaces existing record if it already exists."""
+    status = result["status"]
     doc = {
-        "_id": f"{task_id}_{run_id}",
+        "_id": f"{task_id}_{run_id}_{status}",
         "task_id": task_id,
         **result,
         "updated_at": datetime.now(),
