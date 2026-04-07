@@ -91,7 +91,7 @@
     "schema": {
       "class_name": "FirstChannel_2",
       "fields": {
-        "first_channel": {
+        "first_channel_edges": {
           "type": "string"
         }
       }
@@ -105,13 +105,13 @@
     "schema": {
       "class_name": "FirstChannel_3",
       "fields": {
-        "first_channel": {
+        "first_channel_all": {
           "type": "string"
         },
-        "channel_name_callsign": {
+        "first_channel_name_callsign": {
           "type": "string"
         },
-        "channel_numbers": {
+        "first_channel_numbers": {
           "type": "array"
         }
       }
@@ -120,27 +120,69 @@
   "8": {
     "task_name": "first_program_2",
     "system_prompt": "You are a precise OCR assistant specialized in extracting structured data from historical American newspaper TV guide grids. These are dense, low-resolution scans with small fonts, abbreviations, and tightly packed columns. Extract only text that is visibly present. Never guess, infer, or autocomplete. If a specific piece of information is illegible or missing, return null.",
-    "user_prompt": "Analyze the provided image of a TV schedule grid. Channels are typically listed vertically (rows) and time slots horizontally (columns). Your task is to extract the program title for the FIRST channel listed at the EARLIEST time slot shown. Follow these steps carefully: 1. Scan the grid to identify the top-most row containing programming data. 2. Scan to the left-most time block within that specific row. 3. Identify the text inside this top-leftmost program block.  4. Transcribe the text exactly as printed. Include all numbers (e.g., episode numbers, parts, movie years), abbreviations, and characters that appear immediately with the title.",
+    "user_prompt": "Analyze the provided image of a TV schedule grid. Channels are typically listed vertically (rows) and time slots horizontally (columns). Your task is to extract the program title for the FIRST channel listed at the EARLIEST time slot shown. Follow these steps carefully: 1. Scan the grid to identify the top-most row containing programming data (the row immediately below the time-slot or any other subsection headers). 2. Scan to the left-most time block within that specific row. 3. Identify the text inside this top-leftmost program block.  4. Transcribe the text exactly as printed. Include all numbers (e.g., episode numbers, parts, movie years), abbreviations, and characters that appear immediately with the title.",
     "task_description": "Extraction: LLM should identify the name of the first program of the TV guide (i.e. the name in the upper leftmost corner).",
     "schema": {
       "class_name": "FirstProgram_2",
       "fields": {
-        "first_program": {
+        "first_program_all": {
           "type": "string"
         }
       }
     }
   },
   "9": {
-    "task_name": "first_program_details",
+    "task_name": "first_program_3",
     "system_prompt": "You are a precise OCR assistant specialized in extracting structured data from historical American newspaper TV guide grids. These are dense, low-resolution scans with small fonts, abbreviations, and tightly packed columns. Extract only text that is visibly present. Never guess, infer, or autocomplete. If a specific piece of information is illegible or missing, return null.",
-    "user_prompt": "Analyze the provided image of a TV schedule grid. Channels are typically listed vertically (rows) and time slots horizontally (columns). ",
-    "task_description": "Extraction: LLM should identify the name of the first program of the TV guide (i.e. the name in the upper leftmost corner). Follow these steps carefully: 1. Scan the grid to identify the top-most row containing programming data. 2. Scan to the left-most time block within that specific row. 3. Identify the text inside this top-leftmost program block. Transcribe ONLY the text appearing immediately after the main program title. This usually consists of TV guide metadata such as closed captioning markers, rerun indicators, movie release years, or VCR Plus+ codes (numeric sequences). Do not include the program title. Extract the symbols, brackets, and parentheses exactly as printed. If there is no text following the title, output null.",
+    "user_prompt": "Analyze the provided image of a TV schedule grid. Channels are typically listed vertically (rows) and time slots horizontally (columns). Your task is to extract the program title for the FIRST channel listed at the EARLIEST time slot shown. Follow these steps carefully: 1. Scan the grid to identify the top-most row containing programming data (the row immediately below the time-slot or any other subsection headers). 2. Scan to the left-most time block within that specific row. 3. Identify the text inside this top-leftmost program block.  4. Return only the title, ignore all closed captioning markers, rerun indicators, movie release years, or VCR Plus+ codes (numeric sequences) that appear immediately with the title.",
+    "task_description": "Extraction: LLM should identify the name of the first program of the TV guide (i.e. the name in the upper leftmost corner).",
     "schema": {
-      "class_name": "first_program_details",
+      "class_name": "FirstProgram_Name",
       "fields": {
-        "first_program_details": {
+        "first_program_name": {
           "type": "string"
+        }
+      }
+    }
+  },
+  "10": {
+    "task_name": "first_program_4",
+    "system_prompt": "You are a precise OCR assistant specialized in extracting structured data from historical American newspaper TV guide grids. These are dense, low-resolution scans with small fonts, abbreviations, and tightly packed columns. Extract only text that is visibly present. Never guess, infer, or autocomplete. If a specific piece of information is illegible or missing, return null.",
+    "user_prompt": "Analyze the provided image of a TV schedule grid. Channels are typically listed vertically (rows) and time slots horizontally (columns). Follow these steps carefully: 1. Scan the grid to identify the top-most row containing programming data (the row immediately below the time-slot or any other subsection headers). 2. Scan to the left-most time block within that specific row. 3. Identify the text inside this top-leftmost program block. Transcribe ONLY the text appearing immediately after the main program title. This usually consists of TV guide metadata such as closed captioning markers, rerun indicators, movie release years, or VCR Plus+ codes (numeric sequences). Do not include the program title. Extract the symbols, brackets, and parentheses exactly as printed. If there is no text following the title, output null.",
+    "task_description": "Extraction: LLM should identify the name of the first program of the TV guide (i.e. the name in the upper leftmost corner).",
+    "schema": {
+      "class_name": "FirstProgram_Trailing",
+      "fields": {
+        "first_program_trailing": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "11": {
+    "task_name": "all_channels_1",
+    "system_prompt": "You are a precise OCR assistant specialized in extracting structured data from historical American newspaper TV guide grids. These are dense, low-resolution scans with small fonts, abbreviations, and tightly packed columns. Extract only text that is visibly present. Never guess, infer, or autocomplete. If a specific piece of information is illegible or missing, return null.",
+    "user_prompt": "You are an expert data extraction assistant. Analyze the provided image of a newspaper TV schedule grid. Your task is to extract a comprehensive list of all channel identifiers, capturing every number and name in strict left-to-right order for each row. Step-by-Step Extraction: Locate the Channel Column: Scan the image to identify the vertical column(s) dedicated to listing the channels. Rely on the structural pattern to find it: look for a dense, vertical stack containing short numbers and network names/callsigns. Do not rely on its position on the page. Scan Row by Row: Move down this specific vertical axis, processing one channel row at a time. Extract Left-to-Right: For every single row, read horizontally from left to right. Capture every identifier belonging to that channel. Exclusions & Filtering (CRITICAL Guardrails): SKIP Category Headers: Do not extract structural sub-headers that group the channels inside the grid itself (e.g., BROADCAST CHANNELS, CABLE CHANNELS, PREMIUM). Output the final extracted channels STRICTLY as a single, valid JSON array of strings. For each row, the string must contain the extracted identifiers in the exact left-to-right order they appear, separated by a pipe (|) character with a single space on either side.",
+    "task_description": "Extraction: LLM should identify all channels printed in the newspaper TV guide.",
+    "schema": {
+      "class_name": "All_Channels_1",
+      "fields": {
+        "all_channels": {
+          "type": "array"
+        }
+      }
+    }
+  },
+  "12": {
+    "task_name": "all_times_1",
+    "system_prompt": "You are a precise OCR assistant specialized in extracting structured data from historical American newspaper TV guide grids. These are dense, low-resolution scans with small fonts, abbreviations, and tightly packed columns. Extract only text that is visibly present. Never guess, infer, or autocomplete. If a specific piece of information is illegible or missing, return null.",
+    "user_prompt": "You are an expert data extraction assistant. Analyze the provided image of a newspaper TV schedule grid. Your task is to extract a comprehensive, sequential list of all the time slots that form the horizontal axis of the grid, reading strictly from left to right. Step-by-Step Extraction: Locate the Time Axis: Scan the image to identify the primary horizontal row(s) dedicated to chronological time increments (e.g., 6:00, 6:30, 7:00, 7:30). This is almost always located at the very top of the schedule grid, acting as the column headers for the TV shows. Extract and Clean the Times: Capture every time increment in the sequence. You must REMOVE any am, pm, AM, or PM text attached to the time. Output the final extracted time slots STRICTLY as a single, valid JSON array of strings. List the numeric time slots in the exact left-to-right chronological order they appear on the grid.",
+    "task_description": "Extraction: LLM should identify all time slots printed in the newspaper TV guide.",
+    "schema": {
+      "class_name": "All_Times_1",
+      "fields": {
+        "all_timeslots": {
+          "type": "array"
         }
       }
     }
