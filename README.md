@@ -179,11 +179,13 @@ day_of_week = csv_df['Day'][0]
 - Tasks are loaded via the mapping.csv file.
 - If the task has not already been processed then the corresponding benchmark, model, and image are loaded from their respective JSONs.
 - A pydantic model and prompts are passed into an LLM via the Stanford AI API.
-- The following outputs are saved as an individual JSON file to `LLM_Benchmarks/outputs/results/results_{task_id}_{run_id}.json`
+- The following outputs are saved to the DARC MongoDB shard
 
 ```json
 {
-  "0": {
+    "_id": "0_1",
+    "task_id": "0",
+    "run_id": 1,
     "output": "Arizona Republic",
     "model_name": "gpt-4",
     "model_id": "1",
@@ -193,8 +195,8 @@ day_of_week = csv_df['Day'][0]
     "completion_tokens": 9,
     "total_tokens": 1196,
     "status": "processed",
-    "run_number": 1
-  }
+    "run_number": 1,
+    "updated_at": "April 1st, 12pm"
 }
 ```
 
