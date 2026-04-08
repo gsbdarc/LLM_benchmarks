@@ -4,279 +4,508 @@
     "newspaper_date": "Dec 17 2000",
     "day_of_week": "Wednesday",
     "tv_guide_date": "December 20 2000",
-    "first_program": "Good Morning Arizona 94204",
-    "first_channel": "3"
+    "first_program_raw": "Good Morning Arizona 94204",
+    "first_channel_raw": "3",
+    "first_channel_name": "null",
+    "first_channel_numbers": [
+      "3"
+    ],
+    "first_program_name": "Good Morning Arizona",
+    "first_program_trailing": "94204"
   },
   "1": {
     "newspaper_name": "Austin American Statesman",
     "newspaper_date": "Aug 3 2014",
     "day_of_week": "Saturday",
     "tv_guide_date": "August 9 2014",
-    "first_program": "Good Day Austin Saturday",
-    "first_channel": "Fox/7.1"
+    "first_program_raw": "Good Day Austin Saturday",
+    "first_channel_raw": "Fox/7.1 2 2 2",
+    "first_channel_name": "Fox",
+    "first_channel_numbers": [
+      "7.1",
+      "2",
+      "2",
+      "2"
+    ],
+    "first_program_name": "Good Day Austin Saturday",
+    "first_program_trailing": "null"
   },
   "2": {
     "newspaper_name": "Austin American Statesman",
     "newspaper_date": "Feb 22 2015",
     "day_of_week": "Sunday",
     "tv_guide_date": "February 22 2015",
-    "first_program": "2015 Daytona 500 The 57th running of the event. The race consists of 200 laps and is the first race of the season. (N) (cc)",
-    "first_channel": "Fox/7.1"
+    "first_program_raw": "2015 Daytona 500 The 57th running of the event. The race consists of 200 laps and is the first race of the season. (N) (cc)",
+    "first_channel_raw": "Fox/7.1 2 2 2",
+    "first_channel_name": "Fox",
+    "first_channel_numbers": [
+      "7.1",
+      "2",
+      "2",
+      "2"
+    ],
+    "first_program_name": "Good Day Austin Saturday",
+    "first_program_trailing": "(N) (cc)"
   },
   "3": {
     "newspaper_name": "Austin American Statesman",
     "newspaper_date": "Jan 12 2014",
     "day_of_week": "Saturday",
     "tv_guide_date": "January 18 2014",
-    "first_program": "Good Day Austin Saturday",
-    "first_channel": "Fox/7.1"
+    "first_program_raw": "Good Day Austin Saturday",
+    "first_channel_raw": "Fox/7.1 2 2 2",
+    "first_channel_name": "Fox",
+    "first_channel_numbers": [
+      "7.1",
+      "2",
+      "2",
+      "2"
+    ],
+    "first_program_name": "Good Day Austin Saturday",
+    "first_program_trailing": "null"
   },
   "4": {
     "newspaper_name": "Austin American Statesman",
     "newspaper_date": "Nov 23 2014",
     "day_of_week": "Saturday",
     "tv_guide_date": "November 29 2014",
-    "first_program": "News",
-    "first_channel": "Fox/7.1"
+    "first_program_raw": "News",
+    "first_channel_raw": "Fox/7.1",
+    "first_channel_name": "Fox",
+    "first_channel_numbers": [
+      "7.1",
+      "2",
+      "2",
+      "2"
+    ],
+    "first_program_name": "News",
+    "first_program_trailing": "null"
   },
   "5": {
     "newspaper_name": "Chicago Tribune",
     "newspaper_date": "May 28 1995",
     "day_of_week": "Saturday",
     "tv_guide_date": "June 3 1995",
-    "first_program": "Ancient Mysteries",
-    "first_channel": "AE"
+    "first_program_raw": "Ancient Mysteries 394796",
+    "first_channel_raw": "AE",
+    "first_channel_name": "AE",
+    "first_channel_numbers": "null",
+    "first_program_name": "Ancient Mysteries",
+    "first_program_trailing": "394796"
   },
   "6": {
     "newspaper_name": "Chicago Tribune",
     "newspaper_date": "Oct 30 1994",
     "day_of_week": "Saturday",
     "tv_guide_date": "November 5 1994",
-    "first_program": "Ancient Mysteries",
-    "first_channel": "AE"
+    "first_program_raw": "Ancient Mysteries 408211",
+    "first_channel_raw": "AE",
+    "first_channel_name": "AE",
+    "first_channel_numbers": "null",
+    "first_program_name": "Ancient Mysteries",
+    "first_program_trailing": "408211"
   },
   "7": {
     "newspaper_name": "Daily News",
     "newspaper_date": "Apr 13 2008",
     "day_of_week": "Monday",
     "tv_guide_date": "April 14 2008",
-    "first_program": "News at Noon",
-    "first_channel": "2"
+    "first_program_raw": "News at Noon",
+    "first_channel_raw": "2",
+    "first_channel_name": "null",
+    "first_channel_numbers": [
+      "2"
+    ],
+    "first_program_name": "News at Noon",
+    "first_program_trailing": "null"
   },
   "8": {
     "newspaper_name": "Daily News",
     "newspaper_date": "Apr 25 2010",
     "day_of_week": "Thursday",
     "tv_guide_date": "April 29 2010",
-    "first_program": "CBS 2 News",
-    "first_channel": "2 WCBS"
+    "first_program_raw": "CBS 2 News",
+    "first_channel_raw": "2 WCBS",
+    "first_channel_name": "WCBS",
+    "first_channel_numbers": [
+      "2"
+    ],
+    "first_program_name": "CBS 2 News",
+    "first_program_trailing": "null"
   },
   "9": {
     "newspaper_name": "Daily News",
     "newspaper_date": "Jun 17 2012",
     "day_of_week": "Monday",
     "tv_guide_date": "June 18 2012",
-    "first_program": "CBS 2 News Sunday (N)",
-    "first_channel": "2 WCBS"
+    "first_program_raw": "CBS 2 News Sunday (N) (cc)",
+    "first_channel_raw": "2 WCBS",
+    "first_channel_name": "WCBS",
+    "first_channel_numbers": [
+      "2"
+    ],
+    "first_program_name": "CBS 2 News Sunday",
+    "first_program_trailing": "(N) (cc)"
   },
   "10": {
     "newspaper_name": "Daily News",
     "newspaper_date": "Jun 9 2013",
     "day_of_week": "Sunday",
     "tv_guide_date": "June 9 2013",
-    "first_program": "CBS 2 News Sunday (N)",
-    "first_channel": "2 WCBS"
+    "first_program_raw": "CBS 2 News Sunday (N)",
+    "first_channel_raw": "2 WCBS",
+    "first_channel_name": "WCBS",
+    "first_channel_numbers": [
+      "2"
+    ],
+    "first_program_name": "CBS 2 News Sunday",
+    "first_program_trailing": "(N)"
   },
   "11": {
     "newspaper_name": "Daily News",
     "newspaper_date": "Mar 11 2012",
     "day_of_week": "Friday",
     "tv_guide_date": "March 16 2012",
-    "first_program": "(4:30) CBS 2 News This Morning (N) (cc)",
-    "first_channel": "2 WCBS"
+    "first_program_new": "(4:30) CBS 2 News This Morning (N) (cc)",
+    "first_channel_new": "2 WCBS",
+    "first_channel_name": "WCBS",
+    "first_channel_numbers": [
+      "2"
+    ],
+    "first_program_name": "CBS 2 News This Morning",
+    "first_program_trailing": "(N) (cc)"
   },
   "12": {
     "newspaper_name": "Daily News",
     "newspaper_date": "Mar 30 2014",
     "day_of_week": "Monday",
     "tv_guide_date": "March 31 2014",
-    "first_program": "NCAA Basketball",
-    "first_channel": "2 WCBS"
+    "first_program_raw": "NCAA Basketball",
+    "first_channel_raw": "2 WCBS",
+    "first_channel_name": "WCBS",
+    "first_channel_numbers": [
+      "2"
+    ],
+    "first_program_name": "NCAA Basketball",
+    "first_program_trailing": "null"
   },
   "13": {
     "newspaper_name": "Daily News",
     "newspaper_date": "May 15 2016",
     "day_of_week": "Sunday",
     "tv_guide_date": "May 22 2016",
-    "first_program": "CBS 2 News Saturday (N) (cc)",
-    "first_channel": "2 WCBS"
+    "first_program_raw": "CBS 2 News Saturday (N) (cc)",
+    "first_channel_raw": "2 WCBS",
+    "first_channel_name": "WCBS",
+    "first_channel_numbers": [
+      "2"
+    ],
+    "first_program_name": "CBS 2 News Saturday",
+    "first_program_trailing": "(N) (CC)"
   },
   "14": {
     "newspaper_name": "Daily News",
     "newspaper_date": "Oct 14 2007",
     "day_of_week": "Monday",
     "tv_guide_date": "October 15 2007",
-    "first_program": "30-Minute Meals",
-    "first_channel": "FOOD"
+    "first_program_raw": "30-Minute Meals",
+    "first_channel)raw": "FOOD",
+    "first_channel_name": "FOOD",
+    "first_channel_numbers": "null",
+    "first_program_name": "30-Minute Meals",
+    "first_program_trailing": "null"
   },
   "15": {
     "newspaper_name": "Daily News",
     "newspaper_date": "Oct 18 2009",
     "day_of_week": "Saturday",
     "tv_guide_date": "October 24 2009",
-    "first_program": "SNAKES ON A PLANE ('06) Samuel L. Jackson, Kenan Thompson. 3066705",
-    "first_channel": "FX"
+    "first_program_raw": "SNAKES ON A PLANE ('06) Samuel L. Jackson, Kenan Thompson. 3066705",
+    "first_channel_raw": "FX",
+    "first_channel_name": "FX",
+    "first_channel_numbers": "null",
+    "first_program_name": "SNAKES ON A PLANE Samuel L. Jackson, Kenan Thompson.",
+    "first_program_trailing": "('06) 3066705"
   },
   "16": {
     "newspaper_name": "Honolulu Star Advertiser",
     "newspaper_date": "Oct 9 2016",
     "day_of_week": "Tuesday",
     "tv_guide_date": "October 11 2016",
-    "first_program": "Wake Up 2Day",
-    "first_channel": "2 KHON 3 3 3"
+    "first_program_raw": "Wake Up 2Day",
+    "first_channel_raw": "2 KHON 3 3 3",
+    "first_channel_name": "KHON",
+    "first_channel_numbers": [
+      "2",
+      "3",
+      "3",
+      "3"
+    ],
+    "first_program_name": "Wake Up 2Day",
+    "first_program_trailing": "null"
   },
   "17": {
     "newspaper_name": "Messenger Inquirer",
     "newspaper_date": "Oct 12 1997",
     "day_of_week": "Monday",
     "tv_guide_date": "October 13 1997",
-    "first_program": "News",
-    "first_channel": "7 WTVW"
+    "first_program_raw": "News",
+    "first_channel_raw": "7 WTVW",
+    "first_channel_name": "WTVW",
+    "first_channel_numbers": [
+      "7"
+    ],
+    "first_program_name": "News",
+    "first_program_trailing": "null"
   },
   "18": {
     "newspaper_name": "Statesman Journal",
     "newspaper_date": "Jan 17 1999",
     "day_of_week": "Thursday",
     "tv_guide_date": "January 21 1999",
-    "first_program": "ABC World News Tonight (CC) 173",
-    "first_channel": "2 KATU ABC"
+    "first_program_raw": "ABC World News Tonight (CC) 173",
+    "first_channel_raw": "2 KATU ABC",
+    "first_channel_name": "KATU ABC",
+    "first_channel_numbers": [
+      "2"
+    ],
+    "first_program_name": "ABC World News Tonight",
+    "first_program_trailing": "(CC) 173"
   },
   "19": {
     "newspaper_name": "Statesman Journal",
     "newspaper_date": "Nov 8 1998",
     "day_of_week": "Friday",
     "tv_guide_date": "November 13 1998",
-    "first_program": "Politically 9292145",
-    "first_channel": "2 KATU"
+    "first_program_raw": "Politically 9292145",
+    "first_channel_raw": "2 KATU",
+    "first_channel_name": "KATU",
+    "first_channel_numbers": [
+      "2"
+    ],
+    "first_program_name": "Politically",
+    "first_program_trailing": "9292145"
   },
   "20": {
     "newspaper_name": "Statesman Journal",
     "newspaper_date": "Sep 5 1999",
     "day_of_week": "Wednesday",
     "tv_guide_date": "September 8 1999",
-    "first_program": "News (CC) 85682",
-    "first_channel": "2 KATU"
+    "first_program_raw": "News (CC) 85682",
+    "first_channel_raw": "2 KATU",
+    "first_channel_name": "KATU",
+    "first_channel_numbers": [
+      "2"
+    ],
+    "first_program_name": "News",
+    "first_program_trailing": "(CC) 85682"
   },
   "21": {
     "newspaper_name": "The Arizona Republic",
     "newspaper_date": "Mar 5 2000",
     "day_of_week": "Saturday",
     "tv_guide_date": "March 11 2000",
-    "first_program": "Biography: Gene Hackman. 413091",
-    "first_channel": "A&E"
+    "first_program_raw": "Biography: Gene Hackman. 413091",
+    "first_channel_raw": "A&E",
+    "first_channel_name": "A&E",
+    "first_channel_numbers": "null",
+    "first_program_name": "Biography: Gene Hackman.",
+    "first_program_trailing": "413091"
   },
   "22": {
     "newspaper_name": "The Californian",
     "newspaper_date": "May 31 1998",
     "day_of_week": "Tuesday",
     "tv_guide_date": "June 2 1998",
-    "first_program": "News",
-    "first_channel": "KCBS 2"
+    "first_program_raw": "News",
+    "first_channel_raw": "KCBS 2 2 2 2 2",
+    "first_channel_name": "KCBS",
+    "first_channel_numbers": [
+      "2",
+      "2",
+      "2",
+      "2",
+      "2"
+    ],
+    "first_program_name": "News",
+    "first_program_trailing": "null"
   },
   "23": {
     "newspaper_name": "The Honolulu Advertiser",
     "newspaper_date": "Feb 9 1997",
     "day_of_week": "Thursday",
     "tv_guide_date": "February 13 1997",
-    "first_program": "(6:00) News (CC) 89164",
-    "first_channel": "2 3 2 Fox"
+    "first_program_raw": "(6:00) News (CC) 89164",
+    "first_channel_raw": "2 3 2 Fox",
+    "first_channel_name": "Fox",
+    "first_channel_numbers": [
+      "2",
+      "3",
+      "2"
+    ],
+    "first_program_name": "News",
+    "first_program_trailing": "(CC) 89164"
   },
   "24": {
     "newspaper_name": "The Honolulu Advertiser",
     "newspaper_date": "Mar 21 2004",
     "day_of_week": "Friday",
     "tv_guide_date": "March 26 2004",
-    "first_program": "Futurerama 8712",
-    "first_channel": "2 3 003 2"
+    "first_program_raw": "Futurerama 8712",
+    "first_channel_raw": "2 3 003 2 KHON",
+    "first_channel_name": "KHON",
+    "first_channel_numbers": [
+      "2",
+      "3",
+      "003",
+      "2"
+    ],
+    "first_program_name": "Futurerama",
+    "first_program_trailing": "8712"
   },
   "25": {
     "newspaper_name": "The Honolulu Advertiser",
     "newspaper_date": "Mar 9 2003",
     "day_of_week": "Monday",
     "tv_guide_date": "March 10 2003",
-    "first_program": "(6:00) News (CC) 52978",
-    "first_channel": "2 3 003 2"
+    "first_program_raw": "(6:00) News (CC) 52978",
+    "first_channel_raw": "2 3 003 2 KHON",
+    "first_channel_name": "KHON",
+    "first_channel_numbers": [
+      "2",
+      "3",
+      "003",
+      "2"
+    ],
+    "first_program_name": "News",
+    "first_program_trailing": "(CC) 52978"
   },
   "26": {
     "newspaper_name": "The Honolulu Advertiser",
     "newspaper_date": "May 26 2002",
     "day_of_week": "Sunday",
     "tv_guide_date": "May 26 2002",
-    "first_program": "(11:00) Auto Racing NASCAR Winston Cup -- Coca-Cola 600. (S Live) (CC) 193997",
-    "first_channel": "2 3 003 2"
+    "first_program_raw": "(11:00) Auto Racing NASCAR Winston Cup -- Coca-Cola 600. (S Live) (CC) 193997",
+    "first_channel_raw": "2 3 003 2 KHON",
+    "first_channel_name": "KHON",
+    "first_channel_numbers": [
+      "2",
+      "3",
+      "003",
+      "2"
+    ],
+    "first_program_name": "Auto Racing NASCAR Winston Cup -- Coca-Cola 600.",
+    "first_program_trailing": "(S Live) (CC) 193997"
   },
   "27": {
     "newspaper_name": "The Honolulu Advertiser",
     "newspaper_date": "Sep 28 1997",
     "day_of_week": "Thursday",
     "tv_guide_date": "October 2 1997",
-    "first_program": "(6:00) News (CC) 34666",
-    "first_channel": "3 2 Fox"
+    "first_program_raw": "(6:00) News (CC) 34666",
+    "first_channel_raw": "3 2 Fox KHON",
+    "first_channel_name": "KHON",
+    "first_channel_numbers": [
+      "3",
+      "2"
+    ],
+    "first_program_name": "News",
+    "first_program_trailing": "(CC) 34666"
   },
   "28": {
     "newspaper_name": "The Kansas City Star",
     "newspaper_date": "Apr 3 2005",
     "day_of_week": "Monday-Friday",
     "tv_guide_date": "April 4-8 2005",
-    "first_program": "King of Hill",
-    "first_channel": "4 WDAF"
+    "first_program_raw": "King of Hill",
+    "first_channel_raw": "4 WDAF",
+    "first_channel_name": "WDAF",
+    "first_channel_numbers": [
+      "4"
+    ],
+    "first_program_name": "King of Hill",
+    "first_program_trailing": "null"
   },
   "29": {
     "newspaper_name": "The Kansas City Star",
     "newspaper_date": "Sep 15 2002",
     "day_of_week": "Sunday",
     "tv_guide_date": "September 15 2002",
-    "first_program": "Biography: Alan Alda 718318",
-    "first_channel": "A&E"
+    "first_program_raw": "Biography: Alan Alda 718318",
+    "first_channel_raw": "A&E",
+    "first_channel_name": "A&E",
+    "first_channel_numbers": "null",
+    "first_program_name": "Biography: Alan Alda",
+    "first_program_trailing": "718318"
   },
   "30": {
     "newspaper_name": "The Monitor",
     "newspaper_date": "Nov 6 1994",
     "day_of_week": "Tuesday",
     "tv_guide_date": "November 8 1994",
-    "first_program": "Noticiero Telemundo: Edici\u00f3n Matutina 31717",
-    "first_channel": "Telemundo 2 XRIO"
+    "first_program_raw": "Noticiero Telemundo: Edici\u00f3n Matutina 31717",
+    "first_channel_raw": "Telemundo 2 XRIO",
+    "first_channel_name": "Telemundo XRIO",
+    "first_channel_numbers": [
+      "2"
+    ],
+    "first_program_name": "Noticiero Telemundo: Edici\u00f3n Matutina",
+    "first_program_trailing": "31717"
   },
   "31": {
     "newspaper_name": "The News Tribune",
     "newspaper_date": "Mar 27 2011",
     "day_of_week": "Saturday",
     "tv_guide_date": "April 2 2011",
-    "first_program": "Jimmy Kimmel Live (CC) (HD)",
-    "first_channel": "KOMO ABC 4 4"
+    "first_program_raw": "Jimmy Kimmel Live (CC) (HD)",
+    "first_channel_raw": "KOMO ABC 4 4",
+    "first_channel_name": "KOMO",
+    "first_channel_numbers": [
+      "4",
+      "4"
+    ],
+    "first_program_name": "KOMO ABC",
+    "first_program_trailing": "(CC) (HD)"
   },
   "32": {
     "newspaper_name": "The Palm Beach Post",
     "newspaper_date": "May 22 1994",
     "day_of_week": "Sunday",
     "tv_guide_date": "May 29 1994",
-    "first_program": "Born Losers (1967) Tom Laughlin. Part-Indian foot fighter Billy Jack vs. outlaw bikers. (Crime drama, PG, (2:00) +9493577",
-    "first_channel": "TBS"
+    "first_program_raw": "Born Losers (1967) Tom Laughlin. Part-Indian foot fighter Billy Jack vs. outlaw bikers. (Crime drama, PG, (2:00) +9493577",
+    "first_channel_raw": "TBS",
+    "first_channel_name": "TBS",
+    "first_channel_numbers": "null",
+    "first_program_name": "Born Losers Tom Laughlin. Part-Indian foot fighter Billy Jack vs. outlaw bikers.",
+    "first_program_trailing": "(1967) (Crime drama, PG, (2:00) +9493577"
   },
   "33": {
     "newspaper_name": "The Sentinel",
     "newspaper_date": "Jun 29 1997",
     "day_of_week": "Monday-Friday",
     "tv_guide_date": "June 30-4 1997",
-    "first_program": "Spider-Man (CC) 61721 7363",
-    "first_channel": "43 5"
+    "first_program_raw": "Spider-Man (CC) 61721 7363",
+    "first_channel_raw": "43 5",
+    "first_channel_name": "null",
+    "first_channel_numbers": [
+      "43",
+      "5"
+    ],
+    "first_program_name": "Spider-Man",
+    "first_program_trailing": "(CC) 61721 7363"
   },
   "34": {
     "newspaper_name": "The Sentinel",
     "newspaper_date": "Nov 16 1997",
     "day_of_week": "Monday-Friday",
     "tv_guide_date": "November 17 to 21 1997",
-    "first_program": "Sesame Street (CC) 123017",
-    "first_channel": "33"
+    "first_program_raw": "Sesame Street (CC) 123017",
+    "first_channel_raw": "33",
+    "first_channel_name": "null",
+    "first_channel_numbers": [
+      "33"
+    ],
+    "first_program_name": "Sesame Street",
+    "first_program_trailing": "(CC) 123017"
   }
 }
