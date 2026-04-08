@@ -14,9 +14,7 @@ import csv
 import os
 
 # Load environment variables from .env file
-project_root = Path(__file__).resolve().parents[1]
-load_dotenv(project_root/".env")
-BASE_DIR = os.getenv("BASE_DIR")
+BASE_DIR = Path(__file__).resolve().parents[1]
 
 # Load JSON mapping files for images, benchmarks, and models
 
@@ -24,6 +22,9 @@ image_index_path = os.path.join(BASE_DIR, "inputs", "image_index.json")
 
 with open(image_index_path, "r") as f:
     image_index = json.load(f)
+    # randomly generated 10 integers from 0 to 34 to sample
+    sample_ids = ["0", "3", "7", "11", "14", "19", "22", "26", "28", "31"]
+    image_index = {key: value for key, value in image_index.items() if key in sample_ids}
 
 benchmark_path = os.path.join(BASE_DIR, "inputs", "benchmarks.json")
 
@@ -35,7 +36,8 @@ model_path = os.path.join(BASE_DIR, "inputs", "models.json")
 with open(model_path, "r") as f:
     models = json.load(f)
     model_keys = list(models.keys())
-    model_keys = model_keys[1:]  # take out llama
+    retired_models = {"0", "8", "9"}
+    model_keys = [x for x in model_keys if x not in retired_models] # filter out retired models
 
 # Generate all combinations of benchmarks, models, and images
 

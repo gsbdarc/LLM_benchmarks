@@ -91,7 +91,7 @@
     "schema": {
       "class_name": "FirstChannel_2",
       "fields": {
-        "first_channel_edges": {
+        "first_channel_2": {
           "type": "string"
         }
       }
@@ -105,10 +105,10 @@
     "schema": {
       "class_name": "FirstChannel_3",
       "fields": {
-        "first_channel_all": {
+        "first_channel_raw": {
           "type": "string"
         },
-        "first_channel_name_callsign": {
+        "first_channel_name": {
           "type": "string"
         },
         "first_channel_numbers": {
@@ -125,7 +125,7 @@
     "schema": {
       "class_name": "FirstProgram_2",
       "fields": {
-        "first_program_all": {
+        "first_program_raw": {
           "type": "string"
         }
       }
@@ -181,7 +181,7 @@
     "schema": {
       "class_name": "All_Times_1",
       "fields": {
-        "all_timeslots": {
+        "all_times": {
           "type": "array"
         }
       }
