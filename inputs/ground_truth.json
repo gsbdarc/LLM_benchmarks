@@ -72,15 +72,25 @@
       "VH1",
       "WGN"
     ],
-    "all_times": [
-      "12:00",
-      "6:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "12:00",
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "10": [
         {
@@ -2257,7 +2267,7 @@
     },
     "first_program_raw": "Good Morning Arizona 94204",
     "first_channel_raw": "3",
-    "first_channel_name": "null",
+    "first_channel_name": [],
     "first_channel_numbers": [
       "3"
     ],
@@ -2331,16 +2341,27 @@
       "WE",
       "WGN-A"
     ],
-    "all_times": [
-      "12:00",
-      "5:00",
-      "6:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "12:00",
+        "5:00",
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "5:00",
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "A&E": [
         {
@@ -4305,7 +4326,7 @@
       "2"
     ],
     "first_program_name": "Good Day Austin Saturday",
-    "first_program_trailing": "null"
+    "first_program_trailing": []
   },
   "2": {
     "newspaper_name": "Austin American Statesman",
@@ -4374,17 +4395,30 @@
       "WE",
       "WGN-A"
     ],
-    "all_times": [
-      "12:00",
-      "1:00",
-      "2:00",
-      "3:00",
-      "4:00",
-      "5:00",
-      "6:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "12:00",
+        "1:00",
+        "2:00",
+        "3:00",
+        "4:00",
+        "5:00",
+        "6:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "12:00",
+        "1:00",
+        "2:00",
+        "3:00",
+        "4:00",
+        "5:00",
+        "6:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "A&E": [
         {
@@ -5936,7 +5970,7 @@
       "2",
       "2"
     ],
-    "first_program_name": "Good Day Austin Saturday",
+    "first_program_name": "2015 Daytona 500 The 57th running of the event. The race consists of 200 laps and is the first race of the season.",
     "first_program_trailing": "(N) (cc)"
   },
   "3": {
@@ -6006,15 +6040,26 @@
       "WE",
       "WGN-A"
     ],
-    "all_times": [
-      "5:00",
-      "6:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "5:00",
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "5:00",
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "A&E": [
         {
@@ -8011,7 +8056,7 @@
       "2"
     ],
     "first_program_name": "Good Day Austin Saturday",
-    "first_program_trailing": "null"
+    "first_program_trailing": []
   },
   "4": {
     "newspaper_name": "Austin American Statesman",
@@ -8080,16 +8125,28 @@
       "WE",
       "WGN-A"
     ],
-    "all_times": [
-      "4:00",
-      "5:00",
-      "6:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "4:00",
+        "5:00",
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "4:00",
+        "5:00",
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "A&E": [
         {
@@ -9621,7 +9678,7 @@
       ]
     },
     "first_program_raw": "News",
-    "first_channel_raw": "Fox/7.1",
+    "first_channel_raw": "Fox/7.1 2 2 2",
     "first_channel_name": "Fox",
     "first_channel_numbers": [
       "7.1",
@@ -9630,7 +9687,7 @@
       "2"
     ],
     "first_program_name": "News",
-    "first_program_trailing": "null"
+    "first_program_trailing": []
   },
   "5": {
     "newspaper_name": "Chicago Tribune",
@@ -9678,11 +9735,18 @@
       "VH1",
       "WOR"
     ],
-    "all_times": [
-      "1:00",
-      "2:00",
-      "3:00"
-    ],
+    "all_times": {
+      "hours": [
+        "1:00",
+        "2:00",
+        "3:00"
+      ],
+      "military_hours": [
+        "1:00",
+        "2:00",
+        "3:00"
+      ]
+    },
     "all_shows_times": {
       "AE": [
         {
@@ -10254,7 +10318,7 @@
     "first_program_raw": "Ancient Mysteries 394796",
     "first_channel_raw": "AE",
     "first_channel_name": "AE",
-    "first_channel_numbers": "null",
+    "first_channel_numbers": [],
     "first_program_name": "Ancient Mysteries",
     "first_program_trailing": "394796"
   },
@@ -10303,11 +10367,18 @@
       "VH-1",
       "WOR"
     ],
-    "all_times": [
-      "1:00",
-      "2:00",
-      "3:00"
-    ],
+    "all_times": {
+      "hours": [
+        "1:00",
+        "2:00",
+        "3:00"
+      ],
+      "military_hours": [
+        "1:00",
+        "2:00",
+        "3:00"
+      ]
+    },
     "all_shows_times": {
       "AE": [
         {
@@ -10861,7 +10932,7 @@
     "first_program_raw": "Ancient Mysteries 408211",
     "first_channel_raw": "AE",
     "first_channel_name": "AE",
-    "first_channel_numbers": "null",
+    "first_channel_numbers": [],
     "first_program_name": "Ancient Mysteries",
     "first_program_trailing": "408211"
   },
@@ -10918,14 +10989,24 @@
       "WE",
       "YES"
     ],
-    "all_times": [
-      "12:00",
-      "1:00",
-      "2:00",
-      "3:00",
-      "4:00",
-      "5:00"
-    ],
+    "all_times": {
+      "hours": [
+        "12:00",
+        "1:00",
+        "2:00",
+        "3:00",
+        "4:00",
+        "5:00"
+      ],
+      "military_hours": [
+        "12:00",
+        "1:00",
+        "2:00",
+        "3:00",
+        "4:00",
+        "5:00"
+      ]
+    },
     "all_shows_times": {
       "11": [
         {
@@ -12358,12 +12439,12 @@
     },
     "first_program_raw": "News at Noon",
     "first_channel_raw": "2",
-    "first_channel_name": "null",
+    "first_channel_name": [],
     "first_channel_numbers": [
       "2"
     ],
     "first_program_name": "News at Noon",
-    "first_program_trailing": "null"
+    "first_program_trailing": []
   },
   "8": {
     "newspaper_name": "Daily News",
@@ -12417,17 +12498,30 @@
       "WE",
       "YES"
     ],
-    "all_times": [
-      "6:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00",
-      "12:00",
-      "1:00",
-      "2:00"
-    ],
+    "all_times": {
+      "hours": [
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00",
+        "12:00",
+        "1:00",
+        "2:00"
+      ],
+      "military_hours": [
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00",
+        "12:00",
+        "1:00",
+        "2:00"
+      ]
+    },
     "all_shows_times": {
       "11 WPIX": [
         {
@@ -14511,7 +14605,7 @@
       "2"
     ],
     "first_program_name": "CBS 2 News",
-    "first_program_trailing": "null"
+    "first_program_trailing": []
   },
   "9": {
     "newspaper_name": "Daily News",
@@ -14593,15 +14687,26 @@
       "WE",
       "YES"
     ],
-    "all_times": [
-      "12:00",
-      "6:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "12:00",
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "12:00",
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "11 WPIX": [
         {
@@ -16879,15 +16984,26 @@
       "WE",
       "YES"
     ],
-    "all_times": [
-      "12:00",
-      "6:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "12:00",
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "12:00",
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "10 WNET": [
         {
@@ -19065,17 +19181,30 @@
       "WE",
       "YES"
     ],
-    "all_times": [
-      "6:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00",
-      "12:00",
-      "1:00",
-      "2:00"
-    ],
+    "all_times": {
+      "hours": [
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00",
+        "12:00",
+        "1:00",
+        "2:00"
+      ],
+      "military_hours": [
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00",
+        "12:00",
+        "1:00",
+        "2:00"
+      ]
+    },
     "all_shows_times": {
       "11 WPIX": [
         {
@@ -21204,8 +21333,8 @@
         }
       ]
     },
-    "first_program_new": "(4:30) CBS 2 News This Morning (N) (cc)",
-    "first_channel_new": "2 WCBS",
+    "first_program_raw": "(4:30) CBS 2 News This Morning (N) (cc)",
+    "first_channel_raw": "2 WCBS",
     "first_channel_name": "WCBS",
     "first_channel_numbers": [
       "2"
@@ -21293,15 +21422,26 @@
       "WE",
       "YES "
     ],
-    "all_times": [
-      "12:00",
-      "6:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "12:00",
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "12:00",
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "10/55 WLNY": [
         {
@@ -23457,7 +23597,7 @@
       "2"
     ],
     "first_program_name": "NCAA Basketball",
-    "first_program_trailing": "null"
+    "first_program_trailing": []
   },
   "13": {
     "newspaper_name": "Daily News",
@@ -23502,20 +23642,36 @@
       "USA",
       "YES"
     ],
-    "all_times": [
-      "12:00",
-      "1:00",
-      "2:00",
-      "3:00",
-      "4:00",
-      "5:00",
-      "6:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "12:00",
+        "1:00",
+        "2:00",
+        "3:00",
+        "4:00",
+        "5:00",
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "12:00",
+        "1:00",
+        "2:00",
+        "3:00",
+        "4:00",
+        "5:00",
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "10/55 WLNY": [
         {
@@ -27008,14 +27164,24 @@
       "WE",
       "YES"
     ],
-    "all_times": [
-      "6:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "ENC": [
         {
@@ -28127,11 +28293,11 @@
       ]
     },
     "first_program_raw": "30-Minute Meals",
-    "first_channel)raw": "FOOD",
+    "first_channel_raw": "FOOD",
     "first_channel_name": "FOOD",
-    "first_channel_numbers": "null",
+    "first_channel_numbers": [],
     "first_program_name": "30-Minute Meals",
-    "first_program_trailing": "null"
+    "first_program_trailing": []
   },
   "15": {
     "newspaper_name": "Daily News",
@@ -28177,14 +28343,24 @@
       "WE",
       "YES"
     ],
-    "all_times": [
-      "6:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "ENC": [
         {
@@ -29152,7 +29328,7 @@
     "first_program_raw": "SNAKES ON A PLANE ('06) Samuel L. Jackson, Kenan Thompson. 3066705",
     "first_channel_raw": "FX",
     "first_channel_name": "FX",
-    "first_channel_numbers": "null",
+    "first_channel_numbers": [],
     "first_program_name": "SNAKES ON A PLANE Samuel L. Jackson, Kenan Thompson.",
     "first_program_trailing": "('06) 3066705"
   },
@@ -29231,17 +29407,30 @@
       "VH1 18",
       "WE 66"
     ],
-    "all_times": [
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00",
-      "12:00",
-      "1:00",
-      "2:00",
-      "3:00"
-    ],
+    "all_times": {
+      "hours": [
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00",
+        "12:00",
+        "1:00",
+        "2:00",
+        "3:00"
+      ],
+      "military_hours": [
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00",
+        "12:00",
+        "1:00",
+        "2:00",
+        "3:00"
+      ]
+    },
     "all_shows_times": {
       "11 KHET 10": [
         {
@@ -32234,7 +32423,7 @@
       "3"
     ],
     "first_program_name": "Wake Up 2Day",
-    "first_program_trailing": "null"
+    "first_program_trailing": []
   },
   "17": {
     "newspaper_name": "Messenger Inquirer",
@@ -32288,14 +32477,24 @@
       "USA",
       "VH-1"
     ],
-    "all_times": [
-      "6:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "11 WHAS": [
         {
@@ -33655,7 +33854,7 @@
       "7"
     ],
     "first_program_name": "News",
-    "first_program_trailing": "null"
+    "first_program_trailing": []
   },
   "18": {
     "newspaper_name": "Statesman Journal",
@@ -33688,14 +33887,24 @@
       "8 KGW NBC",
       "9 TLC"
     ],
-    "all_times": [
-      "6:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "1 DIS": [
         {
@@ -34456,14 +34665,24 @@
       "8 KGW",
       "9 TLC"
     ],
-    "all_times": [
-      "12:00",
-      "1:00",
-      "2:00",
-      "3:00",
-      "4:00",
-      "5:00"
-    ],
+    "all_times": {
+      "hours": [
+        "12:00",
+        "1:00",
+        "2:00",
+        "3:00",
+        "4:00",
+        "5:00"
+      ],
+      "military_hours": [
+        "12:00",
+        "1:00",
+        "2:00",
+        "3:00",
+        "4:00",
+        "5:00"
+      ]
+    },
     "all_shows_times": {
       "1 DIS": [
         {
@@ -36464,14 +36683,24 @@
       "8 KGW",
       "9 TLC"
     ],
-    "all_times": [
-      "12:00",
-      "1:00",
-      "2:00",
-      "3:00",
-      "4:00",
-      "5:00"
-    ],
+    "all_times": {
+      "hours": [
+        "12:00",
+        "1:00",
+        "2:00",
+        "3:00",
+        "4:00",
+        "5:00"
+      ],
+      "military_hours": [
+        "12:00",
+        "1:00",
+        "2:00",
+        "3:00",
+        "4:00",
+        "5:00"
+      ]
+    },
     "all_shows_times": {
       "1 DIS": [
         {
@@ -38438,14 +38667,24 @@
       "VH1",
       "WGN"
     ],
-    "all_times": [
-      "6:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "A&E": [
         {
@@ -39735,7 +39974,7 @@
     "first_program_raw": "Biography: Gene Hackman. 413091",
     "first_channel_raw": "A&E",
     "first_channel_name": "A&E",
-    "first_channel_numbers": "null",
+    "first_channel_numbers": [],
     "first_program_name": "Biography: Gene Hackman.",
     "first_program_trailing": "413091"
   },
@@ -39818,15 +40057,26 @@
       "XETV",
       "XEWT"
     ],
-    "all_times": [
-      "5:00",
-      "6:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "5:00",
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "5:00",
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "4SD": [
         {
@@ -42396,7 +42646,7 @@
       "2"
     ],
     "first_program_name": "News",
-    "first_program_trailing": "null"
+    "first_program_trailing": []
   },
   "23": {
     "newspaper_name": "The Honolulu Advertiser",
@@ -42513,15 +42763,26 @@
       "USA",
       "VH1"
     ],
-    "all_times": [
-      "12:00",
-      "1:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "12:00",
+        "1:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "12:00",
+        "1:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "11 10": [
         {
@@ -44868,14 +45129,24 @@
       "VIEWS",
       "WE"
     ],
-    "all_times": [
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00",
-      "12:00"
-    ],
+    "all_times": {
+      "hours": [
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00",
+        "12:00"
+      ],
+      "military_hours": [
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00",
+        "12:00"
+      ]
+    },
     "all_shows_times": {
       "A&E": [
         {
@@ -47758,14 +48029,24 @@
       "VIEWS",
       "WE"
     ],
-    "all_times": [
-      "12:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "12:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "12:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "A&E": [
         {
@@ -50485,14 +50766,24 @@
       "VIEWS",
       "WE"
     ],
-    "all_times": [
-      "1:00",
-      "2:00",
-      "3:00",
-      "4:00",
-      "5:00",
-      "6:00"
-    ],
+    "all_times": {
+      "hours": [
+        "1:00",
+        "2:00",
+        "3:00",
+        "4:00",
+        "5:00",
+        "6:00"
+      ],
+      "military_hours": [
+        "1:00",
+        "2:00",
+        "3:00",
+        "4:00",
+        "5:00",
+        "6:00"
+      ]
+    },
     "all_shows_times": {
       "A&E": [
         {
@@ -52811,16 +53102,28 @@
       "VH1",
       "WBN"
     ],
-    "all_times": [
-      "5:00",
-      "6:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00",
-      "12:00"
-    ],
+    "all_times": {
+      "hours": [
+        "5:00",
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00",
+        "12:00"
+      ],
+      "military_hours": [
+        "5:00",
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00",
+        "12:00"
+      ]
+    },
     "all_shows_times": {
       "A&E": [
         {
@@ -54869,17 +55172,30 @@
       "WDAF",
       "WIBW"
     ],
-    "all_times": [
-      "12:00",
-      "1:00",
-      "2:00",
-      "3:00",
-      "4:00",
-      "5:00",
-      "6:00",
-      "7:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "12:00",
+        "1:00",
+        "2:00",
+        "3:00",
+        "4:00",
+        "5:00",
+        "6:00",
+        "7:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "12:00",
+        "1:00",
+        "2:00",
+        "3:00",
+        "4:00",
+        "5:00",
+        "6:00",
+        "7:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "A&E": [
         {
@@ -58439,7 +58755,7 @@
       "4"
     ],
     "first_program_name": "King of Hill",
-    "first_program_trailing": "null"
+    "first_program_trailing": []
   },
   "29": {
     "newspaper_name": "The Kansas City Star",
@@ -58510,14 +58826,24 @@
       "WE",
       "WGN"
     ],
-    "all_times": [
-      "6:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "A&E": [
         {
@@ -60151,7 +60477,7 @@
     "first_program_raw": "Biography: Alan Alda 718318",
     "first_channel_raw": "A&E",
     "first_channel_name": "A&E",
-    "first_channel_numbers": "null",
+    "first_channel_numbers": [],
     "first_program_name": "Biography: Alan Alda",
     "first_program_trailing": "718318"
   },
@@ -60192,14 +60518,24 @@
       "WTBS",
       "XHAB"
     ],
-    "all_times": [
-      "6:00",
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "6:00",
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "17": [
         {
@@ -61185,16 +61521,28 @@
       "VS",
       "WE"
     ],
-    "all_times": [
-      "12:00",
-      "1:00",
-      "2:00",
-      "3:00",
-      "4:00",
-      "5:00",
-      "6:00",
-      "7:00"
-    ],
+    "all_times": {
+      "hours": [
+        "12:00",
+        "1:00",
+        "2:00",
+        "3:00",
+        "4:00",
+        "5:00",
+        "6:00",
+        "7:00"
+      ],
+      "military_hours": [
+        "12:00",
+        "1:00",
+        "2:00",
+        "3:00",
+        "4:00",
+        "5:00",
+        "6:00",
+        "7:00"
+      ]
+    },
     "all_shows_times": {
       "A&E": [
         {
@@ -64170,7 +64518,7 @@
       "4",
       "4"
     ],
-    "first_program_name": "KOMO ABC",
+    "first_program_name": "Jimmy Kimmel Live ",
     "first_program_trailing": "(CC) (HD)"
   },
   "32": {
@@ -64245,11 +64593,18 @@
       "WGN",
       "WOR"
     ],
-    "all_times": [
-      "12:00",
-      "10:00",
-      "11:00"
-    ],
+    "all_times": {
+      "hours": [
+        "12:00",
+        "10:00",
+        "11:00"
+      ],
+      "military_hours": [
+        "12:00",
+        "10:00",
+        "11:00"
+      ]
+    },
     "all_shows_times": {
       "10": [
         {
@@ -65029,7 +65384,7 @@
     "first_program_raw": "Born Losers (1967) Tom Laughlin. Part-Indian foot fighter Billy Jack vs. outlaw bikers. (Crime drama, PG, (2:00) +9493577",
     "first_channel_raw": "TBS",
     "first_channel_name": "TBS",
-    "first_channel_numbers": "null",
+    "first_channel_numbers": [],
     "first_program_name": "Born Losers Tom Laughlin. Part-Indian foot fighter Billy Jack vs. outlaw bikers.",
     "first_program_trailing": "(1967) (Crime drama, PG, (2:00) +9493577"
   },
@@ -65079,11 +65434,18 @@
       "WPHL",
       "WSBK"
     ],
-    "all_times": [
-      "3:00",
-      "4:00",
-      "5:00"
-    ],
+    "all_times": {
+      "hours": [
+        "3:00",
+        "4:00",
+        "5:00"
+      ],
+      "military_hours": [
+        "3:00",
+        "4:00",
+        "5:00"
+      ]
+    },
     "all_shows_times": {
       "13": [
         {
@@ -65558,7 +65920,7 @@
     },
     "first_program_raw": "Spider-Man (CC) 61721 7363",
     "first_channel_raw": "43 5",
-    "first_channel_name": "null",
+    "first_channel_name": [],
     "first_channel_numbers": [
       "43",
       "5"
@@ -65613,14 +65975,24 @@
       "WPHL",
       "WSBK"
     ],
-    "all_times": [
-      "7:00",
-      "8:00",
-      "9:00",
-      "10:00",
-      "11:00",
-      "12:00"
-    ],
+    "all_times": {
+      "hours": [
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00",
+        "12:00"
+      ],
+      "military_hours": [
+        "7:00",
+        "8:00",
+        "9:00",
+        "10:00",
+        "11:00",
+        "12:00"
+      ]
+    },
     "all_shows_times": {
       "13": [
         {
@@ -66761,7 +67133,7 @@
     },
     "first_program_raw": "Sesame Street (CC) 123017",
     "first_channel_raw": "33",
-    "first_channel_name": "null",
+    "first_channel_name": [],
     "first_channel_numbers": [
       "33"
     ],

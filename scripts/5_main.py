@@ -25,10 +25,10 @@ from pymongo.server_api import ServerApi
 from datetime import datetime
 
 # Task selection from slurm array
-task_selection = sys.argv[1]
+#task_selection = sys.argv[1]
 # cast to int so we can use this to index mapping.csv
-task_selection = int(task_selection)
-# task_selection = 4820
+#task_selection = int(task_selection)
+task_selection = 3930
 
 # Load environment variables from .env file
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -259,7 +259,7 @@ def write_results_mongo(collection, task_id: str, result: dict, run_id: int) -> 
 def main():
     """Load a task from the mapping, process it through the LLM pipeline, and save results."""
 
-    run_number = 0  # future iteration: add this as a slurm script variable, have a default
+    run_number = 1  # future iteration: add this as a slurm script variable, have a default
 
     mapping_path = os.path.join(BASE_DIR, "inputs", "mapping.csv")
 
