@@ -25,10 +25,10 @@ from pymongo.server_api import ServerApi
 from datetime import datetime
 
 # Task selection from slurm array
-# task_selection = sys.argv[1]
+task_selection = sys.argv[1]
 # cast to int so we can use this to index mapping.csv
-# task_selection = int(task_selection)
-task_selection = 147
+task_selection = int(task_selection)
+# task_selection = 4820
 
 # Load environment variables from .env file
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -200,7 +200,7 @@ def run_model(model_name: str, b64: str, SYSTEM_PROMPT: str,
                 # Attach metadata
                 # -----------------------------------------
 
-                output_dict["output"] = llm_output[benchmark_name]
+                output_dict["output"] = llm_output
                 output_dict["model_name"] = model_name
                 output_dict["model_id"] = model_id
                 output_dict["image_id"] = image_id
@@ -240,7 +240,7 @@ def run_model(model_name: str, b64: str, SYSTEM_PROMPT: str,
         return output_dict  # all retries failed, exit loop
 
 
-def write_results_mongo(collection, task_id: str, result: dict) -> None:
+def write_results_mongo(collection, task_id: str, result: dict, run_id: int) -> None:
     """ Writes a single result ot MongoDB, replaces existing record if it already exists."""
     status = result["status"]
     doc = {
@@ -259,7 +259,7 @@ def write_results_mongo(collection, task_id: str, result: dict) -> None:
 def main():
     """Load a task from the mapping, process it through the LLM pipeline, and save results."""
 
-    run_number = 2  # future iteration: add this as a slurm script variable, have a default
+    run_number = 0  # future iteration: add this as a slurm script variable, have a default
 
     mapping_path = os.path.join(BASE_DIR, "inputs", "mapping.csv")
 
@@ -313,7 +313,7 @@ def main():
 
     # write LLM results to MongoDB
 
-    write_results_mongo(collection, str(task_selection), model_output)
+    write_results_mongo(collection, str(task_selection), model_output, run_number)
 
 
 if __name__ == "__main__":
