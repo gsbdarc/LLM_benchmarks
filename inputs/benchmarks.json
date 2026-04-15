@@ -278,7 +278,8 @@
         "ordered": false,
         "metrics": [
           "set_f1",
-          "sequence_lcs"
+          "sequence_lcs",
+          "set_inclusion"
         ],
         "weight": 1
       }

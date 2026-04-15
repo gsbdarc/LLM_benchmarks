@@ -35,7 +35,7 @@ from pymongo import MongoClient, UpdateOne, ReplaceOne
 from pymongo.server_api import ServerApi
 from pymongo.errors import PyMongoError
 
-from evaluator import evaluate_task, aggregate_scores
+from evaluator import evaluate_task
 
 # ---------------------------------------------------------------------------
 #  Config

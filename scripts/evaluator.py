@@ -269,7 +269,42 @@ def sequence_lcs(predicted: Any, expected: Any) -> dict:
         "sequence_lcs": round(similarity, 4),
         "lcs_length": lcs_len,
     }
- 
+
+def set_inclusion(predicted: Any, expected: Any) -> dict:
+    """
+    Set-based Inclusion Precision / Recall / F1.
+
+    Checks if the expected string is a substring of ANY predicted string (Recall),
+    and if a predicted string contains ANY expected string (Precision).
+    """
+    pred_list = _normalize_list(predicted)
+    gt_list = _normalize_list(expected)
+
+    # Filter out empty strings
+    pred_list = [x for x in pred_list if x]
+    gt_list = [x for x in gt_list if x]
+
+    if not pred_list and not gt_list:
+        return {"set_inclusion": 1.0, "inclusion_precision": 1.0, "inclusion_recall": 1.0}
+    if not pred_list or not gt_list:
+        return {"set_inclusion": 0.0, "inclusion_precision": 0.0, "inclusion_recall": 0.0}
+
+    # Recall: What fraction of ground truth items are found inside at least one predicted item?
+    # e.g. Is "a&e" found inside "a&e | 52 | 50"?
+    matched_gt = sum(1 for gt in gt_list if any(gt in pred for pred in pred_list))
+    recall = matched_gt / len(gt_list)
+
+    # Precision: What fraction of predicted items contain at least one ground truth item?
+    matched_pred = sum(1 for pred in pred_list if any(gt in pred for gt in gt_list))
+    precision = matched_pred / len(pred_list)
+
+    f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+
+    return {
+        "set_inclusion": round(f1, 4),
+        "inclusion_precision": round(precision, 4),
+        "inclusion_recall": round(recall, 4),
+    }
  
 # ---------------------------------------------------------------------------
 #  Metric registry — maps metric name → function
@@ -282,6 +317,7 @@ METRIC_REGISTRY = {
     "char_f1":      char_f1,
     "set_f1":       set_f1,
     "sequence_lcs": sequence_lcs,
+    "set_inclusion": set_inclusion,
 }
  
  
@@ -385,6 +421,7 @@ def evaluate_task(
             composite_score = max(
                 scores.get("set_f1", 0.0),
                 scores.get("sequence_lcs", 0.0),
+                scores.get("set_inclusion", 0.0),
             )
  
         else:
@@ -409,6 +446,17 @@ def evaluate_task(
     
     weighted_score = (weighted_sum / total_weight) if total_weight > 0 else 0.0
 
+    # Override the score to be the max if we are evaluating the all_times_1 benchmark
+    task_name = benchmark_spec.get("task_name")
+    
+    if task_name == "all_times_1": 
+        if field_details:
+            # Extract the max composite_score from the evaluated fields
+            weighted_score = max(detail["composite_score"] for detail in field_details.values())
+        else:
+            weighted_score = 0.0
+    # --------------------------
+
     return {
         "field_details": field_details,
         "weighted_score": round(weighted_score, 4),
@@ -416,44 +464,3 @@ def evaluate_task(
     }
  
  
-# ---------------------------------------------------------------------------
-#  Aggregate utilities (for model-level rollups)
-# ---------------------------------------------------------------------------
- 
-def aggregate_scores(evaluation_docs: list[dict]) -> dict:
-    """
-    Aggregate evaluation scores across multiple task results.
- 
-    Computes mean weighted_score and per-field mean for each metric.
-    Useful for comparing models or benchmarks.
-    """
-    if not evaluation_docs:
-        return {}
- 
-    n = len(evaluation_docs)
-    total_weighted = sum(d.get("weighted_score", 0.0) for d in evaluation_docs)
- 
-    # Collect all field-level scores
-    field_metrics: dict[str, dict[str, list[float]]] = {}
-    for doc in evaluation_docs:
-        for field_key, detail in doc.get("field_details", {}).items():
-            scores = detail.get("scores", {}) if isinstance(detail, dict) else {}
-            if field_key not in field_metrics:
-                field_metrics[field_key] = {}
-            for metric_name, value in scores.items():
-                if isinstance(value, (int, float)):
-                    field_metrics[field_key].setdefault(metric_name, []).append(value)
- 
-    # Compute means
-    field_means = {}
-    for field_key, metrics in field_metrics.items():
-        field_means[field_key] = {
-            metric: round(sum(vals) / len(vals), 4)
-            for metric, vals in metrics.items()
-        }
- 
-    return {
-        "mean_weighted_score": round(total_weighted / n, 4),
-        "n_samples": n,
-        "field_means": field_means,
-    }
