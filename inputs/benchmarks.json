@@ -67,6 +67,17 @@
           "type": "string"
         }
       }
+    },
+    "ground_truth": {
+      "first_program": {
+        "gt_field": "first_program_raw",
+        "output_field": "first_program",
+        "type": "raw_string",
+        "metrics": [
+          "word_iou"
+        ],
+        "weight": 1
+      }
     }
   },
   "5": {
@@ -81,6 +92,17 @@
           "type": "string"
         }
       }
+    },
+    "ground_truth": {
+      "first_channel": {
+        "gt_field": "first_channel_raw",
+        "output_field": "first_channel",
+        "type": "raw_string",
+        "metrics": [
+          "word_iou"
+        ],
+        "weight": 1
+      }
     }
   },
   "6": {
@@ -94,6 +116,17 @@
         "first_channel_2": {
           "type": "string"
         }
+      }
+    },
+    "ground_truth": {
+      "first_channel_2": {
+        "gt_field": "first_channel_raw",
+        "output_field": "first_channel_2",
+        "type": "raw_string",
+        "metrics": [
+          "word_iou"
+        ],
+        "weight": 1
       }
     }
   },
@@ -115,6 +148,39 @@
           "type": "array"
         }
       }
+    },
+    "ground_truth": {
+      "first_channel_raw": {
+        "gt_field": "first_channel_raw",
+        "output_field": "first_channel_raw",
+        "type": "raw_string",
+        "metrics": [
+          "word_iou"
+        ],
+        "weight": 0.5
+      },
+      "first_channel_name": {
+        "gt_field": "first_channel_name",
+        "output_field": "first_channel_name",
+        "type": "extracted_string",
+        "metrics": [
+          "null_accuracy",
+          "levenshtein",
+          "char_f1"
+        ],
+        "weight": 0.3
+      },
+      "first_channel_numbers": {
+        "gt_field": "first_channel_numbers",
+        "output_field": "first_channel_numbers",
+        "type": "list",
+        "ordered": false,
+        "metrics": [
+          "set_f1",
+          "sequence_lcs"
+        ],
+        "weight": 0.2
+      }
     }
   },
   "8": {
@@ -122,12 +188,15 @@
     "system_prompt": "You are a precise OCR assistant specialized in extracting structured data from historical American newspaper TV guide grids. These are dense, low-resolution scans with small fonts, abbreviations, and tightly packed columns. Extract only text that is visibly present. Never guess, infer, or autocomplete. If a specific piece of information is illegible or missing, return null.",
     "user_prompt": "Analyze the provided image of a TV schedule grid. Channels are typically listed vertically (rows) and time slots horizontally (columns). Your task is to extract the program title for the FIRST channel listed at the EARLIEST time slot shown. Follow these steps carefully: 1. Scan the grid to identify the top-most row containing programming data (the row immediately below the time-slot or any other subsection headers). 2. Scan to the left-most time block within that specific row. 3. Identify the text inside this top-leftmost program block.  4. Transcribe the text exactly as printed. Include all numbers (e.g., episode numbers, parts, movie years), abbreviations, and characters that appear immediately with the title.",
     "task_description": "Extraction: LLM should identify the name of the first program of the TV guide (i.e. the name in the upper leftmost corner).",
-    "schema": {
-      "class_name": "FirstProgram_2",
-      "fields": {
-        "first_program_raw": {
-          "type": "string"
-        }
+    "ground_truth": {
+      "first_program_raw": {
+        "gt_field": "first_program_raw",
+        "output_field": "first_program_raw",
+        "type": "raw_string",
+        "metrics": [
+          "word_iou"
+        ],
+        "weight": 1
       }
     }
   },
@@ -143,6 +212,19 @@
           "type": "string"
         }
       }
+    },
+    "ground_truth": {
+      "first_program_name": {
+        "gt_field": "first_program_name",
+        "output_field": "first_program_name",
+        "type": "extracted_string",
+        "metrics": [
+          "null_accuracy",
+          "levenshtein",
+          "char_f1"
+        ],
+        "weight": 1
+      }
     }
   },
   "10": {
@@ -157,6 +239,19 @@
           "type": "string"
         }
       }
+    },
+    "ground_truth": {
+      "first_program_trailing": {
+        "gt_field": "first_program_trailing",
+        "output_field": "first_program_trailing",
+        "type": "extracted_string",
+        "metrics": [
+          "null_accuracy",
+          "levenshtein",
+          "char_f1"
+        ],
+        "weight": 1
+      }
     }
   },
   "11": {
@@ -168,8 +263,25 @@
       "class_name": "All_Channels_1",
       "fields": {
         "all_channels": {
-          "type": "array"
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
+      }
+    },
+    "ground_truth": {
+      "all_channels": {
+        "gt_field": "all_channels",
+        "output_field": "all_channels",
+        "type": "list",
+        "ordered": false,
+        "metrics": [
+          "set_f1",
+          "sequence_lcs",
+          "set_inclusion"
+        ],
+        "weight": 1
       }
     }
   },
@@ -184,6 +296,30 @@
         "all_times": {
           "type": "array"
         }
+      }
+    },
+    "ground_truth": {
+      "all_times_hours": {
+        "gt_field": "all_times.hours",
+        "output_field": "all_times",
+        "type": "list",
+        "ordered": true,
+        "metrics": [
+          "set_f1",
+          "sequence_lcs"
+        ],
+        "weight": 0.5
+      },
+      "all_times_military": {
+        "gt_field": "all_times.military_hours",
+        "output_field": "all_times",
+        "type": "list",
+        "ordered": true,
+        "metrics": [
+          "set_f1",
+          "sequence_lcs"
+        ],
+        "weight": 0.5
       }
     }
   }
