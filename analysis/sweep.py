@@ -24,13 +24,13 @@ from pathlib import Path
 import pandas as pd
 from dotenv import load_dotenv
 
-# Make the eval package importable (analysis/ -> repo root -> mcp/).
+# Make the eval package importable (analysis/ -> repo root).
 REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "mcp"))
+sys.path.insert(0, str(REPO_ROOT))
 
-from eval import config  # noqa: E402
-from eval.observability import scrape_vllm_metrics  # noqa: E402
-from eval.runner import aprepare, discover_rows, run_batch  # noqa: E402
+from agent_eval import config  # noqa: E402
+from agent_eval.observability import scrape_vllm_metrics  # noqa: E402
+from agent_eval.runner import aprepare, discover_rows, run_batch  # noqa: E402
 
 METRICS_TS_DIR = REPO_ROOT / "outputs" / "vllm_metrics_timeseries"
 

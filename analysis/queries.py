@@ -36,7 +36,7 @@ def connect(base_dir=None):
     matches = list(Path(glob.split("**")[0]).rglob("*.parquet"))
     if not matches:
         raise FileNotFoundError(
-            f"no run Parquet files under {glob} — run `python -m eval ...` first"
+            f"no run Parquet files under {glob} — run `python -m agent_eval ...` first"
         )
     con = duckdb.connect()
     con.execute(

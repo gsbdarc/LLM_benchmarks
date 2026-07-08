@@ -8,3 +8,17 @@ tabulate
 instructor
 ollama-instructor
 matplotlib
+
+# Agentic metric-eval (mcp/eval) + observability/analysis layer
+mcp
+pymongo
+weave
+tenacity          # retry/backoff on NIM/MCP connection drops
+requests          # scrape vLLM /v1/metrics
+psutil            # client RAM sampling
+pyarrow           # Parquet run-summary sink
+duckdb            # OLAP queries over the Parquet runs
+
+# Tests
+pytest
+pytest-asyncio

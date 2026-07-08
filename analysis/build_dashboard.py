@@ -27,8 +27,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from analysis.queries import connect
-from eval import config
-from eval.prompts import METRIC_EVAL_SYSTEM, PROMPT_NAME, eval_user_prompt
+from agent_eval import config
+from agent_eval.prompts import METRIC_EVAL_SYSTEM, PROMPT_NAME, eval_user_prompt
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = Path(__file__).resolve().parent / "dashboard_template.html"
@@ -50,7 +50,7 @@ RUN_COLUMNS = [
     "n_tool_calls", "n_metric_calls", "n_tool_errors", "tool_sequence_json",
     "prompt_tokens", "completion_tokens", "total_tokens",
     "tokens_per_sec", "peak_context", "wall_time_total",
-    "save_success", "score_consistent", "selection_accuracy",
+    "save_success", "save_count", "save_failed", "score_consistent", "selection_accuracy",
     "gpu_cache_usage_end", "requests_running_end", "weave_trace_url",
 ]
 
@@ -78,7 +78,7 @@ def _present_columns(con) -> set:
 def build_prompt_registry(prompt_names) -> dict:
     """{prompt_name: {system, user}} for the prompt versions we can source.
 
-    Seeded from eval/prompts.py, so the CURRENT prompt renders its real text.
+    Seeded from agent_eval/prompts.py, so the CURRENT prompt renders its real text.
     Historical prompt versions whose text we don't have are omitted (the UI shows
     a "(not embedded)" placeholder); persisting prompt text per version over time
     is the follow-up for full historical fidelity.
