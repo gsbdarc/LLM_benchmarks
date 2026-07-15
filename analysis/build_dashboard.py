@@ -25,6 +25,7 @@ import json
 import webbrowser
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from analysis.queries import connect
 from agent_eval import config
@@ -65,6 +66,8 @@ GLOSSARY = [
     {"term": "llm_time_total", "def": "Sum of the agent's LLM request round-trips (model/service latency). For remote endpoints (playground) it includes network + shared-API queueing, so read it as SERVICE latency, not pure inference; only local models approximate inference time."},
     {"term": "overhead_time", "def": "wall_time_total − llm_time_total ≈ tool-execution + agent-loop time. The MCP tool server is local for all backends, so this is backend-independent."},
     {"term": "wall_time_total", "def": "End-to-end agent time = llm_time_total + overhead_time (excludes the GPU-metrics scrapes, which are timed outside it)."},
+    {"term": "total_tokens", "def": "prompt + completion tokens summed across ALL agent steps. Each step re-sends the growing conversation as its prompt, so this is ~95% prompt tokens and far larger than tokens_per_sec × time (which reconstructs only generated tokens)."},
+    {"term": "tokens_per_sec", "def": "completion (generated) tokens per second of llm_time — generation throughput. Excludes prompt tokens, so tokens_per_sec × llm_time ≈ completion tokens, NOT total_tokens."},
     {"term": "steps", "def": "Number of agent turns (tool-call rounds) taken to finish a task."},
     {"term": "stopped_reason", "def": "Why the agent loop ended: answered, max_steps, or error."},
     {"term": "prompt", "def": "The AGENT's system+user prompt (versioned by prompt_name) — NOT the original benchmark prompt given to the model under test."},
@@ -73,12 +76,12 @@ GLOSSARY = [
 ]
 
 
-def _present_columns(con) -> set:
+def _present_columns(con: Any) -> set[str]:
     """Column names actually available in the runs view (older Parquet may lack new ones)."""
     return {d[0] for d in con.execute("SELECT * FROM runs LIMIT 0").description}
 
 
-def build_prompt_registry(prompt_names) -> dict:
+def build_prompt_registry(prompt_names: set[str] | list[str]) -> dict[str, dict[str, str]]:
     """{prompt_name: {system, user}} for the prompt versions we can source.
 
     Seeded from the agent_eval/prompts registry, so the CURRENT prompt renders its real text.
@@ -98,7 +101,8 @@ def build_prompt_registry(prompt_names) -> dict:
 
 # ── tool-path LLM summaries ────────────────────────────────────────────
 
-def _path_signature(tool_sequence_json) -> str:
+def _path_signature(tool_sequence_json: str | None) -> str:
+    """Render a run's tool_sequence_json as a ' → '-joined path signature ('' if unparseable)."""
     try:
         seq = json.loads(tool_sequence_json or "[]")
     except (TypeError, json.JSONDecodeError):
@@ -106,20 +110,23 @@ def _path_signature(tool_sequence_json) -> str:
     return " → ".join(seq)
 
 
-def _load_cache(path) -> dict:
+def _load_cache(path: str | Path) -> dict[str, str]:
+    """Load the path-summary cache from `path` ({} if it is absent or corrupt)."""
     try:
         return json.loads(Path(path).read_text())
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
 
 
-def _save_cache(path, cache) -> None:
+def _save_cache(path: str | Path, cache: dict[str, str]) -> None:
+    """Persist the path-summary cache to `path`, creating parent dirs as needed."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(cache))
 
 
-def _summary_messages(signature: str, reasonings: list) -> list:
+def _summary_messages(signature: str, reasonings: list[str]) -> list[dict[str, str]]:
+    """Build the chat messages asking for a one-sentence 'why this path' explanation."""
     joined = "\n---\n".join(reasonings[:3]) if reasonings else "(no reasoning captured)"
     return [
         {"role": "system", "content":
@@ -134,7 +141,10 @@ def _summary_messages(signature: str, reasonings: list) -> list:
     ]
 
 
-def _summarize_one(client, model, completion_kwargs, signature, reasonings):
+def _summarize_one(
+    client: Any, model: str, completion_kwargs: dict[str, Any],
+    signature: str, reasonings: list[str],
+) -> str | None:
     """One summary call; returns text or None on any failure (graceful skip)."""
     try:
         resp = client.chat.completions.create(
@@ -147,7 +157,10 @@ def _summarize_one(client, model, completion_kwargs, signature, reasonings):
         return None
 
 
-def summarize_paths(con, present, summarizer_backend, top_n=6, cache_path=DEFAULT_CACHE, refresh=False):
+def summarize_paths(
+    con: Any, present: set[str], summarizer_backend: str, top_n: int = 6,
+    cache_path: str | Path = DEFAULT_CACHE, refresh: bool = False,
+) -> dict[str, str]:
     """Return {path_signature: blurb} for the top-N tool paths.
 
     Summaries are cached by PATH SIGNATURE in a JSON file, so a path is summarized
@@ -202,8 +215,11 @@ def summarize_paths(con, present, summarizer_backend, top_n=6, cache_path=DEFAUL
 
 # ── snapshot + render ──────────────────────────────────────────────────
 
-def build_snapshot(base_dir=None, summarizer_backend="summarizer", summarize=True,
-                   top_n=6, cache_path=DEFAULT_CACHE, refresh_summaries=False):
+def build_snapshot(
+    base_dir: str | Path | None = None, summarizer_backend: str = "summarizer",
+    summarize: bool = True, top_n: int = 6, cache_path: str | Path = DEFAULT_CACHE,
+    refresh_summaries: bool = False,
+) -> dict[str, Any]:
     """Query DuckDB and return a JSON-serializable snapshot dict."""
     con = connect(base_dir)
     present = _present_columns(con)
@@ -235,7 +251,7 @@ def build_snapshot(base_dir=None, summarizer_backend="summarizer", summarize=Tru
     }
 
 
-def render_html(snapshot, template_path=TEMPLATE):
+def render_html(snapshot: dict[str, Any], template_path: str | Path = TEMPLATE) -> str:
     """Inject the snapshot JSON into the template, escaping `<` so an embedded
     `</script>` can't break out of the data block."""
     template = Path(template_path).read_text()
@@ -245,7 +261,8 @@ def render_html(snapshot, template_path=TEMPLATE):
     return template.replace(PLACEHOLDER, data_json)
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> None:
+    """CLI entry: build the snapshot, render the template, and write the HTML file."""
     p = argparse.ArgumentParser(prog="analysis.build_dashboard")
     p.add_argument("--base-dir", default=None, help="override outputs/agent_runs")
     p.add_argument("--out", default=str(DEFAULT_OUT))

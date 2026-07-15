@@ -16,17 +16,19 @@ from __future__ import annotations
 from pathlib import Path
 
 import duckdb
+import pandas as pd
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_RUNS_DIR = REPO_ROOT / "outputs" / "agent_runs"
 
 
-def runs_glob(base_dir=None) -> str:
+def runs_glob(base_dir: str | Path | None = None) -> str:
+    """Glob pattern for the date-partitioned run Parquet files (defaults to outputs/agent_runs)."""
     base = Path(base_dir) if base_dir is not None else DEFAULT_RUNS_DIR
     return str(base / "**" / "*.parquet")
 
 
-def connect(base_dir=None):
+def connect(base_dir: str | Path | None = None) -> duckdb.DuckDBPyConnection:
     """Return a DuckDB connection with a `runs` view over the Parquet dataset.
 
     Raises FileNotFoundError if no run files exist yet (so the caller gets a
@@ -45,7 +47,7 @@ def connect(base_dir=None):
     return con
 
 
-def summary_by(con, *dims):
+def summary_by(con: duckdb.DuckDBPyConnection, *dims: str) -> pd.DataFrame:
     """Aggregate key metrics grouped by the given dimension columns."""
     if not dims:
         dims = ("backend",)
@@ -68,7 +70,7 @@ def summary_by(con, *dims):
     ).df()
 
 
-def concurrency_summary(con):
+def concurrency_summary(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
     """Sequential-vs-parallel view: throughput & GPU pressure by concurrency."""
     return con.execute(
         """
@@ -86,7 +88,7 @@ def concurrency_summary(con):
     ).df()
 
 
-def infra_summary(con):
+def infra_summary(con: duckdb.DuckDBPyConnection) -> pd.DataFrame:
     """Infra-comparison view: throughput & GPU pressure by framework × GPU × concurrency.
 
     The richer version of concurrency_summary — shows whether a serving engine

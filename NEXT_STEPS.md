@@ -1,63 +1,55 @@
-# Next steps — pick up Tuesday
+# Next steps — team review (Tue 2026-07-21), then composite_v2
 
-Goal: run the first real agentic-eval batch on the **playground** (gpt-5-mini) over ~100
-real `llm_outputs`, get the data into the dashboard. All tooling is built, tested, and the
-directory reorg is done.
+First real agentic-eval batch is **done** and in the dashboard. Immediate next step is a
+**team review of the results + dashboard on Tuesday morning (2026-07-21) to collect feedback
+before deciding what to build next.**
 
-## Where we left off (Fri)
-- Single-row smoke **passed** end-to-end (worker → MCP server → Mongo → playground agent →
-  composite tool → save → Parquet + Weave trace URL), and the 3 fixes verified on the real row
-  (`agent_model_key`, `weave_trace_url`, `save_success`/`save_failed`).
-- `weave` installed into `~/venv` (was missing).
-- **Directory reorg DONE:** `mcp/` → **`agent_eval/`** (one flat package at the repo root,
-  sibling of `scripts/`/`analysis/`). `python -m eval` is now **`python -m agent_eval`**;
-  `metric_server.py`→`server.py`, `metric_tools.py`→`tools.py`; the `eval/` subpackage is gone.
-  Non-eval bits moved out: `redivis_example/`→`reference/`, notebooks→`notebooks/`. **112 tests green.**
-- **Uncommitted:** the whole reorg + eval-mapping pipeline + worker mode + slurm scripts + the
-  save/weave/model fixes. **Commit first thing** (it's a big rename — commit so it's safe).
+## Where we landed
+- **Batch 376856 complete:** 120 evals = **40 outputs × 3 judges** (gpt-5-mini, DeepSeek-V3.2,
+  claude-sonnet-4-6), all via the playground API, weave on. 119 converged, 1 hit `max_steps`.
+- **Judges:** Llama-4 was dropped — the Stanford key has **no Llama access** (401); swapped in
+  **DeepSeek-V3.2** (open-weight, validated end-to-end).
+- **Data landed in all stores:** local Parquet, **`agentic_runs`** (central Mongo mirror, the
+  team-queryable copy — 120/120), and **`agentic_evaluations`** (per-judge verdicts, keyed by
+  the shared **`eval_id`** so multiple judges of the same output no longer collapse).
+- **Dashboard:** `images/agent_dashboard_376856.html` (self-contained; built from the clean
+  `agentic_runs` rows). Group-by model/benchmark, latency split (`llm_time` vs `overhead_time`),
+  full-size tool-path/routing DAG.
 
-## Run it (all from the REPO ROOT)
+## Headline results (for the review)
+- **Routing accuracy ~0.44–0.54 overall**, but wildly uneven by benchmark:
+  bench 11 = 1.00, bench 7 = 0.985, bench 10 = 0.33, bench 6 = 0.17, **bench 5 = 0.083**.
+- The **raw_string ↔ extracted_string confusion is concentrated in single-/ambiguous-field
+  benchmarks (5, 6, 10)** — e.g. bench 5's `first_channel` is gold `raw_string` but every judge
+  routes it `extracted_string`. Bench 7 (3 clearly-different-shaped fields) routes near-perfectly.
+- **Save reliability high** (DeepSeek 100%, gpt-5-mini & claude 97.5%); the misses were 1
+  `max_steps` and 1 answered-but-didn't-save (caught by `save_success`). No true tool-hedging
+  (the few >1-tool-per-field cases were all sanctioned retry-after-error).
+- **Latency** (service, not pure inference — playground is remote): DeepSeek fastest (~20s),
+  gpt-5-mini ~24s, claude ~26s. `overhead_time` ~0.9s and backend-independent (local tools).
+
+## Queued (after team feedback picks the direction)
+- **Benchmark 5/6/10 routing deep-dive** → the concrete input for **composite_v2**: sharpen the
+  raw-vs-extracted distinction (raw = always-present printed line; extracted = a single value
+  that may be absent), *and* review whether some gold `field_type` labels are too strict.
+- **deepseek-r1 as a 4th judge** — the "does a reasoning model route better?" experiment.
+- **Local NIM run** to populate the GPU-pressure / concurrency panel (needs the GPU).
+- **Dashboard path-summaries** (needs the gemma summarizer server): rebuild with
+  `python -m analysis.build_dashboard --base-dir outputs/dash_batch376856 --refresh-summaries --out images/agent_dashboard_376856.html`.
+
+## Rebuild / re-run recipes (from the repo root)
 
 ```bash
-cd /yen/projects/students/ltdarc-usf-intern-2025/LLM_benchmarks
-
-# 0. commit the reorg + tooling (big uncommitted change)
-git add -A && git commit -m "Reorg mcp/ -> agent_eval package; eval-mapping run tooling + fixes"
-
-# 1. clean slate (drops the smoke rows + capped validation registry)
-rm -rf outputs/agent_runs/* ; rm -f inputs/eval_mapping*.csv
-
-# 2. build the 100-row sample (queries Mongo; ~seconds)
 source ~/venv/bin/activate
-python -m agent_eval.registry.create_eval_mapping --sample 100
 
-# 3. fire the self-contained batch (SLURM picks a compute node, runs its own server)
-sbatch agent_eval/scripts/run_eval_batch.slurm
-#    knobs:  --export=ALL,MAXPAR=12   (more concurrency)
-#            --export=ALL,WEAVE=0     (if Weave/W&B can't be reached from compute nodes)
+# regenerate the dashboard from the clean batch rows (Mongo export lives in outputs/dash_batch376856)
+python -m analysis.build_dashboard --base-dir outputs/dash_batch376856 --no-summaries \
+    --out images/agent_dashboard_376856.html
 
-# 4. check results
-cat eval-batch-<jobid>.out            # "Batch complete: X/N rows produced a Done line"
-ls eval-logs/                         # per-row logs; failed rows listed in the .out
-
-# 5. build the dashboard from the real rows
-python -m analysis.build_dashboard --no-summaries      # -> images/agent_dashboard.html
+# a fresh batch: rebuild the sample, then fire it (SLURM picks a compute node, starts its own server)
+python -m agent_eval.registry.create_eval_mapping --sample 40 --seed 0
+sbatch agent_eval/scripts/run_eval_batch.slurm       # knobs: --export=ALL,MAXPAR=8,WEAVE=1
 ```
 
-## Watch for
-- **`weave.init` errors in `eval-logs/row-*.out`** = compute nodes can't reach wandb.ai.
-  Re-run with `sbatch --export=ALL,WEAVE=0 agent_eval/scripts/run_eval_batch.slurm` (data still flows to
-  Parquet; only the trace deep-link is lost). This is the one thing the batch will tell us that
-  we couldn't test in advance.
-- **Routing accuracy / agent behavior**: the smoke showed gpt-5-mini double-saving and
-  misrouting benchmark 6 (raw_string → extracted_string). Expected signal, not a bug — look at
-  the spread across the batch; it's fodder for a prompt tweak later.
-
-## Reorg landed (reference)
-`agent_eval/` is now the one package. Test it with `cd agent_eval && EVAL_DISABLE_WEAVE=1
-python -m pytest`. `agent_eval/README.md` is the design log (layout + run recipe + findings).
-
-## Later (needs the GPU, currently busy)
-- Local-model (NIM) run to populate the sequential-vs-parallel / GPU-pressure panel and the
-  `--concurrency N` study (`requests_running_end` should rise >1 vs sequential).
-- Path-summaries on the dashboard (needs the gemma summarizer server up).
+Tests: `cd agent_eval && EVAL_DISABLE_WEAVE=1 python -m pytest` (123 green).
+Design log + layout: `agent_eval/README.md`.

@@ -75,6 +75,12 @@ modules sit at the top; run entry points as `python -m agent_eval …` from the 
   **degrade gracefully**: if the summarizer endpoint is down, the build still succeeds
   without blurbs. Summarizer currently reuses the working gemma NIM server
   (`summarizer` backend).
+- **Dashboard views.** Group breakdown is regroupable by **model or benchmark** (also
+  prompt / framework / GPU / temperature); each group shows tokens, **latency split into
+  `llm_time` (model/service) vs `overhead_time` (local tool + loop)**, routing accuracy,
+  and save rate. The **tool-call path / routing** DAG renders full-size (scrolls
+  horizontally) with divergent (mis-routed) paths flagged. `eval_id` joins each run row
+  to its `agentic_evaluations` verdict.
 
 ## Running
 

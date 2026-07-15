@@ -71,6 +71,8 @@
   .agentviz .summary-card .value { margin-top: 8px; font-size: clamp(1.2rem, 2.4vw, 1.7rem); font-weight: 700; }
   .agentviz .chart-frame { width: 100%; overflow-x: auto; }
   .agentviz svg.chart { width: 100%; height: auto; display: block; }
+  /* the flow DAG renders at its true pixel size and scrolls, instead of shrinking to fit */
+  .agentviz svg.chart-flow { width: auto; max-width: none; height: auto; }
   .agentviz table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   .agentviz th, .agentviz td {
     border-bottom: 1px solid var(--border); padding: 9px 8px; font-size: 0.9rem;
@@ -223,11 +225,14 @@
     { key: "total_tokens", label: "Total tokens", fmt: intFmt },
     { key: "completion_tokens", label: "Completion tokens", fmt: intFmt },
     { key: "tokens_per_sec", label: "Tokens/sec", fmt: num1 },
+    { key: "llm_time_total", label: "LLM time (s)", fmt: num1 },
+    { key: "overhead_time", label: "Overhead (s)", fmt: num1 },
     { key: "steps", label: "Steps", fmt: num1 },
     { key: "selection_accuracy", label: "Routing acc", fmt: pct }
   ];
   var GROUPBYS = [
     { key: "model", label: "Model" },
+    { key: "benchmark_id", label: "Benchmark" },
     { key: "prompt_name", label: "Prompt" },
     { key: "framework", label: "Framework" },
     { key: "gpu_type", label: "GPU type" },
@@ -469,6 +474,8 @@
       { label: "Runs", value: intFmt(list.length) },
       { label: "Avg tool calls", value: num1(avg(list, "n_tool_calls")) },
       { label: "Avg total tokens", value: intFmt(avg(list, "total_tokens")) },
+      { label: "Avg LLM s", value: num1(avg(list, "llm_time_total")) },
+      { label: "Avg overhead s", value: num1(avg(list, "overhead_time")) },
       { label: "Save success", value: pct(rate(list, "save_success")) },
       { label: "Routing acc", value: pct(avg(list, "selection_accuracy")) }
     ];
@@ -487,6 +494,8 @@
       header("Metric calls", "n_metric_calls", "group", st, true),
       header("Total tokens", "total_tokens", "group", st, true),
       header("Tokens/sec", "tokens_per_sec", "group", st, true),
+      header("LLM s", "llm_time_total", "group", st, true),
+      header("Ovh s", "overhead_time", "group", st, true),
       header("Steps", "steps", "group", st, true),
       header("Sel acc", "selection_accuracy", "group", st, true),
       header("Save %", "save_success", "group", st, true),
@@ -497,11 +506,13 @@
         "</td><td class='num'>" + num1(r.n_metric_calls) +
         "</td><td class='num'>" + intFmt(r.total_tokens) +
         "</td><td class='num'>" + num1(r.tokens_per_sec) +
+        "</td><td class='num'>" + num1(r.llm_time_total) +
+        "</td><td class='num'>" + num1(r.overhead_time) +
         "</td><td class='num'>" + num1(r.steps) +
         "</td><td class='num'>" + pct(r.selection_accuracy) +
         "</td><td class='num'>" + pct(r.save_success) + "</td></tr>");
     });
-    if (!sorted.length) html.push("<tr><td colspan='9' class='helper'>No groups.</td></tr>");
+    if (!sorted.length) html.push("<tr><td colspan='11' class='helper'>No groups.</td></tr>");
     html.push("</tbody></table>");
     document.getElementById("groupTableWrap").innerHTML = html.join("");
   }
@@ -569,7 +580,7 @@
     }
     columns.push([{ key: "__end", label: "end" }]);
 
-    var nodeW = 128, nodeH = 24, colGap = 66, rowGap = 12, padX = 12, padY = 16;
+    var nodeW = 150, nodeH = 46, colGap = 74, rowGap = 22, padX = 18, padY = 24;
     var maxRows = columns.reduce(function (m, c) { return Math.max(m, c.length); }, 1);
     var width = padX * 2 + columns.length * nodeW + (columns.length - 1) * colGap;
     var height = padY * 2 + Math.max(1, maxRows) * (nodeH + rowGap);
@@ -590,13 +601,13 @@
     var maxCount = Math.max.apply(null, allCounts.concat([1]));
     function strokeW(c) { return 1 + (c / maxCount) * 7; }
 
-    var svg = ['<svg class="chart" viewBox="0 0 ' + width + " " + height + '">'];
+    var svg = ['<svg class="chart chart-flow" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + " " + height + '">'];
     function edge(a, b, count, color) {
       if (!a || !b) return;
       var x1 = a.rightX, y1 = a.cy, x2 = b.leftX, y2 = b.cy, mx = (x1 + x2) / 2;
       svg.push('<path d="M' + x1 + "," + y1 + " C" + mx + "," + y1 + " " + mx + "," + y2 + " " + x2 + "," + y2 +
         '" fill="none" stroke="' + color + '" stroke-width="' + strokeW(count).toFixed(2) + '" stroke-opacity="0.45"><title>' + count + ' run(s)</title></path>');
-      svg.push('<text x="' + mx.toFixed(1) + '" y="' + ((y1 + y2) / 2 - 2).toFixed(1) + '" font-size="10" fill="#6b7280" text-anchor="middle">' + count + "</text>");
+      svg.push('<text x="' + mx.toFixed(1) + '" y="' + ((y1 + y2) / 2 - 2).toFixed(1) + '" font-size="14" fill="#6b7280" text-anchor="middle">' + count + "</text>");
     }
     Object.keys(startEdges).forEach(function (t) { edge(pos["0|__start"], pos["1|" + t], startEdges[t], "#8c1515"); });
     Object.keys(midEdges).forEach(function (k) {
@@ -612,7 +623,7 @@
         var fill = n.key === "__start" ? "#15803d" : n.key === "__end" ? "#b45309" : "#ffffff";
         var tcol = term ? "#fff" : "#1f2937";
         svg.push('<rect x="' + pp.x + '" y="' + pp.y + '" width="' + nodeW + '" height="' + nodeH + '" rx="6" fill="' + fill + '" stroke="' + (term ? fill : "#d7d9df") + '"/>');
-        svg.push('<text x="' + (pp.x + nodeW / 2) + '" y="' + (pp.y + nodeH / 2 + 4) + '" font-size="11" text-anchor="middle" fill="' + tcol + '">' + escapeXml(clip(n.label, 18)) + "</text>");
+        svg.push('<text x="' + (pp.x + nodeW / 2) + '" y="' + (pp.y + nodeH / 2 + 6) + '" font-size="17" text-anchor="middle" fill="' + tcol + '">' + escapeXml(clip(n.label, 20)) + "</text>");
       });
     });
     svg.push("</svg>");
