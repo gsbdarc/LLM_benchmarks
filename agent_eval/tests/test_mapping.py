@@ -12,7 +12,7 @@ JUDGE = [{"judge_backend": "playground", "judge_model": "gpt-5-mini", "judge_pro
 
 THREE_JUDGES = [
     {"judge_backend": "playground", "judge_model": m, "judge_prompt": "composite_v1"}
-    for m in ("gpt-5-mini", "Llama-4", "claude-sonnet-4-6")
+    for m in ("gpt-5-mini", "DeepSeek-V3.2", "claude-sonnet-4-6")
 ]
 
 
@@ -36,7 +36,7 @@ def test_sample_paired_keeps_all_judges_for_sampled_outputs():
     for r in picked:
         by_output.setdefault(mapping._output_key(r), set()).add(r["judge_model"])
     assert len(by_output) == 4
-    assert all(js == {"gpt-5-mini", "Llama-4", "claude-sonnet-4-6"} for js in by_output.values())
+    assert all(js == {"gpt-5-mini", "DeepSeek-V3.2", "claude-sonnet-4-6"} for js in by_output.values())
     # deterministic
     assert mapping.sample_paired(rows, 4, seed=0) == picked
 

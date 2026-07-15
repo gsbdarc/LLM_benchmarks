@@ -9,8 +9,8 @@
       "completion_kwargs": { "temperature": 0}
     },
     "2": {
-      "model": "Llama-4",
-      "label": "Llama-4",
+      "model": "DeepSeek-V3.2",
+      "label": "DeepSeek-V3.2",
       "completion_kwargs": { "temperature": 0 }
     },
     "3": {
