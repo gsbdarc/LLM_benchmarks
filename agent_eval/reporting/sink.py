@@ -14,6 +14,7 @@ import json
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Optional, Union
 
 import pandas as pd
 
@@ -21,14 +22,19 @@ from ..config import AGENT_RUNS_DIR
 from .observability import reasoning_blob, tool_sequence
 
 
-def _gpu(gpu, key):
+def _gpu(gpu: Any, key: str) -> Optional[float]:
     """Safely pull a metric from a gpu scrape dict (which may be None or {'error':...})."""
     if not isinstance(gpu, dict) or "error" in gpu:
         return None
     return gpu.get(key)
 
 
-def flatten_run(result, meta, integrity=None, scores=None):
+def flatten_run(
+    result: dict,
+    meta: dict,
+    integrity: dict | None = None,
+    scores: dict | None = None,
+) -> dict[str, Any]:
     """Build one flat row dict from a run_agent result + context.
 
     meta carries config/identifier fields (backend, model, prompt_name, concurrency,
@@ -109,7 +115,7 @@ def flatten_run(result, meta, integrity=None, scores=None):
     return row
 
 
-def write_run_row(row, base_dir=AGENT_RUNS_DIR):
+def write_run_row(row: dict[str, Any], base_dir: Union[str, Path] = AGENT_RUNS_DIR) -> Path:
     """Append one row as its own Parquet file under base_dir/date=YYYY-MM-DD/.
 
     Returns the written file path. Per-file writes are append-safe under
@@ -126,6 +132,8 @@ def write_run_row(row, base_dir=AGENT_RUNS_DIR):
     return path
 
 
-def write_runs(rows, base_dir=AGENT_RUNS_DIR):
+def write_runs(
+    rows: list[dict[str, Any]], base_dir: Union[str, Path] = AGENT_RUNS_DIR
+) -> list[Path]:
     """Write many flat rows (one file per row). Returns list of paths."""
     return [write_run_row(r, base_dir=base_dir) for r in rows]

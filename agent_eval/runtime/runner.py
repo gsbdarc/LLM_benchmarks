@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 from contextlib import nullcontext
+from typing import Any, Optional
 
 from .. import config
 from .agent import call_mcp_tool, load_tools_from_mcp, make_llm_step, run_agent, use_session
@@ -22,7 +23,7 @@ from ..reporting.scorers import _load_gold_metrics, selection_accuracy_scorer
 from ..reporting.sink import flatten_run, write_run_row
 
 
-def _weave_attrs(enabled, attrs):
+def _weave_attrs(enabled: bool, attrs: dict[str, Any]) -> Any:
     """weave.attributes(attrs) if tracing is on, else a no-op context."""
     if enabled:
         import weave
@@ -31,7 +32,13 @@ def _weave_attrs(enabled, attrs):
     return nullcontext()
 
 
-async def aprepare(backend, mcp_url, weave_enabled=True, model=None, gpu_type=None):
+async def aprepare(
+    backend: str,
+    mcp_url: str,
+    weave_enabled: bool = True,
+    model: Optional[str] = None,
+    gpu_type: Optional[str] = None,
+) -> dict[str, Any]:
     """Async setup: returns a context dict used by run_batch.
 
     `model` overrides the backend's default model; `gpu_type` is the GPU name of
@@ -63,7 +70,7 @@ async def aprepare(backend, mcp_url, weave_enabled=True, model=None, gpu_type=No
     }
 
 
-async def discover_rows(mcp_url, benchmark_ids, limit):
+async def discover_rows(mcp_url: str, benchmark_ids: list[str], limit: int) -> list[dict[str, Any]]:
     """Use list_outputs over MCP to build the work list (one row per output)."""
     rows = []
     async with use_session(mcp_url):
@@ -81,7 +88,16 @@ async def discover_rows(mcp_url, benchmark_ids, limit):
     return rows
 
 
-async def run_one(row, ctx, gold, concurrency, max_steps, verbose, write_sink, gpu_metrics):
+async def run_one(
+    row: dict[str, Any],
+    ctx: dict[str, Any],
+    gold: Any,
+    concurrency: int,
+    max_steps: int,
+    verbose: bool,
+    write_sink: bool,
+    gpu_metrics: bool,
+) -> dict[str, Any]:
     """Run the agent on one row, score it, and write a Parquet row. Returns the row dict."""
     safe_run_id = int(row["run_id"]) if row.get("run_id") is not None else 0
     metrics_url = config.metrics_url(ctx["base_url"]) if gpu_metrics else None
@@ -144,13 +160,14 @@ async def run_one(row, ctx, gold, concurrency, max_steps, verbose, write_sink, g
     return result
 
 
-async def run_batch(rows, ctx, concurrency=2, max_steps=config.MAX_STEPS, verbose=False,
-                    write_sink=True, gpu_metrics=True):
+async def run_batch(rows: list[dict[str, Any]], ctx: dict[str, Any], concurrency: int = 2,
+                    max_steps: int = config.MAX_STEPS, verbose: bool = False,
+                    write_sink: bool = True, gpu_metrics: bool = True) -> list[dict[str, Any]]:
     """Run all rows with bounded parallelism (asyncio.gather + Semaphore)."""
     gold = _load_gold_metrics()
     sem = asyncio.Semaphore(concurrency)
 
-    async def _guarded(row):
+    async def _guarded(row: dict[str, Any]) -> dict[str, Any]:
         async with sem:
             return await run_one(row, ctx, gold, concurrency, max_steps, verbose, write_sink, gpu_metrics)
 

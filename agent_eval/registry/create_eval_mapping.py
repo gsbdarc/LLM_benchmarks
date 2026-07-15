@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from typing import Any
 
 # agent_eval/registry/ -> agent_eval/ -> repo root
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -42,7 +43,9 @@ REGISTRY = INPUTS_DIR / "eval_mapping.csv"
 SAMPLE = INPUTS_DIR / "eval_mapping_sample.csv"
 
 
-def fetch_outputs(benchmark_ids, limit_per_benchmark):
+def fetch_outputs(
+    benchmark_ids: list[str], limit_per_benchmark: int
+) -> list[dict[str, Any]]:
     """Pull processed outputs per benchmark via the same query the MCP tool uses."""
     from agent_eval.tools import list_pending_outputs  # lazy: keeps Mongo out of imports
 
@@ -55,7 +58,7 @@ def fetch_outputs(benchmark_ids, limit_per_benchmark):
     return outs
 
 
-def judge_configs():
+def judge_configs() -> list[dict[str, Any]]:
     """The judge/agent config(s) that do the grading. One for now."""
     from agent_eval.prompts import PROMPT_NAME
 
@@ -63,7 +66,7 @@ def judge_configs():
     return [{"judge_backend": "playground", "judge_model": model, "judge_prompt": PROMPT_NAME}]
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(prog="create_eval_mapping")
     p.add_argument("--benchmarks", default=",".join(DEFAULT_BENCHMARKS),
                    help="comma-separated benchmark ids (default: the labeled ones)")

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
+from typing import Any, Optional, Union
 
 from ..config import PKG_DIR
 from .integrity import check_score_consistency, extract_saved_evaluation, save_outcome
@@ -17,7 +18,7 @@ from .observability import op
 GOLD_CSV = PKG_DIR / "gold_metrics.csv"
 
 
-def _load_gold_metrics(path=GOLD_CSV):
+def _load_gold_metrics(path: Union[str, Path] = GOLD_CSV) -> dict[tuple[str, str], Any]:
     """Load the gold field_type keyed by (benchmark_id, field_name). {} if missing.
 
     With the composite consolidation, routing accuracy is graded against the
@@ -39,7 +40,8 @@ def _load_gold_metrics(path=GOLD_CSV):
 
 
 @op
-def save_success_scorer(output):
+def save_success_scorer(output: dict[str, Any]) -> dict[str, Any]:
+    """Score whether the run saved an evaluation and answered (save success/count/failed)."""
     # Shared with integrity.run_integrity_report so the two never drift: success
     # means >=1 SUCCESSFUL save; save_failed preserves the first-attempt-failed nuance.
     attempts, failed, ok = save_outcome(output.get("messages", []))
@@ -51,12 +53,14 @@ def save_success_scorer(output):
 
 
 @op
-def score_consistency_scorer(output):
+def score_consistency_scorer(output: dict[str, Any]) -> dict[str, Any]:
+    """Score whether every saved score traces back to a prior metric-tool result."""
     return check_score_consistency(output.get("messages", []))
 
 
 @op
-def efficiency_scorer(output):
+def efficiency_scorer(output: dict[str, Any]) -> dict[str, Any]:
+    """Score run efficiency: steps, tool errors, tokens, and derived throughput signals."""
     return {
         "steps": output.get("steps", 0),
         "tool_errors": sum(output.get("tool_errors_by_name", {}).values()),
@@ -67,7 +71,7 @@ def efficiency_scorer(output):
     }
 
 
-def _chosen_field_type(fe):
+def _chosen_field_type(fe: dict[str, Any]) -> str:
     """The data shape the agent routed a field to.
 
     Prefer an explicit "field_type"; otherwise derive it from the type-tool name
@@ -82,7 +86,12 @@ def _chosen_field_type(fe):
 
 
 @op
-def selection_accuracy_scorer(output, benchmark_id=None, gold=None, **kwargs):
+def selection_accuracy_scorer(
+    output: dict[str, Any],
+    benchmark_id: Optional[Any] = None,
+    gold: Optional[dict[tuple[str, str], Any]] = None,
+    **kwargs: Any,
+) -> Optional[dict[str, Any]]:
     """Fraction of fields the agent routed to the correct composite type-tool.
 
     Graded against the gold `field_type` (raw_string/extracted_string/list).

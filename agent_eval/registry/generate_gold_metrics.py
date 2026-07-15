@@ -12,6 +12,8 @@ Run once from the repo root:
 Re-run only if benchmarks.json changes or you add new benchmark IDs.
 """
 
+from __future__ import annotations
+
 import csv
 import json
 from pathlib import Path
@@ -23,7 +25,8 @@ OUTPUT_CSV = Path(__file__).resolve().parents[1] / "gold_metrics.csv"
 FIELDNAMES = ["benchmark_id", "benchmark_name", "field_name", "field_type", "gold_metric", "all_metrics"]
 
 
-def main():
+def main() -> None:
+    """Read benchmarks.json and write one gold_metrics.csv row per (benchmark, field)."""
     with open(BENCHMARKS_FILE) as f:
         benchmarks = json.load(f)
 

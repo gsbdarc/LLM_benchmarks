@@ -10,6 +10,7 @@ returned.
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from .observability import op
 
@@ -21,7 +22,7 @@ METRIC_TOOLS = {
 }
 
 
-def extract_saved_evaluation(messages):
+def extract_saved_evaluation(messages: list[Any]) -> tuple[list[dict[str, Any]], int]:
     """Return (list_of_save_args, call_count) by scanning assistant tool_calls."""
     saves = []
     for msg in messages:
@@ -35,7 +36,7 @@ def extract_saved_evaluation(messages):
     return saves, len(saves)
 
 
-def count_failed_saves(messages):
+def count_failed_saves(messages: list[Any]) -> int:
     """Number of save_evaluation TOOL RESULTS that reported failure.
 
     Reads the results (not just the calls) so we can tell a save that errored on
@@ -56,14 +57,14 @@ def count_failed_saves(messages):
     return failed
 
 
-def save_outcome(messages):
+def save_outcome(messages: list[Any]) -> tuple[int, int, int]:
     """(attempts, failed, succeeded) for save_evaluation across a run."""
     _, attempts = extract_saved_evaluation(messages)
     failed = count_failed_saves(messages)
     return attempts, failed, max(0, attempts - failed)
 
 
-def check_score_consistency(messages):
+def check_score_consistency(messages: list[Any]) -> dict[str, Any]:
     """Verify every saved numeric score appeared in a prior metric-tool result."""
     observed = set()
     for msg in messages:
@@ -89,7 +90,7 @@ def check_score_consistency(messages):
     return {"consistent": len(missing) == 0, "missing": missing}
 
 
-def check_retry_rule(messages):
+def check_retry_rule(messages: list[Any]) -> dict[str, Any]:
     """For each tool error, check whether the same tool was re-called (any args)."""
     call_map = {}  # tool_call_id -> (name, args)
     for msg in messages:
@@ -122,7 +123,7 @@ def check_retry_rule(messages):
 
 
 @op
-def run_integrity_report(result, verbose=True):
+def run_integrity_report(result: dict[str, Any], verbose: bool = True) -> dict[str, Any]:
     """Run all checks, optionally print a summary, and return a dict (Weave-traced)."""
     messages = result.get("messages", [])
     save_count, save_failed, save_ok = save_outcome(messages)

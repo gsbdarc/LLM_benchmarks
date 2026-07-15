@@ -26,6 +26,7 @@ import contextvars
 import json
 import time
 from contextlib import asynccontextmanager
+from typing import Any, AsyncIterator, Callable, Optional
 
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
@@ -84,7 +85,7 @@ _retry_policy = dict(
 # ---------------------------------------------------------------------------
 
 @asynccontextmanager
-async def mcp_session(url):
+async def mcp_session(url: str) -> AsyncIterator[ClientSession]:
     """Open one initialized MCP ClientSession over streamable HTTP."""
     async with streamablehttp_client(url) as (read, write, _):
         async with ClientSession(read, write) as session:
@@ -93,7 +94,7 @@ async def mcp_session(url):
 
 
 @asynccontextmanager
-async def use_session(url):
+async def use_session(url: str) -> AsyncIterator[ClientSession]:
     """Open a session AND bind it to the contextvar for call_mcp_tool to find.
 
     Use this to make ad-hoc tool calls outside run_agent (e.g. the CLI calling
@@ -107,7 +108,7 @@ async def use_session(url):
             _session_var.reset(token)
 
 
-async def load_tools_from_mcp(url):
+async def load_tools_from_mcp(url: str) -> list[dict[str, Any]]:
     """Discover tools from the live server, as OpenAI Chat Completions schemas."""
     async with mcp_session(url) as session:
         listed = await session.list_tools()
@@ -129,13 +130,14 @@ async def load_tools_from_mcp(url):
 # ---------------------------------------------------------------------------
 
 @retry(**_retry_policy)
-async def _call_tool_retrying(session, tool_name, arguments):
+async def _call_tool_retrying(session: ClientSession, tool_name: str, arguments: dict[str, Any]) -> Any:
+    """Call one MCP tool with the retry policy applied to transient drops."""
     result = await session.call_tool(tool_name, arguments)
     return result
 
 
 @op
-async def call_mcp_tool(tool_name, arguments, verbose=True):
+async def call_mcp_tool(tool_name: str, arguments: dict[str, Any], verbose: bool = True) -> str:
     """Call one MCP tool over the session bound to the current context."""
     session = _session_var.get()
     if session is None:
@@ -159,12 +161,17 @@ async def call_mcp_tool(tool_name, arguments, verbose=True):
 
 
 @op
-def log_parse_failure(tool_name, raw_args, error_msg):
+def log_parse_failure(tool_name: str, raw_args: Optional[str], error_msg: str) -> dict[str, Any]:
     """Traced event for JSON argument-parse failures (behavior unchanged)."""
     return {"tool_name": tool_name, "raw_args": raw_args, "error": error_msg}
 
 
-def make_llm_step(client, model, tools, completion_kwargs):
+def make_llm_step(
+    client: Any,
+    model: str,
+    tools: list[dict[str, Any]],
+    completion_kwargs: dict[str, Any],
+) -> Callable[[list[Any]], Any]:
     """Build a retried, traced async llm_step bound to a client/model/tools/kwargs.
 
     Returned as a closure so run_agent stays backend-agnostic and tests can pass
@@ -176,7 +183,7 @@ def make_llm_step(client, model, tools, completion_kwargs):
 
     @op
     @retry(**_retry_policy)
-    async def llm_step(messages):
+    async def llm_step(messages: list[Any]) -> Any:
         return await client.chat.completions.create(
             model=model,
             messages=messages,
@@ -194,18 +201,18 @@ def make_llm_step(client, model, tools, completion_kwargs):
 
 @op
 async def run_agent(
-    user_prompt,
-    system_prompt,
-    llm_step,
-    mcp_url,
-    max_steps=12,
-    verbose=True,
-    backend=None,
-    model=None,
-    task_id=None,
-    run_id=None,
-    metrics_url=None,
-):
+    user_prompt: str,
+    system_prompt: str,
+    llm_step: Callable[[list[Any]], Any],
+    mcp_url: str,
+    max_steps: int = 12,
+    verbose: bool = True,
+    backend: Optional[str] = None,
+    model: Optional[str] = None,
+    task_id: Optional[str] = None,
+    run_id: Optional[int] = None,
+    metrics_url: Optional[str] = None,
+) -> dict[str, Any]:
     """Run the agent on one output. Opens one MCP session for the whole loop.
 
     `llm_step` is the closure from make_llm_step. `metrics_url`, when given, is

@@ -18,6 +18,7 @@ from __future__ import annotations
 import csv
 import random
 from pathlib import Path
+from typing import Any
 
 # Full row schema. eval_id is the surrogate key; the rest identify the output and
 # the judge config that evaluates it.
@@ -32,7 +33,9 @@ KEY_FIELDS = [
 ]
 
 
-def build_rows(outputs, judge_configs):
+def build_rows(
+    outputs: list[dict[str, Any]], judge_configs: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     """Cross each output with each judge config → list of row dicts (no eval_id yet).
 
     `outputs`: dicts with task_id/run_id/benchmark_id/model_id (as from
@@ -54,11 +57,13 @@ def build_rows(outputs, judge_configs):
     return rows
 
 
-def _key(row):
+def _key(row: dict[str, Any]) -> tuple[str, ...]:
     return tuple(str(row.get(k)) for k in KEY_FIELDS)
 
 
-def dedupe_and_assign(existing, candidates):
+def dedupe_and_assign(
+    existing: list[dict[str, Any]], candidates: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     """Return the candidate rows not already in `existing`, each given a fresh
     sequential eval_id continuing past the max existing id. Idempotent."""
     seen = {_key(r) for r in existing}
@@ -74,7 +79,12 @@ def dedupe_and_assign(existing, candidates):
     return out
 
 
-def stratified_sample(rows, n, key="benchmark_id", seed=0):
+def stratified_sample(
+    rows: list[dict[str, Any]],
+    n: int | None,
+    key: str = "benchmark_id",
+    seed: int = 0,
+) -> list[dict[str, Any]]:
     """Deterministically sample ~n rows spread evenly across distinct `key` values."""
     if n is None or n >= len(rows):
         return list(rows)
@@ -94,7 +104,8 @@ def stratified_sample(rows, n, key="benchmark_id", seed=0):
 
 # ── CSV I/O ──────────────────────────────────────────────────────────
 
-def read_csv(path):
+def read_csv(path: str | Path) -> list[dict[str, Any]]:
+    """Read a mapping CSV into a list of row dicts (empty list if absent/empty)."""
     p = Path(path)
     if not p.exists() or p.stat().st_size == 0:
         return []
@@ -102,7 +113,10 @@ def read_csv(path):
         return list(csv.DictReader(f))
 
 
-def write_csv(path, rows, fields=FIELDS):
+def write_csv(
+    path: str | Path, rows: list[dict[str, Any]], fields: list[str] = FIELDS
+) -> None:
+    """Overwrite `path` with `rows`, writing a header and only the `fields` columns."""
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     with open(p, "w", newline="") as f:
@@ -112,7 +126,10 @@ def write_csv(path, rows, fields=FIELDS):
             w.writerow({k: r.get(k) for k in fields})
 
 
-def append_csv(path, rows, fields=FIELDS):
+def append_csv(
+    path: str | Path, rows: list[dict[str, Any]], fields: list[str] = FIELDS
+) -> None:
+    """Append `rows` to `path`, writing the header first only if the file is new/empty."""
     p = Path(path)
     exists = p.exists() and p.stat().st_size > 0
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -124,7 +141,7 @@ def append_csv(path, rows, fields=FIELDS):
             w.writerow({k: r.get(k) for k in fields})
 
 
-def read_mapping_row(path, index):
+def read_mapping_row(path: str | Path, index: int) -> dict[str, Any]:
     """Return the row dict at 0-based `index` (header excluded)."""
     rows = read_csv(path)
     if index < 0 or index >= len(rows):
@@ -132,7 +149,7 @@ def read_mapping_row(path, index):
     return rows[index]
 
 
-def coerce_run_id(value):
+def coerce_run_id(value: Any) -> int | None:
     """CSV reads everything as strings; map an empty/None run_id back to None, else int."""
     if value in (None, "", "None"):
         return None

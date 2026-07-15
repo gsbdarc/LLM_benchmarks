@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from typing import Any
 
 from dotenv import load_dotenv
 
@@ -30,7 +31,8 @@ from .prompts import PROMPT_NAME
 from .runtime.runner import aprepare, discover_rows, run_batch
 
 
-def parse_args(argv=None):
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse the CLI arguments for the agentic metric-eval entrypoint."""
     p = argparse.ArgumentParser(prog="eval", description="Agentic metric evaluation")
     p.add_argument("--backend", choices=list(config.BACKENDS), default="nim")
     p.add_argument("--model", default=None,
@@ -55,7 +57,9 @@ def parse_args(argv=None):
     return p.parse_args(argv)
 
 
-def _row_mode_work(args):
+def _row_mode_work(
+    args: argparse.Namespace,
+) -> tuple[str, str | None, list[dict[str, Any]]]:
     """Resolve (backend, model, work-rows) from one eval_mapping row. The row's
     judge config is authoritative so the array does exactly what the mapping says."""
     row = mapping.read_mapping_row(args.eval_mapping, args.row)
@@ -73,7 +77,8 @@ def _row_mode_work(args):
     return backend, model, work
 
 
-async def _amain(args):
+async def _amain(args: argparse.Namespace) -> None:
+    """Prepare the backend/agent context and run the (batch or single-row) eval."""
     load_dotenv()
     weave_enabled = not args.no_weave
     if weave_enabled:
@@ -116,7 +121,8 @@ async def _amain(args):
           f"{'Parquet rows under ' + str(config.AGENT_RUNS_DIR) if not args.no_sink else 'sink disabled'}")
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> None:
+    """CLI entrypoint: parse args and run the async eval driver."""
     args = parse_args(argv)
     asyncio.run(_amain(args))
 

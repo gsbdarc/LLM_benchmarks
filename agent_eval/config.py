@@ -28,6 +28,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from typing import Any
 
 from openai import AsyncOpenAI, OpenAI
 
@@ -73,7 +74,7 @@ def _default_model_key(cfg: dict) -> str:
     return min(models, key=lambda k: int(k))
 
 
-def resolve_model(backend: str, model: str | int | None = None):
+def resolve_model(backend: str, model: str | int | None = None) -> tuple[str, dict, int | None]:
     """Resolve a (model_string, completion_kwargs, model_key) for a backend.
 
     `model` may be an int model KEY from the endpoint's `models` map, None for the
@@ -151,7 +152,7 @@ def metrics_url(base_url: str) -> str:
     return base + "/v1/metrics"
 
 
-def build_backend(backend: str, model: str | int | None = None):
+def build_backend(backend: str, model: str | int | None = None) -> tuple[Any, str, dict, str]:
     """Return (client, model, completion_kwargs, base_url) for a backend name.
 
     `model` selects a model on the endpoint: an int model KEY, the endpoint
@@ -171,7 +172,7 @@ def build_backend(backend: str, model: str | int | None = None):
     return client, resolved_model, completion_kwargs, cfg["base_url"]
 
 
-def sync_openai_client(backend: str, model: str | int | None = None, timeout: float | None = None):
+def sync_openai_client(backend: str, model: str | int | None = None, timeout: float | None = None) -> tuple[Any, str, dict]:
     """A synchronous OpenAI client for a backend — for one-shot scripts.
 
     Used by the dashboard builder (a sync, run-once tool) to write path summaries.

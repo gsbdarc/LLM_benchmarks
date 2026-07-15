@@ -7,6 +7,8 @@ METRIC_EVAL_SYSTEM changes so runs stay comparable in Weave and in the Parquet
 sink.
 """
 
+from __future__ import annotations
+
 PROMPT_NAME = "composite_v1"
 
 METRIC_EVAL_SYSTEM = """
@@ -44,8 +46,12 @@ Rules:
 """
 
 
-def eval_user_prompt(task_id, run_id):
-    """The per-output instruction the agent receives."""
+def eval_user_prompt(task_id: str, run_id: int | str | None) -> str:
+    """The per-output instruction the agent receives.
+
+    `run_id` is only interpolated into the text, so it accepts an int (real runs),
+    a str (e.g. the dashboard's `"<run_id>"` placeholder), or None.
+    """
     return (
         f"Evaluate the model output with task_id={task_id} and run_id={run_id}. "
         f"Fetch it, choose the right metric for each field, compute the scores, and save the evaluation."

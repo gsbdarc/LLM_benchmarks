@@ -110,7 +110,7 @@ _client: MongoClient | None = None
 _indexes_ready = False
 
 
-def get_db():
+def get_db() -> Any:
     """Return the project database, reusing a single client across calls."""
     global _client
     if _client is None:
@@ -118,7 +118,7 @@ def get_db():
     return _client[DB_NAME]
 
 
-def _ensure_indexes(db) -> None:
+def _ensure_indexes(db: Any) -> None:
     """
     Idempotent unique index on the agentic output collection.
 
