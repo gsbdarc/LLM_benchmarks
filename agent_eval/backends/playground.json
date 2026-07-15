@@ -5,7 +5,18 @@
   "models": {
     "1": {
       "model": "gpt-5-mini",
-      "completion_kwargs": { "reasoning_effort": "high" }
+      "label": "gpt-5-mini",
+      "completion_kwargs": { "temperature": 0}
+    },
+    "2": {
+      "model": "Llama-4",
+      "label": "Llama-4",
+      "completion_kwargs": { "temperature": 0 }
+    },
+    "3": {
+      "model": "claude-sonnet-4-6",
+      "label": "claude-sonnet-4-6",
+      "completion_kwargs": { "temperature": 0 }
     }
   }
 }

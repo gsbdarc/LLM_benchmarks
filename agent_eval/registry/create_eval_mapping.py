@@ -59,11 +59,14 @@ def fetch_outputs(
 
 
 def judge_configs() -> list[dict[str, Any]]:
-    """The judge/agent config(s) that do the grading. One for now."""
+    """One judge config per playground model — each output is graded by every judge."""
     from agent_eval.prompts import PROMPT_NAME
 
-    model, _, _ = config.resolve_model("playground")
-    return [{"judge_backend": "playground", "judge_model": model, "judge_prompt": PROMPT_NAME}]
+    cfgs = []
+    for key in sorted(config.BACKENDS["playground"]["models"], key=int):
+        model, _, _ = config.resolve_model("playground", int(key))
+        cfgs.append({"judge_backend": "playground", "judge_model": model, "judge_prompt": PROMPT_NAME})
+    return cfgs
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -73,7 +76,7 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--limit-per-benchmark", type=int, default=100000,
                    help="cap on outputs pulled per benchmark")
     p.add_argument("--sample", type=int, default=None,
-                   help="also write a stratified sample of this many rows for the array")
+                   help="write a paired sample of this many OUTPUTS (each crossed with all judges)")
     p.add_argument("--seed", type=int, default=0, help="sampling seed (deterministic)")
     args = p.parse_args(argv)
 
@@ -89,9 +92,12 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.sample is not None:
         full = mapping.read_csv(REGISTRY)
-        picked = mapping.stratified_sample(full, args.sample, seed=args.seed)
+        picked = mapping.sample_paired(full, args.sample, seed=args.seed)
         mapping.write_csv(SAMPLE, picked)
-        print(f"Sample {SAMPLE}: {len(picked)} rows  ->  --array=0-{max(0, len(picked) - 1)}")
+        n_out = len({mapping._output_key(r) for r in picked})
+        n_judges = len(judge_configs())
+        print(f"Sample {SAMPLE}: {n_out} outputs x {n_judges} judges = {len(picked)} rows "
+              f" ->  --array=0-{max(0, len(picked) - 1)}")
 
 
 if __name__ == "__main__":

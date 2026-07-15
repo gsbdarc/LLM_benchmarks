@@ -5,8 +5,12 @@ import pytest
 from agent_eval import config
 
 
-def test_reasoning_level_playground():
-    assert config.reasoning_level("playground") == "high"
+def test_reasoning_level_falls_back_to_default_model_kwargs():
+    # With no kwargs, reasoning_level uses the endpoint's default model's kwargs.
+    # Assert consistency with resolve_model rather than a hard-coded label, so this
+    # doesn't break when the playground models/params are edited.
+    _, default_kwargs, _ = config.resolve_model("playground")
+    assert config.reasoning_level("playground") == config.reasoning_level("playground", default_kwargs)
 
 
 def test_reasoning_level_nim_thinking():

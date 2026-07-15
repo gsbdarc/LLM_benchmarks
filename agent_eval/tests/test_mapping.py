@@ -10,10 +10,40 @@ OUTPUTS = [
 JUDGE = [{"judge_backend": "playground", "judge_model": "gpt-5-mini", "judge_prompt": "composite_v1"}]
 
 
+THREE_JUDGES = [
+    {"judge_backend": "playground", "judge_model": m, "judge_prompt": "composite_v1"}
+    for m in ("gpt-5-mini", "Llama-4", "claude-sonnet-4-6")
+]
+
+
 def test_build_rows_cross_product():
     rows = mapping.build_rows(OUTPUTS, JUDGE)
     assert len(rows) == 2  # 2 outputs x 1 judge config
     assert rows[0]["task_id"] == "2450" and rows[0]["judge_backend"] == "playground"
+
+
+def test_sample_paired_keeps_all_judges_for_sampled_outputs():
+    # 6 outputs across 2 benchmarks, each crossed with 3 judges = 18 rows.
+    outs = [{"task_id": str(i), "run_id": 0,
+             "benchmark_id": ("5" if i % 2 else "7"), "model_id": "1"} for i in range(6)]
+    rows = mapping.build_rows(outs, THREE_JUDGES)
+    assert len(rows) == 18
+
+    picked = mapping.sample_paired(rows, k_outputs=4, seed=0)
+    # 4 outputs x 3 judges = 12 rows, and every sampled output keeps all 3 judges.
+    assert len(picked) == 12
+    by_output: dict = {}
+    for r in picked:
+        by_output.setdefault(mapping._output_key(r), set()).add(r["judge_model"])
+    assert len(by_output) == 4
+    assert all(js == {"gpt-5-mini", "Llama-4", "claude-sonnet-4-6"} for js in by_output.values())
+    # deterministic
+    assert mapping.sample_paired(rows, 4, seed=0) == picked
+
+
+def test_sample_paired_returns_all_when_k_exceeds_outputs():
+    rows = mapping.build_rows(OUTPUTS, THREE_JUDGES)   # 2 outputs x 3 = 6
+    assert len(mapping.sample_paired(rows, k_outputs=99)) == 6
     # two judge configs -> doubles
     rows2 = mapping.build_rows(OUTPUTS, JUDGE + [{"judge_backend": "playground",
                                                   "judge_model": "gpt-4o",

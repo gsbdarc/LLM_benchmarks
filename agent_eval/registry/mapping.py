@@ -102,6 +102,39 @@ def stratified_sample(
     return picked[:n]
 
 
+# Columns that identify one OUTPUT (independent of the judge that evaluates it).
+OUTPUT_FIELDS = ["task_id", "run_id", "benchmark_id", "model_id"]
+
+
+def _output_key(row: dict[str, Any]) -> tuple[str, ...]:
+    return tuple(str(row.get(f)) for f in OUTPUT_FIELDS)
+
+
+def sample_paired(
+    rows: list[dict[str, Any]],
+    k_outputs: int | None,
+    strat_key: str = "benchmark_id",
+    seed: int = 0,
+) -> list[dict[str, Any]]:
+    """Sample ~k_outputs distinct OUTPUTS (stratified by `strat_key`) and return
+    EVERY row for them — i.e. each sampled output paired with all its judges.
+
+    This gives an apples-to-apples judge comparison: every judge sees the same set
+    of outputs, balanced across benchmarks. Returns all rows if k_outputs is None
+    or exceeds the number of distinct outputs.
+    """
+    # One representative row per distinct output, to sample outputs (not rows).
+    reps: dict[tuple[str, ...], dict[str, Any]] = {}
+    for r in rows:
+        reps.setdefault(_output_key(r), r)
+    if k_outputs is None or k_outputs >= len(reps):
+        chosen = set(reps)
+    else:
+        sampled = stratified_sample(list(reps.values()), k_outputs, key=strat_key, seed=seed)
+        chosen = {_output_key(r) for r in sampled}
+    return [r for r in rows if _output_key(r) in chosen]
+
+
 # ── CSV I/O ──────────────────────────────────────────────────────────
 
 def read_csv(path: str | Path) -> list[dict[str, Any]]:
