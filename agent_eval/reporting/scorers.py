@@ -10,7 +10,7 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
-from .config import PKG_DIR
+from ..config import PKG_DIR
 from .integrity import check_score_consistency, extract_saved_evaluation, save_outcome
 from .observability import op
 

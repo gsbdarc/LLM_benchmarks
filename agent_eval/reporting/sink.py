@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from .config import AGENT_RUNS_DIR
+from ..config import AGENT_RUNS_DIR
 from .observability import reasoning_blob, tool_sequence
 
 

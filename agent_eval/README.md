@@ -16,28 +16,23 @@ exists and is the ground-truth baseline the agent is checked against.
 
 ## Layout
 
-`agent_eval/` is one flat package (a sibling of `scripts/` and `analysis/` at the repo
-root). Import as `agent_eval.<module>`; run as `python -m agent_eval …` from the repo root.
+`agent_eval/` is one package (a sibling of `scripts/` and `analysis/` at the repo root),
+with the library modules grouped by concern into subpackages. Entry points + foundational
+modules sit at the top; run entry points as `python -m agent_eval …` from the repo root.
 
 | Path | Role |
 |---|---|
-| `server.py` | FastMCP HTTP server. 3 data tools (`list_outputs`, `get_task_output`, `save_evaluation`) + **3 composite type-tools** (`evaluate_raw_string/extracted_string/list`). Run: `python -m agent_eval.server`. |
-| `tools.py` | MongoDB business logic; imports metrics/composites from `scripts/evaluator.py` (one source of truth). |
-| `config.py` | Backend resolution + clients. Loads `backends/*.json`. |
-| `backends/*.json` | One file per **endpoint** (URL + framework + auth) with an int-keyed `models` map. |
+| `__main__.py` | CLI entry — `python -m agent_eval` (batch, and `--eval-mapping … --row` worker mode). |
+| `server.py` | FastMCP HTTP server (`python -m agent_eval.server`): 3 data tools + **3 composite type-tools** (`evaluate_raw_string/extracted_string/list`). |
+| `tools.py` | MCP tool business logic; MongoDB access + metric/composite imports from `scripts/evaluator.py` (one source of truth). |
+| `config.py` | Backend resolution + clients; loads `backends/*.json`; path anchor (`PKG_DIR`/`REPO_ROOT`). |
 | `prompts.py` | Agent system/user prompts; `PROMPT_NAME` version. |
-| `agent.py` | MCP session + agent loop (per-step reasoning, usage, GPU scrape, trace URL). |
-| `observability.py` | Hashes, derivations (tokens/sec, peak ctx, `reasoning_blob`), vLLM/NIM metrics scrape. Weave optional (`EVAL_DISABLE_WEAVE=1`). |
-| `integrity.py` | Score-consistency, save-outcome, retry checks. |
-| `scorers.py` | Weave scorers incl. routing `selection_accuracy`. |
-| `sink.py` | Flatten one run → one Parquet row (the OLAP layer). |
-| `runner.py`, `__main__.py` | Batch orchestration + CLI (`python -m agent_eval`; incl. `--eval-mapping/--row` worker mode). |
-| `mapping.py` | Pure logic for the eval-run registry (build/dedupe/sample rows). |
-| `create_eval_mapping.py` | Mongo-facing CLI → `inputs/eval_mapping.csv` (+ sample). `python -m agent_eval.create_eval_mapping`. |
-| `run_metric_mcp.sh` | Start the MCP server by hand (prints its URL). |
-| `run_eval_batch.slurm` | **Self-contained** batch: one SLURM job starts its own server + fans out. The easy path. |
-| `run_eval_array.slurm` | SLURM array variant (persistent shared server; pin to one node). |
-| `gold_metrics.csv`, `generate_gold_metrics.py` | Gold `field_type` per benchmark field (routing-accuracy key). |
+| **`runtime/`** | The agent execution engine: `agent.py` (persistent MCP session + agent loop), `runner.py` (batch orchestration). |
+| **`reporting/`** | Measuring + recording a run: `observability.py` (traces/derivations/scrape), `scorers.py`, `integrity.py`, `sink.py` (one Parquet row per run). |
+| **`registry/`** | The eval-work registry: `mapping.py` (pure build/dedupe/sample), `create_eval_mapping.py` (`python -m agent_eval.registry.create_eval_mapping`), `generate_gold_metrics.py`. |
+| **`scripts/`** | Launchers / SLURM jobs: `run_metric_mcp.sh`, `run_eval_batch.slurm` (self-contained batch — the easy path), `run_eval_array.slurm` (array variant). |
+| `backends/*.json` | One file per **endpoint** (URL + framework + auth) with an int-keyed `models` map. |
+| `gold_metrics.csv` | Gold `field_type` per benchmark field (routing-accuracy key; regenerate via `registry/generate_gold_metrics.py`). |
 | `tests/` | Unit tests. `cd agent_eval && EVAL_DISABLE_WEAVE=1 python -m pytest`. |
 | `agent_dashboard_sample_v2.html` | Hand-authored dashboard mockup (fake data) — the visual target. |
 | `../analysis/queries.py`, `../analysis/build_dashboard.py` | DuckDB views + HTML dashboard generator. |
@@ -85,7 +80,7 @@ All commands run **from the repo root**.
 cd agent_eval && source ~/venv/bin/activate && EVAL_DISABLE_WEAVE=1 python -m pytest -q; cd ..
 
 # MCP server (hand) + one agent run
-agent_eval/run_metric_mcp.sh
+agent_eval/scripts/run_metric_mcp.sh
 python -m agent_eval --backend nim --mcp-url <url> --benchmarks 5 --limit 1 --verbose
 
 # dashboard
@@ -104,9 +99,9 @@ remote (no GPU, no `/metrics`) we skip GPU metrics. Everything runs on **one com
 **Easy path — `run_eval_batch.slurm` (self-contained: one job starts its own server + fans out).**
 From the repo root:
 ```bash
-python -m agent_eval.create_eval_mapping --sample 100      # -> inputs/eval_mapping_sample.csv
-sbatch agent_eval/run_eval_batch.slurm                     # picks a node, runs everything
-#   tune:  sbatch --export=ALL,MAXPAR=12,WEAVE=0 agent_eval/run_eval_batch.slurm
+python -m agent_eval.registry.create_eval_mapping --sample 100      # -> inputs/eval_mapping_sample.csv
+sbatch agent_eval/scripts/run_eval_batch.slurm                     # picks a node, runs everything
+#   tune:  sbatch --export=ALL,MAXPAR=12,WEAVE=0 agent_eval/scripts/run_eval_batch.slurm
 python -m analysis.build_dashboard --no-summaries          # after it finishes
 ```
 The registry crosses sampled outputs × judge-config; today one config

@@ -3,7 +3,7 @@
 import pytest
 
 from analysis import queries
-from agent_eval import sink
+from agent_eval.reporting import sink
 from agent_eval.tests.test_sink import sample_meta, sample_result
 
 

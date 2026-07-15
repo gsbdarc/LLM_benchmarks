@@ -24,9 +24,10 @@ import asyncio
 
 from dotenv import load_dotenv
 
-from . import config, mapping
+from . import config
+from .registry import mapping
 from .prompts import PROMPT_NAME
-from .runner import aprepare, discover_rows, run_batch
+from .runtime.runner import aprepare, discover_rows, run_batch
 
 
 def parse_args(argv=None):

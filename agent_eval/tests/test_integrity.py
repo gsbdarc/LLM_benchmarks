@@ -3,7 +3,7 @@
 import json
 from types import SimpleNamespace
 
-from agent_eval import integrity
+from agent_eval.reporting import integrity
 
 
 def assistant(*calls):

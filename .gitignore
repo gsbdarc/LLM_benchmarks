@@ -6,3 +6,18 @@ inputs/data/
 *.swp
 .ipynb_checkpoints/
 outputs/
+
+# Secrets — never commit
+.env
+
+# Python build/test artifacts
+*.pyc
+.pytest_cache/
+
+# Stray backups + job logs
+.gitignore.save*
+*.out
+
+# Generated eval-run registry (produced by agent_eval.registry.create_eval_mapping)
+inputs/eval_mapping.csv
+inputs/eval_mapping_sample.csv

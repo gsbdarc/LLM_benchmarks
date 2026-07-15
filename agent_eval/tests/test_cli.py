@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from agent_eval import mapping
+from agent_eval.registry import mapping
 from agent_eval.__main__ import _row_mode_work, parse_args
 
 

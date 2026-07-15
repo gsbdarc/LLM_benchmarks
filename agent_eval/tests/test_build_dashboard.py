@@ -5,7 +5,8 @@ import json
 import pytest
 
 from analysis import build_dashboard, queries
-from agent_eval import config, sink
+from agent_eval import config
+from agent_eval.reporting import sink
 from agent_eval.tests.test_sink import sample_meta, sample_result
 
 

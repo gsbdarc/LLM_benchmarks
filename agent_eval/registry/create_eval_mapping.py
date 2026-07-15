@@ -15,9 +15,9 @@ llm_output crossed with a judge/agent config, keyed by an append-only integer
 Only benchmarks with a gold field_type in agent_eval/gold_metrics.csv are useful (routing
 accuracy is null otherwise), so the default set is {5,6,7,10,11}.
 
-    python -m agent_eval.create_eval_mapping --sample 100
+    python -m agent_eval.registry.create_eval_mapping --sample 100
 
-Pure list/dedupe/sample logic lives in agent_eval/mapping.py (unit-tested); this file is
+Pure list/dedupe/sample logic lives in agent_eval/registry/mapping.py (unit-tested); this file is
 the thin Mongo-facing wrapper.
 """
 
@@ -27,16 +27,17 @@ import argparse
 import sys
 from pathlib import Path
 
-PKG_DIR = Path(__file__).resolve().parent       # agent_eval/
-BASE_DIR = PKG_DIR.parent                        # repo root
-if str(BASE_DIR) not in sys.path:                # so `import agent_eval` resolves
-    sys.path.insert(0, str(BASE_DIR))
+# agent_eval/registry/ -> agent_eval/ -> repo root
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:               # so `import agent_eval` resolves
+    sys.path.insert(0, str(REPO_ROOT))
 
-from agent_eval import config, mapping          # noqa: E402
+from agent_eval import config  # noqa: E402
+from agent_eval.registry import mapping  # noqa: E402
 
 # Benchmarks with gold field_type labels in agent_eval/gold_metrics.csv.
 DEFAULT_BENCHMARKS = ["5", "6", "7", "10", "11"]
-INPUTS_DIR = BASE_DIR / "inputs"
+INPUTS_DIR = REPO_ROOT / "inputs"
 REGISTRY = INPUTS_DIR / "eval_mapping.csv"
 SAMPLE = INPUTS_DIR / "eval_mapping_sample.csv"
 

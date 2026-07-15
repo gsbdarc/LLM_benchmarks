@@ -13,13 +13,13 @@
 #      and start the MCP server there:
 #        srun -p normal -c 2 -t 3:00:00 --pty bash
 #        hostname -s                                # <-- the compute node, e.g. yen12
-#        agent_eval/run_metric_mcp.sh               # <-- note the port it prints
+#        agent_eval/scripts/run_metric_mcp.sh               # <-- note the port it prints
 #   2. Build the sample (from a login shell is fine):
-#        python -m agent_eval.create_eval_mapping --sample 100
+#        python -m agent_eval.registry.create_eval_mapping --sample 100
 #   3. Submit this array PINNED TO THAT COMPUTE NODE, throttled with %N so you don't
 #      hit the playground with all tasks at once (the node has 100s of free cores):
 #        sbatch -w <compute-node> --array=0-99%8 \
-#          --export=ALL,MCP_URL="http://127.0.0.1:<port>/mcp" agent_eval/run_eval_array.slurm
+#          --export=ALL,MCP_URL="http://127.0.0.1:<port>/mcp" agent_eval/scripts/run_eval_array.slurm
 #   4. Rerun failures by resubmitting just their indices, e.g. --array=3,17,42%8
 #
 #SBATCH -J eval-array

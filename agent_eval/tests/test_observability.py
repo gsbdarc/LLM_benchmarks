@@ -1,6 +1,6 @@
 """Tests for eval.observability — derivations, hashes, Prometheus parsing, scrape."""
 
-from agent_eval import observability as obs
+from agent_eval.reporting import observability as obs
 
 
 # ── hashes ───────────────────────────────────────────────────────────

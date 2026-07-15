@@ -29,5 +29,5 @@ export MCP_PORT="$PORT"
 
 # Run from the repo root so the `agent_eval` package is importable, then launch
 # the server as a module (server.py uses package-relative imports).
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 python -m agent_eval.server

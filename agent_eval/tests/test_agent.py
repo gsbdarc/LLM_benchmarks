@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from agent_eval import agent
+from agent_eval.runtime import agent
 
 
 # ── fakes ────────────────────────────────────────────────────────────

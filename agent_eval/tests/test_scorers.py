@@ -3,7 +3,7 @@
 import json
 from types import SimpleNamespace
 
-from agent_eval import scorers
+from agent_eval.reporting import scorers
 
 
 def assistant(*calls):

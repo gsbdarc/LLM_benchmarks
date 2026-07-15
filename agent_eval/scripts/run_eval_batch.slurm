@@ -8,9 +8,9 @@
 # on 127.0.0.1 for the job's lifetime.
 #
 #   # from the REPO ROOT:
-#   python -m agent_eval.create_eval_mapping --sample 100   # once: builds inputs/eval_mapping_sample.csv
-#   sbatch agent_eval/run_eval_batch.slurm                  # then this
-#   # tune:  sbatch --export=ALL,MAXPAR=12,WEAVE=0 agent_eval/run_eval_batch.slurm
+#   python -m agent_eval.registry.create_eval_mapping --sample 100   # once: builds inputs/eval_mapping_sample.csv
+#   sbatch agent_eval/scripts/run_eval_batch.slurm                  # then this
+#   # tune:  sbatch --export=ALL,MAXPAR=12,WEAVE=0 agent_eval/scripts/run_eval_batch.slurm
 #
 #SBATCH -J eval-batch
 #SBATCH -p normal

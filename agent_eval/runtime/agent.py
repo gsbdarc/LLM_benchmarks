@@ -36,8 +36,8 @@ from tenacity import (
     wait_exponential,
 )
 
-from . import observability as obs
-from .observability import op
+from ..reporting import observability as obs
+from ..reporting.observability import op
 
 # The active MCP session for the current asyncio task. asyncio.gather wraps each
 # coroutine in its own Task with a copied context, so concurrent run_agent calls

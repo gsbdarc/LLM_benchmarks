@@ -3,7 +3,7 @@
 import duckdb
 import pandas as pd
 
-from agent_eval import sink
+from agent_eval.reporting import sink
 
 
 def sample_result(**over):

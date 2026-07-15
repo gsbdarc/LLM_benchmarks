@@ -3,7 +3,7 @@
 import asyncio
 from contextlib import asynccontextmanager
 
-from agent_eval import runner
+from agent_eval.runtime import runner
 
 
 async def test_discover_rows_parses_listings(monkeypatch):

@@ -7,7 +7,7 @@ Reads the ground_truth block for each specified benchmark and writes one row per
 The agent is scored against this primary metric in selection_accuracy_scorer.
 
 Run once from the repo root:
-    python generate_gold_metrics.py
+    python -m agent_eval.registry.generate_gold_metrics
 
 Re-run only if benchmarks.json changes or you add new benchmark IDs.
 """
@@ -17,8 +17,9 @@ import json
 from pathlib import Path
 
 BENCHMARK_IDS = ["5", "6", "7", "10", "11"]
-BENCHMARKS_FILE = Path(__file__).parent.parent / "inputs" / "benchmarks.json"
-OUTPUT_CSV = Path(__file__).parent / "gold_metrics.csv"
+# agent_eval/registry/ -> agent_eval/ -> repo root
+BENCHMARKS_FILE = Path(__file__).resolve().parents[2] / "inputs" / "benchmarks.json"
+OUTPUT_CSV = Path(__file__).resolve().parents[1] / "gold_metrics.csv"
 FIELDNAMES = ["benchmark_id", "benchmark_name", "field_name", "field_type", "gold_metric", "all_metrics"]
 
 

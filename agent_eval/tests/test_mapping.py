@@ -1,6 +1,6 @@
 """Tests for eval.mapping — the eval-run registry (build / dedupe / sample / IO)."""
 
-from agent_eval import mapping
+from agent_eval.registry import mapping
 
 
 OUTPUTS = [
