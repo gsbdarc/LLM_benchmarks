@@ -61,11 +61,13 @@ def test_row_mode_work_reads_row_and_takes_judge_from_mapping(tmp_path):
         [{"judge_backend": "playground", "judge_model": "gpt-5-mini", "judge_prompt": "composite_v1"}]))
     mapping.write_csv(path, rows)
 
-    args = SimpleNamespace(eval_mapping=str(path), row=1, backend="nim", model=None)
-    backend, model, work = _row_mode_work(args)
+    args = SimpleNamespace(eval_mapping=str(path), row=1, backend="nim", model=None, prompt=None)
+    backend, model, prompt, work = _row_mode_work(args)
     assert backend == "playground"          # taken from the row, not the --backend default
     assert model == "gpt-5-mini"
+    assert prompt == "composite_v1"         # judge_prompt taken from the row
     assert len(work) == 1
     assert work[0]["task_id"] == "2451"
     assert work[0]["run_id"] is None        # empty run_id coerced back to None
+    assert work[0]["eval_id"] == 1          # surrogate id threaded from the row (as int)
     assert work[0]["benchmark_id"] == "7"

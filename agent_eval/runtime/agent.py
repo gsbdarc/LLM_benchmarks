@@ -212,11 +212,15 @@ async def run_agent(
     task_id: Optional[str] = None,
     run_id: Optional[int] = None,
     metrics_url: Optional[str] = None,
+    eval_id: Optional[int] = None,
 ) -> dict[str, Any]:
     """Run the agent on one output. Opens one MCP session for the whole loop.
 
     `llm_step` is the closure from make_llm_step. `metrics_url`, when given, is
-    scraped once before and once after the run for GPU/queue context.
+    scraped once before and once after the run for GPU/queue context. `eval_id`, when
+    given, is stamped onto the agent's save_evaluation call so the verdict is keyed
+    per (output × judge) and joins the run-metrics row — set here client-side rather
+    than trusting the LLM to relay it faithfully.
     """
     messages = [
         {"role": "system", "content": system_prompt},
@@ -228,16 +232,20 @@ async def run_agent(
     tool_errors_by_name: dict = {}
     steps_detail: list = []
     llm_time_total = 0.0
-    wall_t0 = time.perf_counter()
     steps_run = 0
     stopped_reason = "max_steps"
     answer = "Stopped after maximum tool-calling steps."
 
+    # Scrape GPU metrics BEFORE starting the wall clock (and again after stopping it,
+    # below) so the scrape's own HTTP latency never lands inside wall_time_total. This
+    # keeps wall_time backend-consistent: playground has no scrape, and NIM shouldn't
+    # be penalised for one.
     gpu_start = obs.scrape_vllm_metrics(metrics_url) if metrics_url else None
 
     if verbose:
         obs.log("AGENT START", f"Model: {model}  Backend: {backend}")
 
+    wall_t0 = time.perf_counter()
     async with use_session(mcp_url):
         for step in range(1, max_steps + 1):
             steps_run = step
@@ -307,6 +315,8 @@ async def run_agent(
                     # BUG (logged, not fixed): args fall back to {} — tool still called.
                     log_parse_failure(name, tc.function.arguments, str(e))
                     args = {}
+                if name == "save_evaluation" and eval_id is not None:
+                    args["eval_id"] = eval_id  # authoritative id, not the LLM's
                 tool_calls_by_name[name] = tool_calls_by_name.get(name, 0) + 1
                 t_tool = time.perf_counter()
                 tool_result = await call_mcp_tool(name, args, verbose=verbose)
@@ -323,8 +333,8 @@ async def run_agent(
             if verbose:
                 obs.log("AGENT STOPPED", f"Hit max_steps={max_steps}")
 
+    wall_time_total = time.perf_counter() - wall_t0   # stop before the post-run scrape
     gpu_end = obs.scrape_vllm_metrics(metrics_url) if metrics_url else None
-    wall_time_total = time.perf_counter() - wall_t0
 
     return {
         "answer": answer,
@@ -338,6 +348,10 @@ async def run_agent(
         "tool_errors_by_name": tool_errors_by_name,
         "llm_time_total": llm_time_total,
         "wall_time_total": wall_time_total,
+        # wall_time minus model latency ≈ tool-execution + agent-loop overhead. The MCP
+        # tool server is local for both backends, so this is backend-independent and lets
+        # llm_time (model/service latency) be compared without the tool time mixed in.
+        "overhead_time": max(0.0, wall_time_total - llm_time_total),
         # ── new derived metrics (plan §2) ──
         "tokens_per_sec": obs.tokens_per_second(total_usage["completion_tokens"], llm_time_total),
         "peak_context": obs.peak_context(steps_detail),

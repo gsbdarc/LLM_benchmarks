@@ -27,7 +27,6 @@ from dotenv import load_dotenv
 
 from . import config
 from .registry import mapping
-from .prompts import PROMPT_NAME
 from .runtime.runner import aprepare, discover_rows, run_batch
 
 
@@ -37,6 +36,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--backend", choices=list(config.BACKENDS), default="nim")
     p.add_argument("--model", default=None,
                    help="override the backend's default model (same endpoint, different model)")
+    p.add_argument("--prompt", default=None,
+                   help="prompt variant name or index (default: prompt #1)")
     p.add_argument("--gpu-type", default=None,
                    help="GPU model name of the (cross-host) server; else read from $GPU_TYPE")
     p.add_argument("--mcp-url", required=True, help="URL printed by ./run_metric_mcp.sh")
@@ -47,6 +48,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--verbose", action="store_true", help="print the full agent transcript")
     p.add_argument("--no-weave", action="store_true", help="disable Weave tracing")
     p.add_argument("--no-sink", action="store_true", help="do not write Parquet rows")
+    p.add_argument("--no-mongo-runs", action="store_true",
+                   help="do not mirror run rows to the central agentic_runs collection")
     p.add_argument("--no-gpu-metrics", action="store_true", help="skip /v1/metrics scrape")
     # SLURM-array worker mode: evaluate exactly the one output named by a row of an
     # eval_mapping.csv (the backend/model come from that row's judge config).
@@ -59,22 +62,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def _row_mode_work(
     args: argparse.Namespace,
-) -> tuple[str, str | None, list[dict[str, Any]]]:
-    """Resolve (backend, model, work-rows) from one eval_mapping row. The row's
+) -> tuple[str, str | None, str | None, list[dict[str, Any]]]:
+    """Resolve (backend, model, prompt, work-rows) from one eval_mapping row. The row's
     judge config is authoritative so the array does exactly what the mapping says."""
     row = mapping.read_mapping_row(args.eval_mapping, args.row)
     backend = row.get("judge_backend") or args.backend
     model = row.get("judge_model") or args.model
-    if row.get("judge_prompt") and row["judge_prompt"] != PROMPT_NAME:
-        print(f"WARNING: mapping row judge_prompt={row['judge_prompt']!r} but the "
-              f"installed prompt is {PROMPT_NAME!r}; running with the installed prompt.")
+    prompt = row.get("judge_prompt") or args.prompt
+    eval_id = int(row["eval_id"]) if row.get("eval_id") not in (None, "") else None
     work = [{
+        "eval_id": eval_id,
         "task_id": row["task_id"],
         "run_id": mapping.coerce_run_id(row.get("run_id")),
         "benchmark_id": row["benchmark_id"],
         "model_id": row.get("model_id"),
     }]
-    return backend, model, work
+    return backend, model, prompt, work
 
 
 async def _amain(args: argparse.Namespace) -> None:
@@ -89,14 +92,15 @@ async def _amain(args: argparse.Namespace) -> None:
 
     row_mode = args.eval_mapping is not None and args.row is not None
     if row_mode:
-        backend, model, rows = _row_mode_work(args)
+        backend, model, prompt, rows = _row_mode_work(args)
     else:
-        backend, model = args.backend, args.model
+        backend, model, prompt = args.backend, args.model, args.prompt
 
     ctx = await aprepare(backend, args.mcp_url, weave_enabled=weave_enabled,
-                         model=model, gpu_type=args.gpu_type)
+                         model=model, prompt=prompt, gpu_type=args.gpu_type)
     print(f"Backend: {backend} ({ctx['framework']}) | "
-          f"Model: {ctx['model']} (#{ctx['agent_model_key']}) | GPU: {ctx['gpu_type']} | "
+          f"Model: {ctx['model']} (#{ctx['agent_model_key']}) | "
+          f"Prompt: {ctx['prompt_name']} (#{ctx['prompt_key']}) | GPU: {ctx['gpu_type']} | "
           f"tools_hash={ctx['tools_hash']} | git={ctx['git_commit']}")
 
     if row_mode:
@@ -114,6 +118,7 @@ async def _amain(args: argparse.Namespace) -> None:
         verbose=args.verbose,
         write_sink=not args.no_sink,
         gpu_metrics=not args.no_gpu_metrics,
+        write_mongo=not args.no_mongo_runs,
     )
 
     n_ok = sum(1 for r in results if r.get("stopped_reason") == "answered")

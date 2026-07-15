@@ -43,13 +43,13 @@ TYPE_TOOLS = ["evaluate_raw_string", "evaluate_extracted_string", "evaluate_list
 # NOTE: reasoning_json is intentionally NOT embedded per-run (it can be large);
 # it is read separately at build time to generate the path summaries.
 RUN_COLUMNS = [
-    "task_id", "run_id", "benchmark_id", "model_id",
+    "eval_id", "task_id", "run_id", "benchmark_id", "model_id",
     "backend", "framework", "model", "agent_model_key",
-    "temperature", "gpu_type", "reasoning_level", "prompt_name", "prompt_hash",
+    "temperature", "gpu_type", "reasoning_level", "prompt_name", "prompt_key", "prompt_hash",
     "concurrency", "steps", "stopped_reason",
     "n_tool_calls", "n_metric_calls", "n_tool_errors", "tool_sequence_json",
     "prompt_tokens", "completion_tokens", "total_tokens",
-    "tokens_per_sec", "peak_context", "wall_time_total",
+    "tokens_per_sec", "peak_context", "wall_time_total", "llm_time_total", "overhead_time",
     "save_success", "save_count", "save_failed", "score_consistent", "selection_accuracy",
     "gpu_cache_usage_end", "requests_running_end", "weave_trace_url",
 ]
@@ -62,6 +62,9 @@ GLOSSARY = [
     {"term": "evaluate_raw_string", "def": "Composite tool for free-form prose fields. Scores with word-IoU."},
     {"term": "evaluate_extracted_string", "def": "Composite tool for a single extracted value that may be absent. null_accuracy × max(levenshtein, char_f1)."},
     {"term": "evaluate_list", "def": "Composite tool for set/sequence fields. max(set_f1, sequence_lcs, set_inclusion)."},
+    {"term": "llm_time_total", "def": "Sum of the agent's LLM request round-trips (model/service latency). For remote endpoints (playground) it includes network + shared-API queueing, so read it as SERVICE latency, not pure inference; only local models approximate inference time."},
+    {"term": "overhead_time", "def": "wall_time_total − llm_time_total ≈ tool-execution + agent-loop time. The MCP tool server is local for all backends, so this is backend-independent."},
+    {"term": "wall_time_total", "def": "End-to-end agent time = llm_time_total + overhead_time (excludes the GPU-metrics scrapes, which are timed outside it)."},
     {"term": "steps", "def": "Number of agent turns (tool-call rounds) taken to finish a task."},
     {"term": "stopped_reason", "def": "Why the agent loop ended: answered, max_steps, or error."},
     {"term": "prompt", "def": "The AGENT's system+user prompt (versioned by prompt_name) — NOT the original benchmark prompt given to the model under test."},
@@ -78,7 +81,7 @@ def _present_columns(con) -> set:
 def build_prompt_registry(prompt_names) -> dict:
     """{prompt_name: {system, user}} for the prompt versions we can source.
 
-    Seeded from agent_eval/prompts.py, so the CURRENT prompt renders its real text.
+    Seeded from the agent_eval/prompts registry, so the CURRENT prompt renders its real text.
     Historical prompt versions whose text we don't have are omitted (the UI shows
     a "(not embedded)" placeholder); persisting prompt text per version over time
     is the follow-up for full historical fidelity.

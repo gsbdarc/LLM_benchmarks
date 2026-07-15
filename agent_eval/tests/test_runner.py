@@ -34,7 +34,8 @@ async def test_run_batch_respects_concurrency(monkeypatch):
     active = 0
     peak = 0
 
-    async def fake_run_one(row, ctx, gold, concurrency, max_steps, verbose, write_sink, gpu_metrics):
+    async def fake_run_one(row, ctx, gold, concurrency, max_steps, verbose,
+                           write_sink, gpu_metrics, write_mongo=True):
         nonlocal active, peak
         active += 1
         peak = max(peak, active)
@@ -45,7 +46,8 @@ async def test_run_batch_respects_concurrency(monkeypatch):
     monkeypatch.setattr(runner, "run_one", fake_run_one)
 
     rows = [{"task_id": str(i), "run_id": 0, "benchmark_id": "5"} for i in range(6)]
-    results = await runner.run_batch(rows, ctx={}, concurrency=2, write_sink=False, gpu_metrics=False)
+    results = await runner.run_batch(rows, ctx={}, concurrency=2, write_sink=False,
+                                     gpu_metrics=False, write_mongo=False)
 
     assert len(results) == 6
     assert peak <= 2  # semaphore honored

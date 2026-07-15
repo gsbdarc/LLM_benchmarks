@@ -102,6 +102,15 @@ LLM_OUTPUTS_COLL = "llm_outputs"
 BENCHMARKS_COLL = "benchmarks"
 GROUND_TRUTHS_COLL = "ground_truths"
 AGENTIC_EVAL_COLL = "agentic_evaluations"
+AGENTIC_RUNS_COLL = "agentic_runs"
+
+# Identity of one run row = one output (task/run/benchmark/model_under_test) judged
+# by one judge config. agent_model_key/prompt_key (ints, not the display strings) are
+# used so two variants that share a model/prompt name but differ in kwargs stay distinct.
+RUN_KEY_FIELDS = [
+    "task_id", "run_id", "benchmark_id", "model_id",
+    "backend", "agent_model_key", "prompt_key",
+]
 
 # Only benchmarks 4–12 carry a `ground_truth` block, so only those are evaluable.
 EVALUABLE_BENCHMARK_IDS = [str(i) for i in range(4, 13)]
@@ -120,21 +129,28 @@ def get_db() -> Any:
 
 def _ensure_indexes(db: Any) -> None:
     """
-    Idempotent unique index on the agentic output collection.
+    Idempotent indexes on the agentic_evaluations collection.
 
-    create_index is PyMongo's built-in Collection method (same one used in
-    scripts/6b_mongo_eval.py); calling it when the index already exists is a
-    no-op. run_id is part of the key on purpose: the same task is run multiple
-    times to measure LLM consistency, so each run must produce its own row.
-    Without run_id, run 2 would overwrite run 1 and the signal would be lost.
+    The unique key is `eval_id` (the mapping's per-(output × judge) surrogate), via a
+    PARTIAL index so it applies only to real eval_ids — letting the same output graded
+    by different judges keep one doc each. The LEGACY unique index on
+    (task_id, benchmark_id, model_id, run_id) forced one doc per output and collapsed
+    multi-judge verdicts, so it is dropped if present; a plain (non-unique) index on
+    those four is kept for query/join performance. create_index is idempotent.
     """
     global _indexes_ready
     if _indexes_ready:
         return
-    db[AGENTIC_EVAL_COLL].create_index(
-        [("task_id", 1), ("benchmark_id", 1), ("model_id", 1), ("run_id", 1)],
-        unique=True,
+    coll = db[AGENTIC_EVAL_COLL]
+    legacy = "task_id_1_benchmark_id_1_model_id_1_run_id_1"
+    for ix in coll.list_indexes():
+        if ix["name"] == legacy and ix.get("unique"):
+            coll.drop_index(legacy)
+    coll.create_index(
+        [("eval_id", 1)], unique=True,
+        partialFilterExpression={"eval_id": {"$type": ["int", "long"]}},
     )
+    coll.create_index([("task_id", 1), ("benchmark_id", 1), ("model_id", 1), ("run_id", 1)])
     _indexes_ready = True
 
 
@@ -278,13 +294,17 @@ def save_agentic_evaluation(
     run_id: Any,
     image_id: Any,
     field_evaluations: list,
+    eval_id: int | None = None,
 ) -> dict:
     """
     Upsert one agentic evaluation into the agentic_evaluations collection.
 
-    Idempotent on (task_id, benchmark_id, model_id, run_id) so re-evaluating a
-    run updates in place, while different runs of the same task each get their
-    own row (needed for the LLM-consistency comparison).
+    Keyed on `eval_id` when present — the mapping's surrogate id, unique per
+    (output × judge config) — so the SAME output graded by different judges keeps
+    one doc each instead of overwriting last-writer-wins. It is also the shared join
+    key with the agentic_runs metrics collection. Without eval_id (the discovery/dev
+    path) it falls back to (task_id, benchmark_id, model_id, run_id), which still
+    gives each consistency run its own row.
 
     `field_evaluations` is the agent's record of the type-tool it routed to, e.g.
         [{"field": "first_program", "field_type": "raw_string",
@@ -300,14 +320,18 @@ def save_agentic_evaluation(
     db = get_db()
     _ensure_indexes(db)
 
-    filter_key = {
+    filter_key = (
+        {"eval_id": eval_id}
+        if eval_id is not None
+        else {"task_id": task_id, "benchmark_id": str(benchmark_id),
+              "model_id": model_id, "run_id": run_id}
+    )
+    eval_doc = {
+        "eval_id": eval_id,
         "task_id": task_id,
         "benchmark_id": str(benchmark_id),
         "model_id": model_id,
         "run_id": run_id,
-    }
-    eval_doc = {
-        **filter_key,
         "image_id": image_id,
         "field_evaluations": field_evaluations,
         "source": "agentic",
@@ -321,3 +345,24 @@ def save_agentic_evaluation(
         "key": filter_key,
         "n_fields": len(field_evaluations),
     }
+
+
+def save_run_row(row: dict[str, Any]) -> dict[str, Any]:
+    """Mirror one flat run-observability row into the agentic_runs collection.
+
+    This is the central, team-queryable copy of what the local Parquet sink writes
+    (perf, tokens, save_success, selection_accuracy, weave_trace_url, ...). Keyed on
+    `eval_id` when present — the shared join key with agentic_evaluations — else the
+    RUN_KEY_FIELDS composite; either way a re-run of the same (output × judge config)
+    updates in place rather than accumulating duplicates. `stored_at` records when the
+    mirror was made.
+    """
+    db = get_db()
+    eval_id = row.get("eval_id")
+    filter_key = (
+        {"eval_id": eval_id} if eval_id is not None
+        else {k: row.get(k) for k in RUN_KEY_FIELDS}
+    )
+    doc = {**row, "stored_at": datetime.now(timezone.utc)}
+    db[AGENTIC_RUNS_COLL].replace_one(filter_key, doc, upsert=True)
+    return {"saved": True, "collection": AGENTIC_RUNS_COLL, "key": filter_key}

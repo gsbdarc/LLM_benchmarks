@@ -57,6 +57,7 @@ def flatten_run(
 
     row = {
         # ── identifiers ──
+        "eval_id": meta.get("eval_id"),
         "task_id": meta.get("task_id"),
         "run_id": meta.get("run_id"),
         "benchmark_id": meta.get("benchmark_id"),
@@ -70,6 +71,7 @@ def flatten_run(
         "gpu_type": meta.get("gpu_type"),
         "reasoning_level": meta.get("reasoning_level"),
         "prompt_name": meta.get("prompt_name"),
+        "prompt_key": meta.get("prompt_key"),
         "prompt_hash": meta.get("prompt_hash"),
         "tools_hash": meta.get("tools_hash"),
         "git_commit": meta.get("git_commit"),
@@ -80,6 +82,7 @@ def flatten_run(
         "stopped_reason": result.get("stopped_reason"),
         "wall_time_total": result.get("wall_time_total"),
         "llm_time_total": result.get("llm_time_total"),
+        "overhead_time": result.get("overhead_time"),
         "tokens_per_sec": result.get("tokens_per_sec"),
         "prompt_tokens": usage.get("prompt_tokens"),
         "completion_tokens": usage.get("completion_tokens"),

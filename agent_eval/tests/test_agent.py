@@ -189,10 +189,49 @@ async def test_run_agent_happy_path(monkeypatch):
     assert result["usage"] == {"prompt_tokens": 220, "completion_tokens": 30, "total_tokens": 250}
     assert result["peak_context"] == 120
     assert result["tokens_per_sec"] is not None and result["tokens_per_sec"] > 0
+    # wall = llm + overhead, and overhead is non-negative
+    assert result["overhead_time"] >= 0
+    assert abs(result["wall_time_total"] - (result["llm_time_total"] + result["overhead_time"])) < 1e-6
     assert result["tool_calls_by_name"] == {"get_task_output": 1}
     assert session.calls[0][0] == "get_task_output"
     # weave_trace_url is present on the result and null when Weave is disabled (tests)
     assert "weave_trace_url" in result and result["weave_trace_url"] is None
+
+
+async def test_run_agent_stamps_eval_id_on_save_evaluation(monkeypatch):
+    # The LLM omits eval_id; the client must inject the authoritative one.
+    session = FakeSession({"save_evaluation": '{"saved": true}'})
+
+    @asynccontextmanager
+    async def fake_use_session(url):
+        tok = agent._session_var.set(session)
+        try:
+            yield session
+        finally:
+            agent._session_var.reset(tok)
+
+    monkeypatch.setattr(agent, "use_session", fake_use_session)
+
+    responses = [
+        _response(
+            _msg(tool_calls=[_tool_call("c1", "save_evaluation",
+                                        '{"task_id": "2450", "field_evaluations": [{"f": 1}]}')]),
+            "tool_calls",
+            {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+        ),
+        _response(_msg(content="done"), "stop",
+                  {"prompt_tokens": 12, "completion_tokens": 6, "total_tokens": 18}),
+    ]
+
+    await agent.run_agent(
+        "Evaluate task 2450", "SYSTEM", make_scripted_llm_step(responses),
+        mcp_url="http://fake/mcp", verbose=False, eval_id=77,
+    )
+
+    name, args = session.calls[0]
+    assert name == "save_evaluation"
+    assert args["eval_id"] == 77           # injected client-side, not from the LLM
+    assert args["task_id"] == "2450"       # LLM-provided args preserved
 
 
 async def test_run_agent_stops_at_max_steps(monkeypatch):

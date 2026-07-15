@@ -26,7 +26,7 @@ modules sit at the top; run entry points as `python -m agent_eval …` from the 
 | `server.py` | FastMCP HTTP server (`python -m agent_eval.server`): 3 data tools + **3 composite type-tools** (`evaluate_raw_string/extracted_string/list`). |
 | `tools.py` | MCP tool business logic; MongoDB access + metric/composite imports from `scripts/evaluator.py` (one source of truth). |
 | `config.py` | Backend resolution + clients; loads `backends/*.json`; path anchor (`PKG_DIR`/`REPO_ROOT`). |
-| `prompts.py` | Agent system/user prompts; `PROMPT_NAME` version. |
+| `prompts/` | Prompt registry: one JSON per variant (`composite_v1.json`); `__init__.py` loader exposes `PROMPT_NAME`/`METRIC_EVAL_SYSTEM`/`eval_user_prompt`. |
 | **`runtime/`** | The agent execution engine: `agent.py` (persistent MCP session + agent loop), `runner.py` (batch orchestration). |
 | **`reporting/`** | Measuring + recording a run: `observability.py` (traces/derivations/scrape), `scorers.py`, `integrity.py`, `sink.py` (one Parquet row per run). |
 | **`registry/`** | The eval-work registry: `mapping.py` (pure build/dedupe/sample), `create_eval_mapping.py` (`python -m agent_eval.registry.create_eval_mapping`), `generate_gold_metrics.py`. |
@@ -54,9 +54,14 @@ modules sit at the top; run entry points as `python -m agent_eval …` from the 
   endpoint with `--model <int>` (or a raw model-id) — no new file per model. The int
   is the *agent/eval* model (stored as `agent_model_key`), distinct from `model_id`
   (the model being evaluated).
-- **Two observability stores.** Weave = deep per-run traces (drill into reasoning);
-  Parquet+DuckDB = wide, many-run rows for the dashboard. `reasoning_json` is a
-  bounded per-run blob that feeds the dashboard's path summaries.
+- **Two observability stores, plus a central mirror.** Weave = deep per-run traces
+  (drill into reasoning); Parquet+DuckDB = wide, many-run rows for the dashboard (the
+  authoritative local record). `reasoning_json` is a bounded per-run blob that feeds the
+  dashboard's path summaries. Each run row is also mirrored to the `agentic_runs` Mongo
+  collection so the whole team can query results (perf, `selection_accuracy`, `save_success`,
+  `weave_trace_url`, …) without Yen access — upsert-keyed on the output × judge-config
+  identity, and failures never break the run. Disable with `--no-mongo-runs`. (Distinct
+  from `agentic_evaluations`, which holds the agent's per-field verdicts.)
 - **GPU type is propagated, not sniffed.** The eval client and GPU server are
   different hosts, so `nvidia-smi` is never read on the client. `run_nim_server.slurm`
   echoes the GPU name; pass it via `--gpu-type` or `$GPU_TYPE`. The infra panel uses

@@ -18,7 +18,7 @@ from .. import config
 from .agent import call_mcp_tool, load_tools_from_mcp, make_llm_step, run_agent, use_session
 from ..reporting.integrity import run_integrity_report
 from ..reporting.observability import compute_prompt_hash, compute_tools_hash, get_git_commit
-from ..prompts import METRIC_EVAL_SYSTEM, PROMPT_NAME, eval_user_prompt
+from ..prompts import resolve_prompt
 from ..reporting.scorers import _load_gold_metrics, selection_accuracy_scorer
 from ..reporting.sink import flatten_run, write_run_row
 
@@ -37,17 +37,20 @@ async def aprepare(
     mcp_url: str,
     weave_enabled: bool = True,
     model: Optional[str] = None,
+    prompt: Optional[str] = None,
     gpu_type: Optional[str] = None,
 ) -> dict[str, Any]:
     """Async setup: returns a context dict used by run_batch.
 
-    `model` overrides the backend's default model; `gpu_type` is the GPU name of
-    the (cross-host) model server, propagated explicitly for the run rows.
+    `model` overrides the backend's default model; `prompt` selects a prompt variant
+    (name or index; default = prompt #1); `gpu_type` is the GPU name of the
+    (cross-host) model server, propagated explicitly for the run rows.
     """
     # Resolve the model key from the original selector before build_backend
     # reassigns `model` to the resolved model string.
     _, _, agent_model_key = config.resolve_model(backend, model)
     client, model, completion_kwargs, base_url = config.build_backend(backend, model)
+    prompt_name, prompt_system, prompt_user, prompt_key = resolve_prompt(prompt)
     tools = await load_tools_from_mcp(mcp_url)
     return {
         "client": client,
@@ -58,7 +61,11 @@ async def aprepare(
         "tools": tools,
         "tools_hash": compute_tools_hash(tools),
         "git_commit": get_git_commit(),
-        "prompt_hash": compute_prompt_hash(METRIC_EVAL_SYSTEM),
+        "prompt_name": prompt_name,
+        "prompt_system": prompt_system,
+        "prompt_user": prompt_user,
+        "prompt_key": prompt_key,
+        "prompt_hash": compute_prompt_hash(prompt_system),
         "reasoning_level": config.reasoning_level(backend, completion_kwargs),
         "llm_step": make_llm_step(client, model, tools, completion_kwargs),
         "backend": backend,
@@ -97,14 +104,17 @@ async def run_one(
     verbose: bool,
     write_sink: bool,
     gpu_metrics: bool,
+    write_mongo: bool = True,
 ) -> dict[str, Any]:
-    """Run the agent on one row, score it, and write a Parquet row. Returns the row dict."""
+    """Run the agent on one row, score it, and write a Parquet row (and, unless
+    write_mongo is off, mirror it to the central agentic_runs collection). Returns
+    the row dict."""
     safe_run_id = int(row["run_id"]) if row.get("run_id") is not None else 0
     metrics_url = config.metrics_url(ctx["base_url"]) if gpu_metrics else None
 
     attrs = {
         "prompt_hash": ctx["prompt_hash"],
-        "prompt_name": PROMPT_NAME,
+        "prompt_name": ctx["prompt_name"],
         "tools_hash": ctx["tools_hash"],
         "git_commit": ctx["git_commit"],
         "completion_kwargs": json.dumps(ctx["completion_kwargs"], default=str),
@@ -115,8 +125,8 @@ async def run_one(
     }
     with _weave_attrs(ctx["weave_enabled"], attrs):
         result = await run_agent(
-            eval_user_prompt(row["task_id"], safe_run_id),
-            METRIC_EVAL_SYSTEM,
+            ctx["prompt_user"].format(task_id=row["task_id"], run_id=safe_run_id),
+            ctx["prompt_system"],
             ctx["llm_step"],
             ctx["mcp_url"],
             max_steps=max_steps,
@@ -126,6 +136,7 @@ async def run_one(
             task_id=row["task_id"],
             run_id=safe_run_id,
             metrics_url=metrics_url,
+            eval_id=row.get("eval_id"),
         )
 
     integrity = run_integrity_report(result, verbose=verbose)
@@ -141,7 +152,8 @@ async def run_one(
         "temperature": ctx.get("temperature"),
         "gpu_type": ctx.get("gpu_type"),
         "reasoning_level": ctx["reasoning_level"],
-        "prompt_name": PROMPT_NAME,
+        "prompt_name": ctx["prompt_name"],
+        "prompt_key": ctx["prompt_key"],
         "prompt_hash": ctx["prompt_hash"],
         "tools_hash": ctx["tools_hash"],
         "git_commit": ctx["git_commit"],
@@ -149,9 +161,21 @@ async def run_one(
         "mcp_url": ctx["mcp_url"],
         "weave_trace_url": result.get("weave_trace_url"),
     }
+    if write_sink or write_mongo:
+        flat = flatten_run(result, meta, integrity, {"selection_accuracy": sel})
     if write_sink:
-        path = write_run_row(flatten_run(result, meta, integrity, {"selection_accuracy": sel}))
+        path = write_run_row(flat)
         result["_sink_path"] = str(path)
+    if write_mongo:
+        # Central, team-queryable mirror. Never let a Mongo hiccup fail the eval —
+        # the Parquet row is the authoritative local record either way.
+        try:
+            from ..tools import save_run_row
+            save_run_row(flat)
+            result["_mongo_run_saved"] = True
+        except Exception as e:  # noqa: BLE001
+            result["_mongo_run_saved"] = False
+            print(f"  WARNING: agentic_runs mirror failed: {e}")
 
     print(f"[task {row['task_id']} run {safe_run_id}] steps={result['steps']} "
           f"tokens={result['usage']['total_tokens']} tps={result.get('tokens_per_sec')} "
@@ -162,13 +186,15 @@ async def run_one(
 
 async def run_batch(rows: list[dict[str, Any]], ctx: dict[str, Any], concurrency: int = 2,
                     max_steps: int = config.MAX_STEPS, verbose: bool = False,
-                    write_sink: bool = True, gpu_metrics: bool = True) -> list[dict[str, Any]]:
+                    write_sink: bool = True, gpu_metrics: bool = True,
+                    write_mongo: bool = True) -> list[dict[str, Any]]:
     """Run all rows with bounded parallelism (asyncio.gather + Semaphore)."""
     gold = _load_gold_metrics()
     sem = asyncio.Semaphore(concurrency)
 
     async def _guarded(row: dict[str, Any]) -> dict[str, Any]:
         async with sem:
-            return await run_one(row, ctx, gold, concurrency, max_steps, verbose, write_sink, gpu_metrics)
+            return await run_one(row, ctx, gold, concurrency, max_steps, verbose,
+                                 write_sink, gpu_metrics, write_mongo)
 
     return await asyncio.gather(*[_guarded(r) for r in rows])
