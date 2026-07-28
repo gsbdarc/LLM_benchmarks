@@ -21,3 +21,7 @@ outputs/
 # Generated eval-run registry (produced by agent_eval.registry.create_eval_mapping)
 inputs/eval_mapping.csv
 inputs/eval_mapping_sample.csv
+
+# Generated (data-laden) dashboard from the self-rescheduling refresh — the tracked
+# dashboard_template.html is the data-free shell (tokenviz hygiene).
+images/agent_dashboard_live.html
