@@ -50,8 +50,10 @@ RUN_COLUMNS = [
     "concurrency", "steps", "stopped_reason",
     "n_tool_calls", "n_metric_calls", "n_tool_errors", "tool_sequence_json",
     "prompt_tokens", "completion_tokens", "total_tokens",
+    "input_dollar_cost", "output_dollar_cost", "total_dollar_cost",
     "tokens_per_sec", "peak_context", "wall_time_total", "llm_time_total", "overhead_time",
     "save_success", "save_count", "save_failed", "score_consistent", "selection_accuracy",
+    "routing_path_correct", "routing_path_reason",
     "gpu_cache_usage_end", "requests_running_end", "weave_trace_url",
 ]
 
@@ -59,7 +61,8 @@ RUN_COLUMNS = [
 GLOSSARY = [
     {"term": "save_success", "def": "Fraction of runs where the agent successfully wrote its evaluation via save_evaluation."},
     {"term": "score_consistent", "def": "The composite score the agent SAVED matches the score recomputed from the tool's own sub-scores (integrity check)."},
-    {"term": "selection_accuracy / routing acc", "def": "Did the agent route the field to the CORRECT composite type-tool, graded against the gold field_type."},
+    {"term": "selection_accuracy / routing acc", "def": "Did the agent route the field to the CORRECT composite type-tool, graded against the gold field_type — from the agent's SAVED declaration (per field)."},
+    {"term": "routing_path_correct", "def": "Did the agent take the correct tool-call PATH (actual behavior): exactly one get_task_output, the SUCCESSFUL metric calls exactly equal the expected set (one correct type-tool per field, any order), and exactly one successful save_evaluation. Stricter, behavior-based complement to selection_accuracy; routing_path_reason gives the failure detail."},
     {"term": "evaluate_raw_string", "def": "Composite tool for free-form prose fields. Scores with word-IoU."},
     {"term": "evaluate_extracted_string", "def": "Composite tool for a single extracted value that may be absent. null_accuracy × max(levenshtein, char_f1)."},
     {"term": "evaluate_list", "def": "Composite tool for set/sequence fields. max(set_f1, sequence_lcs, set_inclusion)."},
@@ -67,6 +70,7 @@ GLOSSARY = [
     {"term": "overhead_time", "def": "wall_time_total − llm_time_total ≈ tool-execution + agent-loop time. The MCP tool server is local for all backends, so this is backend-independent."},
     {"term": "wall_time_total", "def": "End-to-end agent time = llm_time_total + overhead_time (excludes the GPU-metrics scrapes, which are timed outside it)."},
     {"term": "total_tokens", "def": "prompt + completion tokens summed across ALL agent steps. Each step re-sends the growing conversation as its prompt, so this is ~95% prompt tokens and far larger than tokens_per_sec × time (which reconstructs only generated tokens)."},
+    {"term": "total_dollar_cost", "def": "USD to run THIS judge on this eval = prompt_tokens×input_price + completion_tokens×output_price (per-model prices in backends/*.json, USD per 1M tokens). Input-token-dominated (context re-sent each step). Local judges = $0; null when a model is unpriced."},
     {"term": "tokens_per_sec", "def": "completion (generated) tokens per second of llm_time — generation throughput. Excludes prompt tokens, so tokens_per_sec × llm_time ≈ completion tokens, NOT total_tokens."},
     {"term": "steps", "def": "Number of agent turns (tool-call rounds) taken to finish a task."},
     {"term": "stopped_reason", "def": "Why the agent loop ended: answered, max_steps, or error."},

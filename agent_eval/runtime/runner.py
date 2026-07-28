@@ -19,7 +19,7 @@ from .agent import call_mcp_tool, load_tools_from_mcp, make_llm_step, run_agent,
 from ..reporting.integrity import run_integrity_report
 from ..reporting.observability import compute_prompt_hash, compute_tools_hash, get_git_commit
 from ..prompts import resolve_prompt
-from ..reporting.scorers import _load_gold_metrics, selection_accuracy_scorer
+from ..reporting.scorers import _load_gold_metrics, routing_path_scorer, selection_accuracy_scorer
 from ..reporting.sink import flatten_run, write_run_row
 
 
@@ -105,12 +105,35 @@ async def run_one(
     write_sink: bool,
     gpu_metrics: bool,
     write_mongo: bool = True,
+    skip_existing: bool = True,
 ) -> dict[str, Any]:
     """Run the agent on one row, score it, and write a Parquet row (and, unless
     write_mongo is off, mirror it to the central agentic_runs collection). Returns
-    the row dict."""
+    the row dict.
+
+    When write_mongo and skip_existing, a row already evaluated under this code_version
+    (git_commit) is SKIPPED — no agent run, no API spend — so re-runs only do new work."""
     safe_run_id = int(row["run_id"]) if row.get("run_id") is not None else 0
     metrics_url = config.metrics_url(ctx["base_url"]) if gpu_metrics else None
+
+    # Skip-if-exists: don't re-run (or re-spend on) a (task × judge × prompt) already
+    # evaluated at this code_version. Keyed the same way save_run_row keys agentic_runs.
+    if write_mongo and skip_existing:
+        from ..tools import run_exists
+        identity = {
+            "eval_id": row.get("eval_id"),
+            "task_id": row["task_id"], "run_id": safe_run_id,
+            "benchmark_id": row["benchmark_id"], "model_id": row.get("model_id"),
+            "backend": ctx["backend"], "agent_model_key": ctx.get("agent_model_key"),
+            "prompt_key": ctx["prompt_key"], "git_commit": ctx["git_commit"],
+        }
+        try:
+            if run_exists(identity):
+                print(f"[task {row['task_id']} run {safe_run_id}] SKIP — already evaluated "
+                      f"at {ctx['git_commit']}")
+                return {"stopped_reason": "skipped", **identity}
+        except Exception as e:  # noqa: BLE001 — a check failure must not block the run
+            print(f"  WARNING: skip-existing check failed ({e}); running anyway")
 
     attrs = {
         "prompt_hash": ctx["prompt_hash"],
@@ -137,10 +160,12 @@ async def run_one(
             run_id=safe_run_id,
             metrics_url=metrics_url,
             eval_id=row.get("eval_id"),
+            git_commit=ctx["git_commit"],
         )
 
     integrity = run_integrity_report(result, verbose=verbose)
     sel = selection_accuracy_scorer(result, benchmark_id=row["benchmark_id"], gold=gold)
+    path = routing_path_scorer(result, benchmark_id=row["benchmark_id"], gold=gold)
 
     meta = {
         **row,
@@ -162,7 +187,7 @@ async def run_one(
         "weave_trace_url": result.get("weave_trace_url"),
     }
     if write_sink or write_mongo:
-        flat = flatten_run(result, meta, integrity, {"selection_accuracy": sel})
+        flat = flatten_run(result, meta, integrity, {"selection_accuracy": sel, "routing_path": path})
     if write_sink:
         path = write_run_row(flat)
         result["_sink_path"] = str(path)
@@ -187,7 +212,7 @@ async def run_one(
 async def run_batch(rows: list[dict[str, Any]], ctx: dict[str, Any], concurrency: int = 2,
                     max_steps: int = config.MAX_STEPS, verbose: bool = False,
                     write_sink: bool = True, gpu_metrics: bool = True,
-                    write_mongo: bool = True) -> list[dict[str, Any]]:
+                    write_mongo: bool = True, skip_existing: bool = True) -> list[dict[str, Any]]:
     """Run all rows with bounded parallelism (asyncio.gather + Semaphore)."""
     gold = _load_gold_metrics()
     sem = asyncio.Semaphore(concurrency)
@@ -195,6 +220,6 @@ async def run_batch(rows: list[dict[str, Any]], ctx: dict[str, Any], concurrency
     async def _guarded(row: dict[str, Any]) -> dict[str, Any]:
         async with sem:
             return await run_one(row, ctx, gold, concurrency, max_steps, verbose,
-                                 write_sink, gpu_metrics, write_mongo)
+                                 write_sink, gpu_metrics, write_mongo, skip_existing)
 
     return await asyncio.gather(*[_guarded(r) for r in rows])

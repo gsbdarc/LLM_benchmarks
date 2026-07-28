@@ -10,7 +10,9 @@
         "extra_body": {
           "chat_template_kwargs": { "enable_thinking": false }
         }
-      }
+      },
+      "input_price": 0,
+      "output_price": 0
     }
   }
 }

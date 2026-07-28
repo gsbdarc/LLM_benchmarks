@@ -50,6 +50,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--no-sink", action="store_true", help="do not write Parquet rows")
     p.add_argument("--no-mongo-runs", action="store_true",
                    help="do not mirror run rows to the central agentic_runs collection")
+    p.add_argument("--no-skip-existing", action="store_true",
+                   help="re-run rows even if already evaluated at this code_version (git_commit)")
     p.add_argument("--no-gpu-metrics", action="store_true", help="skip /v1/metrics scrape")
     # SLURM-array worker mode: evaluate exactly the one output named by a row of an
     # eval_mapping.csv (the backend/model come from that row's judge config).
@@ -119,6 +121,7 @@ async def _amain(args: argparse.Namespace) -> None:
         write_sink=not args.no_sink,
         gpu_metrics=not args.no_gpu_metrics,
         write_mongo=not args.no_mongo_runs,
+        skip_existing=not args.no_skip_existing,
     )
 
     n_ok = sum(1 for r in results if r.get("stopped_reason") == "answered")

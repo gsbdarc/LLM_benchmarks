@@ -18,7 +18,7 @@ from typing import Any, Optional, Union
 
 import pandas as pd
 
-from ..config import AGENT_RUNS_DIR
+from ..config import AGENT_RUNS_DIR, model_price
 from .observability import reasoning_blob, tool_sequence
 
 
@@ -55,6 +55,21 @@ def flatten_run(
 
     consistency = integrity.get("score_consistency", {}) or {}
 
+    # ── dollar cost of running THIS judge (per-model input/output prices, USD/1M
+    # tokens). Same arithmetic as scripts/7_compute_metrics.py; null when unpriced
+    # (e.g. DeepSeek pending a price) or for a raw model override. Local judges = $0.
+    in_price, out_price = model_price(
+        meta.get("backend"),
+        meta.get("agent_model_key") if meta.get("agent_model_key") is not None else meta.get("model"),
+    )
+    pt, ct = usage.get("prompt_tokens"), usage.get("completion_tokens")
+    input_dollar_cost = pt * in_price / 1_000_000 if (pt is not None and in_price is not None) else None
+    output_dollar_cost = ct * out_price / 1_000_000 if (ct is not None and out_price is not None) else None
+    total_dollar_cost = (
+        (input_dollar_cost or 0) + (output_dollar_cost or 0)
+        if (input_dollar_cost is not None or output_dollar_cost is not None) else None
+    )
+
     row = {
         # ── identifiers ──
         "eval_id": meta.get("eval_id"),
@@ -87,6 +102,9 @@ def flatten_run(
         "prompt_tokens": usage.get("prompt_tokens"),
         "completion_tokens": usage.get("completion_tokens"),
         "total_tokens": usage.get("total_tokens"),
+        "input_dollar_cost": input_dollar_cost,
+        "output_dollar_cost": output_dollar_cost,
+        "total_dollar_cost": total_dollar_cost,
         "peak_context": result.get("peak_context"),
         "client_ram_mb": result.get("client_ram_mb"),
         # ── GPU / queue (from /v1/metrics scrape) ──
@@ -103,6 +121,8 @@ def flatten_run(
         "score_consistent": consistency.get("consistent"),
         "selection_accuracy": (scores.get("selection_accuracy") or {}).get("selection_accuracy")
         if isinstance(scores.get("selection_accuracy"), dict) else scores.get("selection_accuracy"),
+        "routing_path_correct": (scores.get("routing_path") or {}).get("routing_path_correct"),
+        "routing_path_reason": (scores.get("routing_path") or {}).get("routing_path_reason"),
         # ── tool detail ──
         "n_tool_calls": sum(calls.values()),
         "n_metric_calls": n_metric_calls,

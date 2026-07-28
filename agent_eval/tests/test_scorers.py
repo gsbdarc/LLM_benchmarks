@@ -92,3 +92,69 @@ def test_load_gold_metrics_reads_field_type(tmp_path):
     )
     gold = scorers._load_gold_metrics(csv_path)
     assert gold[("5", "first_channel")] == "raw_string"
+
+
+# ── routing_path_scorer (actual tool-call path) ──────────────────────────
+
+_OK = json.dumps({"composite_score": 1.0})
+_ERR = json.dumps({"error": "boom"})
+GOLD5 = {("5", "first_channel"): "raw_string"}                                  # single-field
+GOLD7 = {("7", "a"): "raw_string", ("7", "b"): "extracted_string", ("7", "c"): "list"}  # multi
+
+
+def _tool_result(cid, name, content):
+    return {"role": "tool", "tool_call_id": cid, "name": name, "content": content}
+
+
+def path_output(*steps):
+    """steps: (cid, name, result_content) -> transcript of assistant call + tool result each."""
+    msgs = []
+    for cid, name, content in steps:
+        msgs.append(assistant((cid, name, "{}")))
+        msgs.append(_tool_result(cid, name, content))
+    return {"messages": msgs, "stopped_reason": "answered"}
+
+
+def test_routing_path_single_field_clean():
+    out = path_output(("c1", "get_task_output", _OK), ("c2", "evaluate_raw_string", _OK),
+                      ("c3", "save_evaluation", _OK))
+    assert scorers.routing_path_scorer(out, benchmark_id="5", gold=GOLD5)["routing_path_correct"] is True
+
+
+def test_routing_path_multi_field_any_order_clean():
+    out = path_output(("c1", "get_task_output", _OK), ("c2", "evaluate_list", _OK),
+                      ("c3", "evaluate_raw_string", _OK), ("c4", "evaluate_extracted_string", _OK),
+                      ("c5", "save_evaluation", _OK))
+    assert scorers.routing_path_scorer(out, benchmark_id="7", gold=GOLD7)["routing_path_correct"] is True
+
+
+def test_routing_path_extra_metric_call_fails():
+    out = path_output(("c1", "get_task_output", _OK), ("c2", "evaluate_raw_string", _OK),
+                      ("c3", "evaluate_list", _OK), ("c4", "save_evaluation", _OK))
+    res = scorers.routing_path_scorer(out, benchmark_id="5", gold=GOLD5)
+    assert res["routing_path_correct"] is False and "expected" in res["routing_path_reason"]
+
+
+def test_routing_path_missing_metric_fails():
+    out = path_output(("c1", "get_task_output", _OK), ("c2", "evaluate_raw_string", _OK),
+                      ("c3", "evaluate_extracted_string", _OK), ("c4", "save_evaluation", _OK))
+    assert scorers.routing_path_scorer(out, benchmark_id="7", gold=GOLD7)["routing_path_correct"] is False
+
+
+def test_routing_path_double_fetch_fails():
+    out = path_output(("c1", "get_task_output", _OK), ("c1b", "get_task_output", _OK),
+                      ("c2", "evaluate_raw_string", _OK), ("c3", "save_evaluation", _OK))
+    res = scorers.routing_path_scorer(out, benchmark_id="5", gold=GOLD5)
+    assert res["routing_path_correct"] is False and "get_task_output" in res["routing_path_reason"]
+
+
+def test_routing_path_errored_extra_is_forgiven():
+    # a wrong-type call that ERRORED isn't a successful call, so the successful set still matches
+    out = path_output(("c1", "get_task_output", _OK), ("c2", "evaluate_list", _ERR),
+                      ("c3", "evaluate_raw_string", _OK), ("c4", "save_evaluation", _OK))
+    assert scorers.routing_path_scorer(out, benchmark_id="5", gold=GOLD5)["routing_path_correct"] is True
+
+
+def test_routing_path_none_without_gold():
+    out = path_output(("c1", "get_task_output", _OK))
+    assert scorers.routing_path_scorer(out, benchmark_id="5", gold={}) is None

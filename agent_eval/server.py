@@ -125,13 +125,15 @@ def save_evaluation(
     image_id: Any,
     field_evaluations: list,
     eval_id: int | None = None,
+    git_commit: str | None = None,
 ) -> dict:
     """
     Persist your evaluation of one model output to the agentic_evaluations
-    collection. Idempotent on (task_id, benchmark_id, model_id, run_id).
+    collection. Keyed on (eval_id, git_commit) so results are versioned by code.
 
-    Leave `eval_id` unset — the client stamps it automatically to correlate this
-    verdict with its run-metrics row; any value you pass is overwritten.
+    Leave `eval_id` and `git_commit` unset — the client stamps them automatically to
+    correlate this verdict with its run-metrics row and code version; any value you
+    pass is overwritten.
 
     Pass back the identifiers exactly as returned by get_task_output. Each entry
     in field_evaluations records one field's verdict, e.g.:
@@ -152,6 +154,7 @@ def save_evaluation(
             image_id=image_id,
             field_evaluations=field_evaluations,
             eval_id=eval_id,
+            git_commit=git_commit,
         )
     except Exception as e:  # noqa: BLE001
         logging.exception("save_evaluation failed")

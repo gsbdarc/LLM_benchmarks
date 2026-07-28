@@ -142,12 +142,15 @@ def _ensure_indexes(db: Any) -> None:
     if _indexes_ready:
         return
     coll = db[AGENTIC_EVAL_COLL]
-    legacy = "task_id_1_benchmark_id_1_model_id_1_run_id_1"
-    for ix in coll.list_indexes():
-        if ix["name"] == legacy and ix.get("unique"):
-            coll.drop_index(legacy)
+    # Drop superseded UNIQUE indexes: the 4-field legacy (collapsed multi-judge), and the
+    # eval_id-only one (predates versioning — it would forbid the same eval under a new
+    # code_version). The current key is (eval_id, git_commit).
+    existing = {ix["name"]: ix for ix in coll.list_indexes()}
+    for name in ("task_id_1_benchmark_id_1_model_id_1_run_id_1", "eval_id_1"):
+        if name in existing and existing[name].get("unique"):
+            coll.drop_index(name)
     coll.create_index(
-        [("eval_id", 1)], unique=True,
+        [("eval_id", 1), ("git_commit", 1)], unique=True,
         partialFilterExpression={"eval_id": {"$type": ["int", "long"]}},
     )
     coll.create_index([("task_id", 1), ("benchmark_id", 1), ("model_id", 1), ("run_id", 1)])
@@ -263,6 +266,13 @@ def fetch_evaluable_output(task_id: str, run_id: Any = None) -> dict:
         else:
             predicted = None  # multi-field benchmark but output isn't structured
         expected = _resolve_gt_value(gt_doc, field_def["gt_field"])
+        # An absent value for a NON-list field is stored as an empty list []; that reads
+        # as an empty *list* and mis-routes judges to evaluate_list. Represent absence as
+        # "" for non-list fields so it reads as an absent extracted/raw value. (List fields
+        # keep [] — a genuine empty collection.) `type` is the benchmark's own declared
+        # field type; it is still not surfaced to the agent, only used here to clean the value.
+        if expected == [] and field_def.get("type") != "list":
+            expected = ""
         fields.append(
             {
                 "field": field_key,
@@ -295,16 +305,17 @@ def save_agentic_evaluation(
     image_id: Any,
     field_evaluations: list,
     eval_id: int | None = None,
+    git_commit: str | None = None,
 ) -> dict:
     """
     Upsert one agentic evaluation into the agentic_evaluations collection.
 
-    Keyed on `eval_id` when present — the mapping's surrogate id, unique per
-    (output × judge config) — so the SAME output graded by different judges keeps
-    one doc each instead of overwriting last-writer-wins. It is also the shared join
-    key with the agentic_runs metrics collection. Without eval_id (the discovery/dev
-    path) it falls back to (task_id, benchmark_id, model_id, run_id), which still
-    gives each consistency run its own row.
+    Keyed on (`eval_id`, `git_commit`) when eval_id is present — the mapping's surrogate
+    id (unique per output × judge config) plus the code_version, so the SAME eval under a
+    new code version coexists rather than overwriting the old result, and different judges
+    of one output each keep a doc. eval_id is the shared join key with agentic_runs. Without
+    eval_id (discovery/dev) it falls back to (task_id, benchmark_id, model_id, run_id,
+    git_commit). `git_commit` is stamped client-side (the agent loop), like eval_id.
 
     `field_evaluations` is the agent's record of the type-tool it routed to, e.g.
         [{"field": "first_program", "field_type": "raw_string",
@@ -321,13 +332,14 @@ def save_agentic_evaluation(
     _ensure_indexes(db)
 
     filter_key = (
-        {"eval_id": eval_id}
+        {"eval_id": eval_id, "git_commit": git_commit}
         if eval_id is not None
         else {"task_id": task_id, "benchmark_id": str(benchmark_id),
-              "model_id": model_id, "run_id": run_id}
+              "model_id": model_id, "run_id": run_id, "git_commit": git_commit}
     )
     eval_doc = {
         "eval_id": eval_id,
+        "git_commit": git_commit,
         "task_id": task_id,
         "benchmark_id": str(benchmark_id),
         "model_id": model_id,
@@ -352,17 +364,33 @@ def save_run_row(row: dict[str, Any]) -> dict[str, Any]:
 
     This is the central, team-queryable copy of what the local Parquet sink writes
     (perf, tokens, save_success, selection_accuracy, weave_trace_url, ...). Keyed on
-    `eval_id` when present — the shared join key with agentic_evaluations — else the
-    RUN_KEY_FIELDS composite; either way a re-run of the same (output × judge config)
-    updates in place rather than accumulating duplicates. `stored_at` records when the
-    mirror was made.
+    (`eval_id`, `git_commit`) when eval_id is present — the shared join key with
+    agentic_evaluations plus the code_version — else the RUN_KEY_FIELDS composite +
+    git_commit. So a re-run under a NEW code version coexists (history preserved), while
+    re-running the SAME version updates in place. `stored_at` records the mirror time.
     """
     db = get_db()
-    eval_id = row.get("eval_id")
-    filter_key = (
-        {"eval_id": eval_id} if eval_id is not None
-        else {k: row.get(k) for k in RUN_KEY_FIELDS}
-    )
+    filter_key = _run_filter_key(row)
     doc = {**row, "stored_at": datetime.now(timezone.utc)}
     db[AGENTIC_RUNS_COLL].replace_one(filter_key, doc, upsert=True)
     return {"saved": True, "collection": AGENTIC_RUNS_COLL, "key": filter_key}
+
+
+def _run_filter_key(row: dict[str, Any]) -> dict[str, Any]:
+    """The version-aware uniqueness key for an agentic_runs doc: (eval_id, git_commit)
+    when eval_id is present, else the RUN_KEY_FIELDS composite + git_commit."""
+    eval_id = row.get("eval_id")
+    gc = row.get("git_commit")
+    if eval_id is not None:
+        return {"eval_id": eval_id, "git_commit": gc}
+    return {**{k: row.get(k) for k in RUN_KEY_FIELDS}, "git_commit": gc}
+
+
+def run_exists(row: dict[str, Any]) -> bool:
+    """True if agentic_runs already has this run for its (identity + code_version).
+
+    Lets a batch SKIP re-running a (task × judge × prompt) under a code_version that was
+    already evaluated — so re-runs don't re-spend API or clobber, and only genuinely new
+    (task × version) work executes. Needs the same fields as _run_filter_key on `row`.
+    """
+    return get_db()[AGENTIC_RUNS_COLL].count_documents(_run_filter_key(row), limit=1) > 0

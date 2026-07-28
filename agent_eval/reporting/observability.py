@@ -146,13 +146,28 @@ def compute_tools_hash(tool_schemas: Any) -> str:
 
 
 def get_git_commit() -> str:
-    """Return the short git commit hash of HEAD, or "unknown" if unavailable."""
+    """Short git commit hash of HEAD, suffixed '-dirty' when the working tree differs
+    from HEAD, or "unknown" if git is unavailable.
+
+    Runs are versioned by this value (code_version): the Mongo stores key on it so a
+    re-run under a new commit coexists with old results instead of overwriting them.
+    The '-dirty' flag matters because a dirty tree means the recorded version does not
+    fully pin the code — commit before a versioned run for a clean code_version.
+    """
     try:
-        return subprocess.check_output(
+        h = subprocess.check_output(
             ["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL
         ).decode().strip()
     except Exception:
         return "unknown"
+    try:
+        dirty = subprocess.call(
+            ["git", "diff", "--quiet", "HEAD"],
+            stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+        ) != 0
+    except Exception:
+        dirty = False
+    return h + ("-dirty" if dirty else "")
 
 
 # ---------------------------------------------------------------------------

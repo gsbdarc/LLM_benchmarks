@@ -213,6 +213,7 @@ async def run_agent(
     run_id: Optional[int] = None,
     metrics_url: Optional[str] = None,
     eval_id: Optional[int] = None,
+    git_commit: Optional[str] = None,
 ) -> dict[str, Any]:
     """Run the agent on one output. Opens one MCP session for the whole loop.
 
@@ -308,16 +309,32 @@ async def run_agent(
 
             for tc in msg.tool_calls:
                 name = tc.function.name
+                tool_calls_by_name[name] = tool_calls_by_name.get(name, 0) + 1
                 try:
                     args = json.loads(tc.function.arguments or "{}")
                 except json.JSONDecodeError as e:
+                    # Do NOT fall back to args={} and call the tool anyway — that produced a
+                    # phantom empty call whose error the model then "retried", inflating the
+                    # tool counts (e.g. the double get_task_output). Hand the parse error back
+                    # as the tool result so the model re-emits valid JSON instead.
                     obs.log("ARG PARSE ERROR", f"{e}\n{tc.function.arguments}")
-                    # BUG (logged, not fixed): args fall back to {} — tool still called.
                     log_parse_failure(name, tc.function.arguments, str(e))
-                    args = {}
-                if name == "save_evaluation" and eval_id is not None:
-                    args["eval_id"] = eval_id  # authoritative id, not the LLM's
-                tool_calls_by_name[name] = tool_calls_by_name.get(name, 0) + 1
+                    tool_errors_by_name[name] = tool_errors_by_name.get(name, 0) + 1
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "name": name,
+                        "content": json.dumps({
+                            "error": f"could not parse tool arguments as JSON ({e}); "
+                                     "re-send this call with valid JSON arguments."
+                        }),
+                    })
+                    continue
+                if name == "save_evaluation":
+                    if eval_id is not None:
+                        args["eval_id"] = eval_id        # authoritative id, not the LLM's
+                    if git_commit is not None:
+                        args["git_commit"] = git_commit  # code_version, not the LLM's
                 t_tool = time.perf_counter()
                 tool_result = await call_mcp_tool(name, args, verbose=verbose)
                 tool_time_by_name[name] = tool_time_by_name.get(name, 0.0) + (time.perf_counter() - t_tool)

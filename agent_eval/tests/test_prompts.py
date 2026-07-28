@@ -29,6 +29,14 @@ def test_resolve_unknown_raises():
 def test_eval_user_prompt_interpolates_and_selects_variant():
     assert "task_id=2450" in prompts.eval_user_prompt("2450", 3)
     assert "run_id=None" in prompts.eval_user_prompt("2450", None)
-    # explicit selector yields the same text as the default for the sole variant
+    # explicit selector yields the same text as the default (composite_v1, lowest index)
     assert prompts.eval_user_prompt("2450", 3, prompt="composite_v1") == \
         prompts.eval_user_prompt("2450", 3)
+
+
+def test_composite_v2_loads_at_index_2_and_v1_stays_default():
+    name, system, user, key = prompts.resolve_prompt("composite_v2")
+    assert (name, key) == ("composite_v2", 2)
+    assert prompts.resolve_prompt(2)[0] == "composite_v2"       # by index too
+    assert "{task_id}" in user and "{run_id}" in user and system
+    assert prompts.PROMPT_NAME == "composite_v1"                # lowest index remains default

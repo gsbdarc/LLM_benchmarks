@@ -98,6 +98,25 @@ def resolve_model(backend: str, model: str | int | None = None) -> tuple[str, di
     return str(model), default.get("completion_kwargs", {}), None
 
 
+def model_price(backend: str, model: str | int | None = None) -> tuple[float | None, float | None]:
+    """(input_price, output_price) in USD per 1M tokens for a backend model.
+
+    Mirrors resolve_model's key/string resolution. Returns (None, None) for an
+    unknown backend, an unpriced model, or a raw model-id override — so cost is
+    simply left null rather than guessed. Local models are priced 0/0.
+    """
+    if backend not in BACKENDS:
+        return None, None
+    models = BACKENDS[backend].get("models") or {}
+    key = _default_model_key(BACKENDS[backend]) if model is None else str(model)
+    entry = models.get(key)
+    if entry is None:
+        entry = next((e for e in models.values() if e.get("model") == str(model)), None)
+    if entry is None:
+        return None, None
+    return entry.get("input_price"), entry.get("output_price")
+
+
 def _read_api_key(cfg: dict) -> str:
     """Resolve an API key from the configured file, then env var, else 'not-used'."""
     key_file = cfg.get("api_key_file")

@@ -6,17 +6,23 @@
     "1": {
       "model": "gpt-5-mini",
       "label": "gpt-5-mini",
-      "completion_kwargs": { "temperature": 0}
+      "completion_kwargs": { "temperature": 0},
+      "input_price": 0.25,
+      "output_price": 2
     },
     "2": {
       "model": "DeepSeek-V3.2",
       "label": "DeepSeek-V3.2",
-      "completion_kwargs": { "temperature": 0 }
+      "completion_kwargs": { "temperature": 0 },
+      "input_price": null,
+      "output_price": null
     },
     "3": {
       "model": "claude-sonnet-4-6",
       "label": "claude-sonnet-4-6",
-      "completion_kwargs": { "temperature": 0 }
+      "completion_kwargs": { "temperature": 0 },
+      "input_price": 3,
+      "output_price": 15
     }
   }
 }

@@ -8,11 +8,12 @@ returns a dict of numbers Weave aggregates across the frozen dataset.
 from __future__ import annotations
 
 import csv
+from collections import Counter
 from pathlib import Path
 from typing import Any, Optional, Union
 
 from ..config import PKG_DIR
-from .integrity import check_score_consistency, extract_saved_evaluation, save_outcome
+from .integrity import METRIC_TOOLS, check_score_consistency, extract_saved_evaluation, save_outcome
 from .observability import op
 
 GOLD_CSV = PKG_DIR / "gold_metrics.csv"
@@ -120,4 +121,82 @@ def selection_accuracy_scorer(
         "selection_accuracy": correct / len(scoreable),
         "correct": correct,
         "total": len(scoreable),
+    }
+
+
+# ── routing PATH correctness (actual behavior, not the saved declaration) ────
+
+def _tool_call_outcomes(messages: list[Any]) -> list[tuple[str, bool]]:
+    """[(tool_name, succeeded)] for each tool call that produced a result, in order.
+
+    Assistant messages carry the calls (`tool_calls`, pydantic objects); tool-result
+    messages are dicts keyed by `tool_call_id`. A call succeeded iff its result content
+    carries no error marker. Mirrors integrity.check_retry_rule's id -> name attribution.
+    """
+    id_to_name: dict[str, str] = {}
+    for msg in messages:
+        for tc in getattr(msg, "tool_calls", None) or []:
+            id_to_name[tc.id] = tc.function.name
+    outcomes: list[tuple[str, bool]] = []
+    for msg in messages:
+        if isinstance(msg, dict) and msg.get("role") == "tool":
+            name = id_to_name.get(msg.get("tool_call_id", "")) or msg.get("name")
+            content = msg.get("content", "") or ""
+            errored = '"error"' in content or "isError=True" in content
+            outcomes.append((name, not errored))
+    return outcomes
+
+
+def _expected_metric_multiset(
+    gold: dict[tuple[str, str], Any], benchmark_id: Any
+) -> Counter:
+    """The multiset of correct type-tools for a benchmark: evaluate_{field_type} per field."""
+    return Counter(
+        f"evaluate_{ftype}"
+        for (bid, _field), ftype in gold.items()
+        if bid == str(benchmark_id)
+    )
+
+
+@op
+def routing_path_scorer(
+    output: dict[str, Any],
+    benchmark_id: Optional[Any] = None,
+    gold: Optional[dict[tuple[str, str], Any]] = None,
+    **kwargs: Any,
+) -> Optional[dict[str, Any]]:
+    """Did the agent take the correct tool-call PATH (actual behavior, not its saved
+    declaration)? The clean path holds iff: exactly one get_task_output, the SUCCESSFUL
+    metric calls exactly equal the expected multiset (one correct type-tool per field, any
+    order), and exactly one successful save_evaluation. Returns None until gold exists / the
+    benchmark is graded. Complements selection_accuracy_scorer (declared field_type vs gold).
+    """
+    if gold is None:
+        gold = _load_gold_metrics()
+    if not gold or benchmark_id is None:
+        return None
+    expected = _expected_metric_multiset(gold, benchmark_id)
+    if not expected:
+        return None  # benchmark has no gold fields
+
+    outcomes = _tool_call_outcomes(output.get("messages", []))
+    if not outcomes:
+        return None
+
+    n_fetch = sum(1 for name, _ in outcomes if name == "get_task_output")
+    n_save_ok = sum(1 for name, ok in outcomes if name == "save_evaluation" and ok)
+    got_metrics = Counter(name for name, ok in outcomes if ok and name in METRIC_TOOLS)
+
+    reasons = []
+    if n_fetch != 1:
+        reasons.append(f"get_task_output x{n_fetch} (expected 1)")
+    if got_metrics != expected:
+        reasons.append(f"successful metrics {dict(got_metrics)} != expected {dict(expected)}")
+    if n_save_ok != 1:
+        reasons.append(f"successful save_evaluation x{n_save_ok} (expected 1)")
+
+    correct = not reasons
+    return {
+        "routing_path_correct": correct,
+        "routing_path_reason": "clean path" if correct else "; ".join(reasons),
     }

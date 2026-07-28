@@ -223,6 +223,7 @@
     { key: "n_tool_calls", label: "Tool calls", fmt: num1 },
     { key: "n_metric_calls", label: "Metric calls", fmt: num1 },
     { key: "total_tokens", label: "Total tokens", fmt: intFmt },
+    { key: "total_dollar_cost", label: "Cost $", fmt: usd },
     { key: "completion_tokens", label: "Completion tokens", fmt: intFmt },
     { key: "tokens_per_sec", label: "Tokens/sec", fmt: num1 },
     { key: "llm_time_total", label: "LLM time (s)", fmt: num1 },
@@ -294,6 +295,7 @@
   function intFmt(v) { return v == null ? "-" : Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 }); }
   function num1(v) { return v == null ? "-" : Number(v).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
   function pct(v) { return v == null ? "-" : (Number(v) * 100).toFixed(0) + "%"; }
+  function usd(v) { return v == null ? "-" : "$" + Number(v).toFixed(4); }
 
   function avg(list, key) {
     var sum = 0, n = 0;
@@ -493,6 +495,7 @@
       header("Tool calls", "n_tool_calls", "group", st, true),
       header("Metric calls", "n_metric_calls", "group", st, true),
       header("Total tokens", "total_tokens", "group", st, true),
+      header("Cost $", "total_dollar_cost", "group", st, true),
       header("Tokens/sec", "tokens_per_sec", "group", st, true),
       header("LLM s", "llm_time_total", "group", st, true),
       header("Ovh s", "overhead_time", "group", st, true),
@@ -505,6 +508,7 @@
         "</td><td class='num'>" + num1(r.n_tool_calls) +
         "</td><td class='num'>" + num1(r.n_metric_calls) +
         "</td><td class='num'>" + intFmt(r.total_tokens) +
+        "</td><td class='num'>" + usd(r.total_dollar_cost) +
         "</td><td class='num'>" + num1(r.tokens_per_sec) +
         "</td><td class='num'>" + num1(r.llm_time_total) +
         "</td><td class='num'>" + num1(r.overhead_time) +
@@ -512,7 +516,7 @@
         "</td><td class='num'>" + pct(r.selection_accuracy) +
         "</td><td class='num'>" + pct(r.save_success) + "</td></tr>");
     });
-    if (!sorted.length) html.push("<tr><td colspan='11' class='helper'>No groups.</td></tr>");
+    if (!sorted.length) html.push("<tr><td colspan='12' class='helper'>No groups.</td></tr>");
     html.push("</tbody></table>");
     document.getElementById("groupTableWrap").innerHTML = html.join("");
   }

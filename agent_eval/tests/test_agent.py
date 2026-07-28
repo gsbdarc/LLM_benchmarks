@@ -198,8 +198,8 @@ async def test_run_agent_happy_path(monkeypatch):
     assert "weave_trace_url" in result and result["weave_trace_url"] is None
 
 
-async def test_run_agent_stamps_eval_id_on_save_evaluation(monkeypatch):
-    # The LLM omits eval_id; the client must inject the authoritative one.
+async def test_run_agent_stamps_eval_id_and_git_commit_on_save_evaluation(monkeypatch):
+    # The LLM omits eval_id/git_commit; the client injects the authoritative values.
     session = FakeSession({"save_evaluation": '{"saved": true}'})
 
     @asynccontextmanager
@@ -225,13 +225,14 @@ async def test_run_agent_stamps_eval_id_on_save_evaluation(monkeypatch):
 
     await agent.run_agent(
         "Evaluate task 2450", "SYSTEM", make_scripted_llm_step(responses),
-        mcp_url="http://fake/mcp", verbose=False, eval_id=77,
+        mcp_url="http://fake/mcp", verbose=False, eval_id=77, git_commit="abc123",
     )
 
     name, args = session.calls[0]
     assert name == "save_evaluation"
-    assert args["eval_id"] == 77           # injected client-side, not from the LLM
-    assert args["task_id"] == "2450"       # LLM-provided args preserved
+    assert args["eval_id"] == 77               # injected client-side, not from the LLM
+    assert args["git_commit"] == "abc123"      # code_version stamped client-side too
+    assert args["task_id"] == "2450"           # LLM-provided args preserved
 
 
 async def test_run_agent_stops_at_max_steps(monkeypatch):
@@ -283,3 +284,33 @@ async def test_run_agent_handles_llm_error(monkeypatch):
     )
     assert result["stopped_reason"] == "error"
     assert "model exploded" in result["answer"]
+
+
+async def test_run_agent_parse_failure_returns_error_not_empty_call(monkeypatch):
+    # Malformed tool-call JSON must NOT dispatch a phantom empty call; instead the model
+    # gets an error tool-result it can correct from. (The #3 fix.)
+    session = FakeSession()
+
+    @asynccontextmanager
+    async def fake_use_session(url):
+        tok = agent._session_var.set(session)
+        try:
+            yield session
+        finally:
+            agent._session_var.reset(tok)
+
+    monkeypatch.setattr(agent, "use_session", fake_use_session)
+
+    responses = [
+        _response(_msg(tool_calls=[_tool_call("c1", "get_task_output", "{bad json")]),
+                  "tool_calls", {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2}),
+        _response(_msg(content="done"), "stop",
+                  {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2}),
+    ]
+    result = await agent.run_agent(
+        "go", "SYS", make_scripted_llm_step(responses), mcp_url="http://fake/mcp", verbose=False)
+
+    assert session.calls == []                      # no phantom get_task_output({}) hit the server
+    tool_msgs = [m for m in result["messages"] if isinstance(m, dict) and m.get("role") == "tool"]
+    assert len(tool_msgs) == 1 and '"error"' in tool_msgs[0]["content"]
+    assert result["tool_errors_by_name"].get("get_task_output") == 1

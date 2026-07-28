@@ -35,7 +35,7 @@ async def test_run_batch_respects_concurrency(monkeypatch):
     peak = 0
 
     async def fake_run_one(row, ctx, gold, concurrency, max_steps, verbose,
-                           write_sink, gpu_metrics, write_mongo=True):
+                           write_sink, gpu_metrics, write_mongo=True, skip_existing=True):
         nonlocal active, peak
         active += 1
         peak = max(peak, active)
