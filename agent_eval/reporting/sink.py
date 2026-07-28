@@ -95,6 +95,11 @@ def flatten_run(
         # ── performance ──
         "steps": result.get("steps"),
         "stopped_reason": result.get("stopped_reason"),
+        # On an errored run, persist the exception text (result["answer"] holds "LLM error: …")
+        # so failures are diagnosable from the stored row — bounded so a stray long answer
+        # can't bloat the payload. Null for non-errored runs.
+        "error_detail": (str(result.get("answer"))[:500]
+                         if result.get("stopped_reason") == "error" else None),
         "wall_time_total": result.get("wall_time_total"),
         "llm_time_total": result.get("llm_time_total"),
         "overhead_time": result.get("overhead_time"),

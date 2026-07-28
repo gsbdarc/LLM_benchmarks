@@ -12,7 +12,14 @@ class _FakeColl:
 
     @staticmethod
     def _match(doc, flt):
-        return all(doc.get(k) == v for k, v in flt.items())
+        for k, v in flt.items():
+            dv = doc.get(k)
+            if isinstance(v, dict) and "$ne" in v:   # emulate Mongo's {$ne: x}
+                if dv == v["$ne"]:
+                    return False
+            elif dv != v:
+                return False
+        return True
 
     def replace_one(self, filter_key, doc, upsert=False):
         self.calls.append((filter_key, doc, upsert))
@@ -101,6 +108,17 @@ def test_run_exists_is_version_scoped(monkeypatch):
     assert tools.run_exists(row) is True           # same identity + version -> exists
     # a NEW code version of the same eval does NOT exist yet (coexists, not overwritten)
     assert tools.run_exists({**row, "git_commit": "def456"}) is False
+
+
+def test_run_exists_ignores_errored_runs(monkeypatch):
+    fake = _patch_db(monkeypatch)
+    row = {"eval_id": 42, "git_commit": "abc123", "task_id": "2450", "run_id": 3,
+           "benchmark_id": "5", "model_id": "1", "backend": "playground",
+           "agent_model_key": 1, "prompt_key": 1}
+    tools.save_run_row({**row, "stopped_reason": "error"})    # a prior errored run
+    assert tools.run_exists(row) is False                     # errored -> re-runnable, not "exists"
+    tools.save_run_row({**row, "stopped_reason": "answered"})  # now a successful run
+    assert tools.run_exists(row) is True
 
 
 def test_versions_coexist_not_overwritten(monkeypatch):

@@ -392,5 +392,9 @@ def run_exists(row: dict[str, Any]) -> bool:
     Lets a batch SKIP re-running a (task × judge × prompt) under a code_version that was
     already evaluated — so re-runs don't re-spend API or clobber, and only genuinely new
     (task × version) work executes. Needs the same fields as _run_filter_key on `row`.
+
+    Only a NON-errored run counts as "exists": a previously errored run (transient API
+    failure) is re-runnable, so it does not block its own retry.
     """
-    return get_db()[AGENTIC_RUNS_COLL].count_documents(_run_filter_key(row), limit=1) > 0
+    query = {**_run_filter_key(row), "stopped_reason": {"$ne": "error"}}
+    return get_db()[AGENTIC_RUNS_COLL].count_documents(query, limit=1) > 0
