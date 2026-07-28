@@ -47,6 +47,7 @@ RUN_COLUMNS = [
     "eval_id", "task_id", "run_id", "benchmark_id", "model_id",
     "backend", "framework", "model", "agent_model_key",
     "temperature", "gpu_type", "reasoning_level", "prompt_name", "prompt_key", "prompt_hash",
+    "git_commit",
     "concurrency", "steps", "stopped_reason", "error_detail",
     "n_tool_calls", "n_metric_calls", "n_tool_errors", "tool_sequence_json",
     "prompt_tokens", "completion_tokens", "total_tokens",
