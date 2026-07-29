@@ -110,6 +110,20 @@ def _output_key(row: dict[str, Any]) -> tuple[str, ...]:
     return tuple(str(row.get(f)) for f in OUTPUT_FIELDS)
 
 
+def select_by_outputs(
+    rows: list[dict[str, Any]], reference: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Return every row in `rows` whose OUTPUT appears in `reference`.
+
+    Used to build a new sample over the EXACT same outputs as a prior one (e.g. reuse
+    the v1 sample's 40 outputs for a v2 prompt), so the two are directly paired instead
+    of independently re-sampled. Judge configs are NOT matched — filter by judge_prompt
+    separately if you want only some judges.
+    """
+    wanted = {_output_key(r) for r in reference}
+    return [r for r in rows if _output_key(r) in wanted]
+
+
 def sample_paired(
     rows: list[dict[str, Any]],
     k_outputs: int | None,

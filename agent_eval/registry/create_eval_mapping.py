@@ -7,7 +7,7 @@ llm_output crossed with a judge/agent config, keyed by an append-only integer
 `eval_id`.
 
   (1) pull processed llm_outputs (labeled benchmarks) from Mongo
-  (2) cross them with the judge config(s) — for now just playground/gpt-5-mini/composite_v1
+  (2) cross them with the judge config(s) — each playground model × each --prompts variant
   (3) append new unique combinations to inputs/eval_mapping.csv with a fresh eval_id
   (4) optionally write a stratified sample (inputs/eval_mapping_sample.csv) that a
       SLURM array indexes by $SLURM_ARRAY_TASK_ID
@@ -58,15 +58,30 @@ def fetch_outputs(
     return outs
 
 
-def judge_configs() -> list[dict[str, Any]]:
-    """One judge config per playground model — each output is graded by every judge."""
-    from agent_eval.prompts import PROMPT_NAME
-
+def judge_configs(prompt_names: list[str]) -> list[dict[str, Any]]:
+    """One judge config per (playground model × prompt) — each output is graded by every
+    (model, prompt) judge. Passing >1 prompt builds the prompt A/B (e.g. v1 + v2)."""
     cfgs = []
     for key in sorted(config.BACKENDS["playground"]["models"], key=int):
         model, _, _ = config.resolve_model("playground", int(key))
-        cfgs.append({"judge_backend": "playground", "judge_model": model, "judge_prompt": PROMPT_NAME})
+        for pname in prompt_names:
+            cfgs.append({"judge_backend": "playground", "judge_model": model, "judge_prompt": pname})
     return cfgs
+
+
+def resolve_prompt_names(spec: str | None) -> list[str]:
+    """Resolve a `--prompts` spec (comma-separated names/indices) to canonical names.
+    None → every registered variant, ordered by index."""
+    from agent_eval.prompts import prompt_names, resolve_prompt
+
+    if not spec:
+        return prompt_names()
+    names = []
+    for tok in spec.split(","):
+        tok = tok.strip()
+        if tok:
+            names.append(resolve_prompt(tok)[0])  # validates + canonicalizes name/index
+    return names
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -75,14 +90,24 @@ def main(argv: list[str] | None = None) -> None:
                    help="comma-separated benchmark ids (default: the labeled ones)")
     p.add_argument("--limit-per-benchmark", type=int, default=100000,
                    help="cap on outputs pulled per benchmark")
+    p.add_argument("--prompts", default=None,
+                   help="comma-separated judge prompt names/indices (default: all registered variants)")
     p.add_argument("--sample", type=int, default=None,
                    help="write a paired sample of this many OUTPUTS (each crossed with all judges)")
+    p.add_argument("--sample-like", default=None,
+                   help="write a sample over the EXACT outputs in this CSV (same outputs, current "
+                        "--prompts judges); use to reuse a prior sample's outputs for a new prompt")
     p.add_argument("--seed", type=int, default=0, help="sampling seed (deterministic)")
     args = p.parse_args(argv)
 
+    prompt_names = resolve_prompt_names(args.prompts)
+    cfgs = judge_configs(prompt_names)
+    print(f"Judge configs: {len(cfgs)} = "
+          f"{len(cfgs) // max(1, len(prompt_names))} models x prompts {prompt_names}")
+
     benchmark_ids = [b.strip() for b in args.benchmarks.split(",") if b.strip()]
     outputs = fetch_outputs(benchmark_ids, args.limit_per_benchmark)
-    candidates = mapping.build_rows(outputs, judge_configs())
+    candidates = mapping.build_rows(outputs, cfgs)
 
     existing = mapping.read_csv(REGISTRY)
     new_rows = mapping.dedupe_and_assign(existing, candidates)
@@ -90,12 +115,22 @@ def main(argv: list[str] | None = None) -> None:
     print(f"Registry {REGISTRY}: +{len(new_rows)} new "
           f"(was {len(existing)}, now {len(existing) + len(new_rows)})")
 
-    if args.sample is not None:
+    if args.sample_like is not None:
+        full = mapping.read_csv(REGISTRY)
+        reference = mapping.read_csv(args.sample_like)  # read fully before we overwrite SAMPLE
+        wanted_prompts = set(prompt_names)
+        picked = [r for r in mapping.select_by_outputs(full, reference)
+                  if r.get("judge_prompt") in wanted_prompts]
+        mapping.write_csv(SAMPLE, picked)
+        n_out = len({mapping._output_key(r) for r in picked})
+        print(f"Sample {SAMPLE}: {n_out} outputs (from {args.sample_like}) x prompts {prompt_names} "
+              f"= {len(picked)} rows  ->  --array=0-{max(0, len(picked) - 1)}")
+    elif args.sample is not None:
         full = mapping.read_csv(REGISTRY)
         picked = mapping.sample_paired(full, args.sample, seed=args.seed)
         mapping.write_csv(SAMPLE, picked)
         n_out = len({mapping._output_key(r) for r in picked})
-        n_judges = len(judge_configs())
+        n_judges = len(cfgs)
         print(f"Sample {SAMPLE}: {n_out} outputs x {n_judges} judges = {len(picked)} rows "
               f" ->  --array=0-{max(0, len(picked) - 1)}")
 

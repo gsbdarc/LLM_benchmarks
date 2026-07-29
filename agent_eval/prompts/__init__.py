@@ -76,6 +76,11 @@ def resolve_prompt(prompt: int | str | None = None) -> tuple[str, str, str, int]
     return v["name"], v["system"], v["user"], v["index"]
 
 
+def prompt_names() -> list[str]:
+    """All registered prompt-variant names, ordered by index (default first)."""
+    return [_REGISTRY[k]["name"] for k in sorted(_REGISTRY)]
+
+
 # The default variant, exposed with the pre-registry API for back-compat.
 PROMPT_NAME, METRIC_EVAL_SYSTEM, _DEFAULT_USER, PROMPT_KEY = resolve_prompt()
 

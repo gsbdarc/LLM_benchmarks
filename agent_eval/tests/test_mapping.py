@@ -41,6 +41,37 @@ def test_sample_paired_keeps_all_judges_for_sampled_outputs():
     assert mapping.sample_paired(rows, 4, seed=0) == picked
 
 
+def test_resolve_prompt_names_and_judge_configs():
+    from agent_eval.registry import create_eval_mapping as cem
+    # default = every registered variant (v1 + v2 both ship in the repo)
+    alln = cem.resolve_prompt_names(None)
+    assert "composite_v1" in alln and "composite_v2" in alln
+    # names and indices both resolve; order preserved
+    assert cem.resolve_prompt_names("2,composite_v1") == ["composite_v2", "composite_v1"]
+    # judge_configs crosses models x prompts (one config per model for a single prompt)
+    cfgs = cem.judge_configs(["composite_v2"])
+    assert cfgs and all(c["judge_prompt"] == "composite_v2" for c in cfgs)
+    assert len({c["judge_model"] for c in cfgs}) == len(cfgs)
+
+
+def test_select_by_outputs_reuses_exact_outputs():
+    # A registry with two prompts per output; reuse a v1 reference's outputs for v2.
+    outs = [{"task_id": str(i), "run_id": 0, "benchmark_id": "5", "model_id": "1"} for i in range(5)]
+    two_prompts = [
+        {"judge_backend": "playground", "judge_model": "gpt-5-mini", "judge_prompt": p}
+        for p in ("composite_v1", "composite_v2")
+    ]
+    full = mapping.build_rows(outs, two_prompts)  # 5 outputs x 2 prompts = 10 rows
+    reference = [r for r in mapping.build_rows(outs[:3], two_prompts)
+                 if r["judge_prompt"] == "composite_v1"]  # v1 sample over outputs 0,1,2
+
+    picked = mapping.select_by_outputs(full, reference)
+    assert {mapping._output_key(r) for r in picked} == {mapping._output_key(r) for r in reference}
+    # filtering to just v2 gives one row per reference output
+    v2 = [r for r in picked if r["judge_prompt"] == "composite_v2"]
+    assert len(v2) == 3 and all(r["judge_prompt"] == "composite_v2" for r in v2)
+
+
 def test_sample_paired_returns_all_when_k_exceeds_outputs():
     rows = mapping.build_rows(OUTPUTS, THREE_JUDGES)   # 2 outputs x 3 = 6
     assert len(mapping.sample_paired(rows, k_outputs=99)) == 6
