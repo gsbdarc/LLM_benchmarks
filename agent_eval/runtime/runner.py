@@ -114,7 +114,7 @@ async def run_one(
     When write_mongo and skip_existing, a row already evaluated under this code_version
     (git_commit) is SKIPPED — no agent run, no API spend — so re-runs only do new work."""
     safe_run_id = int(row["run_id"]) if row.get("run_id") is not None else 0
-    metrics_url = config.metrics_url(ctx["base_url"]) if gpu_metrics else None
+    metrics_url = config.metrics_url(ctx["base_url"], ctx.get("framework")) if gpu_metrics else None
 
     # Skip-if-exists: don't re-run (or re-spend on) a (task × judge × prompt) already
     # evaluated at this code_version. Keyed the same way save_run_row keys agentic_runs.

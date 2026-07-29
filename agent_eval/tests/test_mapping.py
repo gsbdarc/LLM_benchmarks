@@ -51,7 +51,23 @@ def test_resolve_prompt_names_and_judge_configs():
     # judge_configs crosses models x prompts (one config per model for a single prompt)
     cfgs = cem.judge_configs(["composite_v2"])
     assert cfgs and all(c["judge_prompt"] == "composite_v2" for c in cfgs)
+    assert all(c["judge_backend"] == "playground" for c in cfgs)
     assert len({c["judge_model"] for c in cfgs}) == len(cfgs)
+
+
+def test_judge_configs_local_backend_and_validation():
+    import pytest
+    from agent_eval.registry import create_eval_mapping as cem
+    # The local vLLM judge is added by naming its backend.
+    qcfgs = cem.judge_configs(["composite_v2"], ["qwen"])
+    assert qcfgs and all(c["judge_backend"] == "qwen" for c in qcfgs)
+    assert qcfgs[0]["judge_model"] == "Qwen/Qwen3.6-35B-A3B"
+    # Multiple backends compose (hosted + local).
+    both = cem.judge_configs(["composite_v2"], ["playground", "qwen"])
+    assert {c["judge_backend"] for c in both} == {"playground", "qwen"}
+    # Unknown backend fails loudly.
+    with pytest.raises(ValueError):
+        cem.judge_configs(["composite_v2"], ["nope"])
 
 
 def test_select_by_outputs_reuses_exact_outputs():

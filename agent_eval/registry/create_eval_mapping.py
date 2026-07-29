@@ -58,14 +58,27 @@ def fetch_outputs(
     return outs
 
 
-def judge_configs(prompt_names: list[str]) -> list[dict[str, Any]]:
-    """One judge config per (playground model × prompt) — each output is graded by every
-    (model, prompt) judge. Passing >1 prompt builds the prompt A/B (e.g. v1 + v2)."""
+DEFAULT_JUDGE_BACKENDS = ["playground"]
+
+
+def judge_configs(
+    prompt_names: list[str], judge_backends: list[str] | None = None
+) -> list[dict[str, Any]]:
+    """One judge config per (backend model × prompt), across the given judge backends.
+
+    Each output is graded by every (backend, model, prompt) judge. Passing >1 prompt
+    builds the prompt A/B (e.g. v1 + v2); adding a backend (e.g. the local 'qwen')
+    adds that judge alongside the hosted ones."""
     cfgs = []
-    for key in sorted(config.BACKENDS["playground"]["models"], key=int):
-        model, _, _ = config.resolve_model("playground", int(key))
-        for pname in prompt_names:
-            cfgs.append({"judge_backend": "playground", "judge_model": model, "judge_prompt": pname})
+    for backend in (judge_backends or DEFAULT_JUDGE_BACKENDS):
+        if backend not in config.BACKENDS:
+            raise ValueError(
+                f"unknown judge backend {backend!r}; choose from {list(config.BACKENDS)}"
+            )
+        for key in sorted(config.BACKENDS[backend].get("models") or {}, key=int):
+            model, _, _ = config.resolve_model(backend, int(key))
+            for pname in prompt_names:
+                cfgs.append({"judge_backend": backend, "judge_model": model, "judge_prompt": pname})
     return cfgs
 
 
@@ -92,6 +105,9 @@ def main(argv: list[str] | None = None) -> None:
                    help="cap on outputs pulled per benchmark")
     p.add_argument("--prompts", default=None,
                    help="comma-separated judge prompt names/indices (default: all registered variants)")
+    p.add_argument("--judge-backends", default=",".join(DEFAULT_JUDGE_BACKENDS),
+                   help="comma-separated judge backends crossed with prompts (default: playground). "
+                        "e.g. 'playground,qwen' to add the local judge, or 'qwen' for local only")
     p.add_argument("--sample", type=int, default=None,
                    help="write a paired sample of this many OUTPUTS (each crossed with all judges)")
     p.add_argument("--sample-like", default=None,
@@ -100,10 +116,10 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--seed", type=int, default=0, help="sampling seed (deterministic)")
     args = p.parse_args(argv)
 
+    judge_backends = [b.strip() for b in args.judge_backends.split(",") if b.strip()]
     prompt_names = resolve_prompt_names(args.prompts)
-    cfgs = judge_configs(prompt_names)
-    print(f"Judge configs: {len(cfgs)} = "
-          f"{len(cfgs) // max(1, len(prompt_names))} models x prompts {prompt_names}")
+    cfgs = judge_configs(prompt_names, judge_backends)
+    print(f"Judge configs: {len(cfgs)} = backends {judge_backends} x prompts {prompt_names}")
 
     benchmark_ids = [b.strip() for b in args.benchmarks.split(",") if b.strip()]
     outputs = fetch_outputs(benchmark_ids, args.limit_per_benchmark)
@@ -119,12 +135,15 @@ def main(argv: list[str] | None = None) -> None:
         full = mapping.read_csv(REGISTRY)
         reference = mapping.read_csv(args.sample_like)  # read fully before we overwrite SAMPLE
         wanted_prompts = set(prompt_names)
+        wanted_backends = set(judge_backends)
         picked = [r for r in mapping.select_by_outputs(full, reference)
-                  if r.get("judge_prompt") in wanted_prompts]
+                  if r.get("judge_prompt") in wanted_prompts
+                  and r.get("judge_backend") in wanted_backends]
         mapping.write_csv(SAMPLE, picked)
         n_out = len({mapping._output_key(r) for r in picked})
-        print(f"Sample {SAMPLE}: {n_out} outputs (from {args.sample_like}) x prompts {prompt_names} "
-              f"= {len(picked)} rows  ->  --array=0-{max(0, len(picked) - 1)}")
+        print(f"Sample {SAMPLE}: {n_out} outputs (from {args.sample_like}) x backends "
+              f"{judge_backends} x prompts {prompt_names} = {len(picked)} rows "
+              f" ->  --array=0-{max(0, len(picked) - 1)}")
     elif args.sample is not None:
         full = mapping.read_csv(REGISTRY)
         picked = mapping.sample_paired(full, args.sample, seed=args.seed)

@@ -44,15 +44,19 @@ for _ in $(seq 1 60); do
 done
 
 WEAVE_FLAG=""; [ "$WEAVE" = "0" ] && WEAVE_FLAG="--no-weave"
+# GPU_METRICS=1 keeps the /metrics scrape on (local vLLM judge: export LOCAL_MODEL_URL +
+# GPU_TYPE too); default off since the hosted playground judges have no GPU endpoint.
+GPU_METRICS="${GPU_METRICS:-0}"
+GPU_FLAG="--no-gpu-metrics"; [ "$GPU_METRICS" = "1" ] && GPU_FLAG=""
 N=$(($(wc -l < "$SAMPLE") - 1))     # data rows = lines minus header
 mkdir -p eval-logs
-echo "MCP=$MCP_URL | evals=$N | MAXPAR=$MAXPAR | weave=$WEAVE"
+echo "MCP=$MCP_URL | evals=$N | MAXPAR=$MAXPAR | weave=$WEAVE | gpu_metrics=$GPU_METRICS"
 
 # 3. fan out: MAXPAR concurrent workers, one per sample row, each logged separately
 seq 0 $((N - 1)) | xargs -P "$MAXPAR" -I{} bash -c '
-  python -m agent_eval --mcp-url "$1" --eval-mapping "$2" --row "$3" --no-gpu-metrics $4 \
+  python -m agent_eval --mcp-url "$1" --eval-mapping "$2" --row "$3" $5 $4 \
       >"eval-logs/row-$3.out" 2>&1
-' _ "$MCP_URL" "$SAMPLE" {} "$WEAVE_FLAG"
+' _ "$MCP_URL" "$SAMPLE" {} "$WEAVE_FLAG" "$GPU_FLAG"
 
 # 4. summarize
 ok=$(grep -l "Done:" eval-logs/row-*.out 2>/dev/null | wc -l)

@@ -32,15 +32,30 @@ def test_reasoning_level_explicit_kwargs_override_backend():
 
 
 @pytest.mark.parametrize(
-    "base,expected",
+    "base,framework,expected",
     [
-        ("http://yen-gpu4:8000/v1", "http://yen-gpu4:8000/v1/metrics"),
-        ("http://yen-gpu4:8000/v1/", "http://yen-gpu4:8000/v1/metrics"),
-        ("http://host:8000", "http://host:8000/v1/metrics"),
+        # NIM / default: metrics under /v1
+        ("http://yen-gpu4:8000/v1", "nim", "http://yen-gpu4:8000/v1/metrics"),
+        ("http://yen-gpu4:8000/v1/", None, "http://yen-gpu4:8000/v1/metrics"),
+        ("http://host:8000", None, "http://host:8000/v1/metrics"),
+        # vLLM: metrics at the server root, not under /v1
+        ("http://yen-gpu2:40777/v1", "vllm", "http://yen-gpu2:40777/metrics"),
+        ("http://yen-gpu2:40777/v1/", "vllm", "http://yen-gpu2:40777/metrics"),
     ],
 )
-def test_metrics_url(base, expected):
-    assert config.metrics_url(base) == expected
+def test_metrics_url(base, framework, expected):
+    assert config.metrics_url(base, framework) == expected
+
+
+def test_resolve_base_url_expands_env(monkeypatch):
+    monkeypatch.setenv("LOCAL_MODEL_URL", "http://yen-gpu2:40777/v1")
+    assert config._resolve_base_url({"base_url": "$LOCAL_MODEL_URL"}) == "http://yen-gpu2:40777/v1"
+
+
+def test_resolve_base_url_unset_raises(monkeypatch):
+    monkeypatch.delenv("LOCAL_MODEL_URL", raising=False)
+    with pytest.raises(ValueError):
+        config._resolve_base_url({"base_url": "$LOCAL_MODEL_URL"})
 
 
 def test_read_api_key_falls_back_to_not_used(monkeypatch):

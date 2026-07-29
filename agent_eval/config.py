@@ -160,12 +160,32 @@ def reasoning_level(backend: str, completion_kwargs: dict | None = None) -> str:
     return "default"
 
 
-def metrics_url(base_url: str) -> str:
-    """Map an OpenAI base_url (…/v1) to the vLLM/NIM Prometheus endpoint (…/metrics).
+def _resolve_base_url(cfg: dict) -> str:
+    """Expand env vars in a backend's base_url — e.g. "$LOCAL_MODEL_URL" for a local
+    vLLM server whose host:port isn't known until the Slurm job lands. Raises if a
+    referenced var is unset, so a forgotten export fails loudly instead of silently
+    hitting a bad URL."""
+    raw = cfg["base_url"]
+    url = os.path.expandvars(raw)
+    if "$" in url:
+        raise ValueError(
+            f"base_url {raw!r} has an unresolved env var — export it before running "
+            f"(e.g. `export LOCAL_MODEL_URL=http://yen-gpu2:40777/v1`)"
+        )
+    return url
 
-    NIM exposes Prometheus text at /v1/metrics (confirmed in nim-server-*.out).
+
+def metrics_url(base_url: str, framework: str | None = None) -> str:
+    """Map an OpenAI base_url (…/v1) to the Prometheus metrics endpoint.
+
+    vLLM exposes Prometheus text at the server ROOT (/metrics); NIM exposes it under
+    /v1/metrics (confirmed in nim-server-*.out).
     """
     base = base_url.rstrip("/")
+    if framework == "vllm":
+        if base.endswith("/v1"):
+            base = base[: -len("/v1")].rstrip("/")
+        return base + "/metrics"
     if base.endswith("/v1"):
         return base + "/metrics"
     return base + "/v1/metrics"
@@ -187,10 +207,11 @@ def build_backend(backend: str, model: str | int | None = None) -> tuple[Any, st
         raise ValueError(f"unknown backend {backend!r}; choose from {list(BACKENDS)}")
     cfg = BACKENDS[backend]
     resolved_model, completion_kwargs, _ = resolve_model(backend, model)
+    base_url = _resolve_base_url(cfg)
     # max_retries=0: tenacity in the agent loop (agent._retry_policy) is the SINGLE retry layer
     # for transient API errors, so the SDK's own retries don't multiply with it.
-    client = AsyncOpenAI(base_url=cfg["base_url"], api_key=_read_api_key(cfg), max_retries=0)
-    return client, resolved_model, completion_kwargs, cfg["base_url"]
+    client = AsyncOpenAI(base_url=base_url, api_key=_read_api_key(cfg), max_retries=0)
+    return client, resolved_model, completion_kwargs, base_url
 
 
 def sync_openai_client(backend: str, model: str | int | None = None, timeout: float | None = None) -> tuple[Any, str, dict]:
@@ -207,7 +228,7 @@ def sync_openai_client(backend: str, model: str | int | None = None, timeout: fl
     cfg = BACKENDS[backend]
     resolved_model, completion_kwargs, _ = resolve_model(backend, model)
     kwargs = {"timeout": timeout} if timeout is not None else {}
-    client = OpenAI(base_url=cfg["base_url"], api_key=_read_api_key(cfg), **kwargs)
+    client = OpenAI(base_url=_resolve_base_url(cfg), api_key=_read_api_key(cfg), **kwargs)
     return client, resolved_model, completion_kwargs
 
 
