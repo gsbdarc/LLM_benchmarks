@@ -187,7 +187,9 @@ def build_backend(backend: str, model: str | int | None = None) -> tuple[Any, st
         raise ValueError(f"unknown backend {backend!r}; choose from {list(BACKENDS)}")
     cfg = BACKENDS[backend]
     resolved_model, completion_kwargs, _ = resolve_model(backend, model)
-    client = AsyncOpenAI(base_url=cfg["base_url"], api_key=_read_api_key(cfg))
+    # max_retries=0: tenacity in the agent loop (agent._retry_policy) is the SINGLE retry layer
+    # for transient API errors, so the SDK's own retries don't multiply with it.
+    client = AsyncOpenAI(base_url=cfg["base_url"], api_key=_read_api_key(cfg), max_retries=0)
     return client, resolved_model, completion_kwargs, cfg["base_url"]
 
 

@@ -51,31 +51,43 @@ _session_var: contextvars.ContextVar = contextvars.ContextVar("mcp_session", def
 # ---------------------------------------------------------------------------
 
 _RETRYABLE_NAMES = {
+    # httpx / anyio connection + timeout errors
     "ConnectError", "ConnectionError", "ConnectionResetError", "ConnectTimeout",
     "ReadError", "ReadTimeout", "WriteError", "RemoteProtocolError",
     "TimeoutError", "TimeoutException", "ClosedResourceError", "BrokenResourceError",
     "EndOfStream", "PoolTimeout",
+    # OpenAI SDK TRANSIENT API errors: rate-limit (429), transient server (5xx), timeouts.
+    # Deliberately NOT BadRequestError/AuthenticationError/NotFoundError — those are permanent
+    # (bad request / key / model), so they fail fast instead of wasting retries.
+    "RateLimitError", "InternalServerError", "APITimeoutError", "APIConnectionError",
 }
 
 
 def _is_retryable(exc: BaseException) -> bool:
-    """True for connection-reset / timeout style errors worth retrying.
+    """True for TRANSIENT errors worth retrying: connection/timeout AND
+    rate-limit (429) / transient-server (5xx) API errors.
 
     Matches on the exception's class name (so we don't have to import httpx/anyio
-    types) and on a "connection"/"timeout"/"reset" substring in the message.
+    or the OpenAI SDK types) and on a transient substring in the message. Permanent
+    errors (BadRequest/Authentication/NotFound) are absent from both → fail fast.
     """
     name = type(exc).__name__
     if name in _RETRYABLE_NAMES:
         return True
     msg = str(exc).lower()
     return any(s in msg for s in ("connection reset", "connection error", "timed out",
-                                  "timeout", "broken pipe", "peer closed"))
+                                  "timeout", "broken pipe", "peer closed",
+                                  "rate limit", "overloaded", "service unavailable",
+                                  "temporarily unavailable"))
 
 
+# 5 attempts / backoff to 30s: rate-limit (429) windows can need a longer wait than a
+# connection blip. tenacity is the SINGLE retry layer (AsyncOpenAI is built with
+# max_retries=0 in config.build_backend) so attempts don't multiply with the SDK's own.
 _retry_policy = dict(
     retry=retry_if_exception(_is_retryable),
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=0.5, min=0.5, max=8),
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=0.5, min=0.5, max=30),
     reraise=True,
 )
 

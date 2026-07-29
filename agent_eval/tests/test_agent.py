@@ -76,6 +76,24 @@ def test_not_retryable_for_value_error():
     assert not agent._is_retryable(ValueError("bad arg"))
 
 
+def test_is_retryable_for_transient_api_errors():
+    # Matched by class name (the OpenAI SDK's typed transient errors) — no import needed.
+    for cls_name in ("RateLimitError", "InternalServerError", "APITimeoutError",
+                     "APIConnectionError"):
+        exc = type(cls_name, (Exception,), {})("boom")
+        assert agent._is_retryable(exc), cls_name
+    # And by message signal.
+    assert agent._is_retryable(RuntimeError("Error code: 429 - rate limit exceeded"))
+    assert agent._is_retryable(RuntimeError("503 service unavailable"))
+
+
+def test_not_retryable_for_permanent_api_errors():
+    # Permanent config/misuse errors must fail fast, not burn retries.
+    for cls_name in ("BadRequestError", "AuthenticationError", "NotFoundError"):
+        exc = type(cls_name, (Exception,), {})("Error code: 400")
+        assert not agent._is_retryable(exc), cls_name
+
+
 # ── session binding ──────────────────────────────────────────────────
 
 async def test_call_mcp_tool_without_session_raises():
