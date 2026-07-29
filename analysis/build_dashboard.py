@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import webbrowser
 from datetime import datetime, timezone
 from pathlib import Path
@@ -62,8 +63,8 @@ RUN_COLUMNS = [
 GLOSSARY = [
     {"term": "save_success", "def": "Fraction of runs where the agent successfully wrote its evaluation via save_evaluation."},
     {"term": "score_consistent", "def": "The composite score the agent SAVED matches the score recomputed from the tool's own sub-scores (integrity check)."},
-    {"term": "selection_accuracy / routing acc", "def": "Did the agent route the field to the CORRECT composite type-tool, graded against the gold field_type — from the agent's SAVED declaration (per field)."},
-    {"term": "routing_path_correct", "def": "Did the agent take the correct tool-call PATH (actual behavior): exactly one get_task_output, the SUCCESSFUL metric calls exactly equal the expected set (one correct type-tool per field, any order), and exactly one successful save_evaluation. Stricter, behavior-based complement to selection_accuracy; routing_path_reason gives the failure detail."},
+    {"term": "Metric identified — selection_accuracy", "def": "Did the agent route the field to the CORRECT composite type-tool, graded against the gold field_type — from the agent's SAVED declaration (what it says it did, per field)."},
+    {"term": "Optimal route — routing_path_correct", "def": "Did the agent take the correct tool-call PATH (what it actually did): exactly one get_task_output, the SUCCESSFUL metric calls exactly equal the expected set (one correct type-tool per field, any order), and exactly one successful save_evaluation. Stricter, behavior-based complement to Metric identified; routing_path_reason gives the failure detail."},
     {"term": "evaluate_raw_string", "def": "Composite tool for free-form prose fields. Scores with word-IoU."},
     {"term": "evaluate_extracted_string", "def": "Composite tool for a single extracted value that may be absent. null_accuracy × max(levenshtein, char_f1)."},
     {"term": "evaluate_list", "def": "Composite tool for set/sequence fields. max(set_f1, sequence_lcs, set_inclusion)."},
@@ -220,6 +221,29 @@ def summarize_paths(
 
 # ── snapshot + render ──────────────────────────────────────────────────
 
+def _version_dates(commits: set[str | None]) -> dict[str, str]:
+    """Map each git_commit to its commit date (YYYY-MM-DD) via `git show`.
+
+    Best-effort: a `-dirty` suffix is stripped to the hash; unknown or
+    uncomputable commits are simply omitted (the UI falls back to the bare hash).
+    """
+    out: dict[str, str] = {}
+    for c in commits:
+        if not c:
+            continue
+        h = c.split("-", 1)[0]  # strip a "-dirty" suffix
+        try:
+            r = subprocess.run(
+                ["git", "show", "-s", "--format=%cs", h],
+                cwd=REPO_ROOT, capture_output=True, text=True, timeout=5,
+            )
+        except Exception:
+            continue
+        if r.returncode == 0 and r.stdout.strip():
+            out[c] = r.stdout.strip()
+    return out
+
+
 def build_snapshot(
     base_dir: str | Path | None = None, summarizer_backend: str = "summarizer",
     summarize: bool = True, top_n: int = 6, cache_path: str | Path = DEFAULT_CACHE,
@@ -253,6 +277,7 @@ def build_snapshot(
         "glossary": GLOSSARY,
         "path_summaries": path_summaries,
         "type_tools": TYPE_TOOLS,
+        "version_dates": _version_dates({r.get("git_commit") for r in runs}),
     }
 
 

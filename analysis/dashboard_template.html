@@ -103,10 +103,10 @@
   .agentviz .route-ok { color: #15803d; }
   .agentviz .route-bad { color: var(--brand); font-weight: 600; }
   .agentviz .path-note { color: var(--muted); font-size: 0.84rem; margin: 2px 0 0; }
-  @media (min-width: 1180px) {
-    .agentviz .layout { grid-template-columns: minmax(260px, 300px) minmax(0, 1fr); }
+  @media (min-width: 900px) {
+    .agentviz .layout { grid-template-columns: minmax(240px, 280px) minmax(0, 1fr); }
   }
-  @media (max-width: 1179px) { .agentviz .sticky-stack { position: static; } }
+  @media (max-width: 899px) { .agentviz .sticky-stack { position: static; } }
   @media (max-width: 960px) {
     .agentviz .summary-grid { grid-template-columns: repeat(2, 1fr); }
   }
@@ -134,6 +134,8 @@
           <div class="account-list" id="modelList"></div>
           <div class="control-label" style="margin-top:14px;">Prompts</div>
           <div class="account-list" id="promptList"></div>
+          <div class="control-label" style="margin-top:14px;">Version</div>
+          <div class="account-list" id="versionList"></div>
           <div class="control-label" style="margin-top:14px;">Benchmarks</div>
           <div class="account-list" id="benchmarkList"></div>
           <div class="control-label" style="margin-top:14px;">Framework</div>
@@ -229,8 +231,8 @@
     { key: "llm_time_total", label: "LLM time (s)", fmt: num1 },
     { key: "overhead_time", label: "Overhead (s)", fmt: num1 },
     { key: "steps", label: "Steps", fmt: num1 },
-    { key: "selection_accuracy", label: "Route (declared)", fmt: pct },
-    { key: "routing_path_correct", label: "Route (path)", fmt: pct }
+    { key: "selection_accuracy", label: "Metric identified", fmt: pct },
+    { key: "routing_path_correct", label: "Optimal route", fmt: pct }
   ];
   var GROUPBYS = [
     { key: "model", label: "Model" },
@@ -256,6 +258,9 @@
   var allBenchmarks = uniq("benchmark_id");
   var allFrameworks = uniq("framework");
   var allGpus = uniq("gpu_type");
+  var allVersions = uniq("git_commit");
+  var versionDates = snapshot.version_dates || {};
+  function versionLabel(v) { var d = versionDates[v]; return d ? v + " · " + d : v; }
 
   function parseSeq(r) {
     if (Array.isArray(r.__seq)) return r.__seq;
@@ -273,6 +278,7 @@
         selectedBenchmarks: Array.isArray(s.selectedBenchmarks) ? s.selectedBenchmarks : allBenchmarks.slice(),
         selectedFrameworks: Array.isArray(s.selectedFrameworks) ? s.selectedFrameworks : allFrameworks.slice(),
         selectedGpus: Array.isArray(s.selectedGpus) ? s.selectedGpus : allGpus.slice(),
+        selectedVersions: Array.isArray(s.selectedVersions) ? s.selectedVersions : allVersions.slice(),
         groupBy: s.groupBy || "model",
         metric: s.metric || "n_tool_calls",
         runQuery: s.runQuery || "",
@@ -284,6 +290,7 @@
         selectedModels: allModels.slice(), selectedPrompts: allPrompts.slice(),
         selectedBenchmarks: allBenchmarks.slice(),
         selectedFrameworks: allFrameworks.slice(), selectedGpus: allGpus.slice(),
+        selectedVersions: allVersions.slice(),
         groupBy: "model", metric: "n_tool_calls", runQuery: "",
         groupSort: { column: "n_runs", direction: "desc" },
         runSort: { column: "task_id", direction: "asc" }
@@ -316,27 +323,40 @@
     });
     return n ? t / n : null;
   }
+  function sum(list, key) {
+    var s = 0, any = false;
+    list.forEach(function (r) {
+      var v = r[key];
+      if (v != null && !isNaN(v)) { s += Number(v); any = true; }
+    });
+    return any ? s : null;
+  }
 
   function filteredRuns() {
-    var ms = {}, ps = {}, bs = {}, fs = {}, gs = {};
+    var ms = {}, ps = {}, bs = {}, fs = {}, gs = {}, vs = {};
     state.selectedModels.forEach(function (m) { ms[m] = 1; });
     state.selectedPrompts.forEach(function (p) { ps[p] = 1; });
     state.selectedBenchmarks.forEach(function (b) { bs[b] = 1; });
     state.selectedFrameworks.forEach(function (f) { fs[f] = 1; });
     state.selectedGpus.forEach(function (g) { gs[g] = 1; });
+    state.selectedVersions.forEach(function (v) { vs[v] = 1; });
     return runs.filter(function (r) {
       var m = r.model == null ? "(none)" : String(r.model);
       var p = r.prompt_name == null ? "(none)" : String(r.prompt_name);
       var b = r.benchmark_id == null ? "(none)" : String(r.benchmark_id);
       var f = r.framework == null ? "(none)" : String(r.framework);
       var g = r.gpu_type == null ? "(none)" : String(r.gpu_type);
-      return ms[m] && ps[p] && bs[b] && fs[f] && gs[g];
+      var v = r.git_commit == null ? "(none)" : String(r.git_commit);
+      return ms[m] && ps[p] && bs[b] && fs[f] && gs[g] && vs[v];
     });
   }
 
   function groupLabel(r) {
     if (state.groupBy === "model||prompt_name") {
       return (r.model || "(none)") + "  ·  " + (r.prompt_name || "(none)");
+    }
+    if (state.groupBy === "git_commit") {
+      return versionLabel(r.git_commit == null ? "(none)" : String(r.git_commit));
     }
     return String(r[state.groupBy] == null ? "(none)" : r[state.groupBy]);
   }
@@ -351,6 +371,7 @@
       var g = groups[k];
       var row = { group: k, n_runs: g.length };
       METRICS.forEach(function (m) { row[m.key] = avg(g, m.key); });
+      row.total_cost = sum(g, "total_dollar_cost");
       row.save_success = rate(g, "save_success");
       row.score_consistent = rate(g, "score_consistent");
       return row;
@@ -420,12 +441,13 @@
   }
 
   function renderFilters() {
-    function list(containerId, values, selected, onToggle) {
+    function list(containerId, values, selected, onToggle, labelOf) {
       var el = document.getElementById(containerId);
       el.innerHTML = "";
       values.forEach(function (v) {
         var checked = selected.indexOf(v) !== -1 ? "checked" : "";
-        el.innerHTML += '<div class="account-item"><input type="checkbox" value="' + escapeXml(v) + '" ' + checked + '><label title="' + escapeXml(v) + '">' + escapeXml(v) + "</label></div>";
+        var disp = labelOf ? labelOf(v) : v;
+        el.innerHTML += '<div class="account-item"><input type="checkbox" value="' + escapeXml(v) + '" ' + checked + '><label title="' + escapeXml(disp) + '">' + escapeXml(disp) + "</label></div>";
       });
       Array.prototype.forEach.call(el.querySelectorAll("input"), function (input) {
         input.addEventListener("change", function () { onToggle(input.value, input.checked); saveState(); render(); });
@@ -446,6 +468,9 @@
     list("gpuList", allGpus, state.selectedGpus, function (v, on) {
       state.selectedGpus = on ? state.selectedGpus.concat([v]) : state.selectedGpus.filter(function (x) { return x !== v; });
     });
+    list("versionList", allVersions, state.selectedVersions, function (v, on) {
+      state.selectedVersions = on ? state.selectedVersions.concat([v]) : state.selectedVersions.filter(function (x) { return x !== v; });
+    }, versionLabel);
     document.getElementById("allModels").onclick = function () { state.selectedModels = allModels.slice(); saveState(); render(); };
     document.getElementById("noModels").onclick = function () { state.selectedModels = []; saveState(); render(); };
   }
@@ -481,8 +506,8 @@
       { label: "Avg LLM s", value: num1(avg(list, "llm_time_total")) },
       { label: "Avg overhead s", value: num1(avg(list, "overhead_time")) },
       { label: "Save success", value: pct(rate(list, "save_success")) },
-      { label: "Route (declared)", value: pct(avg(list, "selection_accuracy")) },
-      { label: "Route (path)", value: pct(rate(list, "routing_path_correct")) }
+      { label: "Metric identified", value: pct(avg(list, "selection_accuracy")) },
+      { label: "Optimal route", value: pct(rate(list, "routing_path_correct")) }
     ];
     document.getElementById("summaryGrid").innerHTML = cards.map(function (c) {
       return '<div class="summary-card"><div class="label">' + c.label + '</div><div class="value">' + c.value + "</div></div>";
@@ -498,13 +523,14 @@
       header("Tool calls", "n_tool_calls", "group", st, true),
       header("Metric calls", "n_metric_calls", "group", st, true),
       header("Total tokens", "total_tokens", "group", st, true),
-      header("Cost $", "total_dollar_cost", "group", st, true),
+      header("Avg $", "total_dollar_cost", "group", st, true),
+      header("Total $", "total_cost", "group", st, true),
       header("Tokens/sec", "tokens_per_sec", "group", st, true),
       header("LLM s", "llm_time_total", "group", st, true),
       header("Ovh s", "overhead_time", "group", st, true),
       header("Steps", "steps", "group", st, true),
-      header("Route (decl)", "selection_accuracy", "group", st, true),
-      header("Route (path)", "routing_path_correct", "group", st, true),
+      header("Metric identified", "selection_accuracy", "group", st, true),
+      header("Optimal route", "routing_path_correct", "group", st, true),
       header("Save %", "save_success", "group", st, true),
       "</tr></thead><tbody>"];
     sorted.forEach(function (r) {
@@ -513,6 +539,7 @@
         "</td><td class='num'>" + num1(r.n_metric_calls) +
         "</td><td class='num'>" + intFmt(r.total_tokens) +
         "</td><td class='num'>" + usd(r.total_dollar_cost) +
+        "</td><td class='num'>" + usd(r.total_cost) +
         "</td><td class='num'>" + num1(r.tokens_per_sec) +
         "</td><td class='num'>" + num1(r.llm_time_total) +
         "</td><td class='num'>" + num1(r.overhead_time) +
@@ -521,7 +548,7 @@
         "</td><td class='num'>" + pct(r.routing_path_correct) +
         "</td><td class='num'>" + pct(r.save_success) + "</td></tr>");
     });
-    if (!sorted.length) html.push("<tr><td colspan='13' class='helper'>No groups.</td></tr>");
+    if (!sorted.length) html.push("<tr><td colspan='14' class='helper'>No groups.</td></tr>");
     html.push("</tbody></table>");
     document.getElementById("groupTableWrap").innerHTML = html.join("");
   }
@@ -693,8 +720,8 @@
       header("Total tokens", "total_tokens", "run", st, true),
       header("Tok/s", "tokens_per_sec", "run", st, true),
       header("Save", "save_success", "run", st, true),
-      header("Route (decl)", "selection_accuracy", "run", st, true),
-      header("Route (path)", "routing_path_correct", "run", st, true),
+      header("Metric identified", "selection_accuracy", "run", st, true),
+      header("Optimal route", "routing_path_correct", "run", st, true),
       "<th>Trace</th></tr></thead><tbody>"];
     sorted.slice(0, 500).forEach(function (r) {
       var trace = r.weave_trace_url ? '<a href="' + escapeXml(r.weave_trace_url) + '" target="_blank">Weave ↗</a>' : "-";
