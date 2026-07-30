@@ -88,7 +88,7 @@ All commands run **from the repo root**.
 
 ```bash
 # tests (offline; weave disabled)
-cd agent_eval && source ~/venv/bin/activate && EVAL_DISABLE_WEAVE=1 python -m pytest -q; cd ..
+source .venv/bin/activate && cd agent_eval && EVAL_DISABLE_WEAVE=1 python -m pytest -q; cd ..
 
 # MCP server (hand) + one agent run
 agent_eval/scripts/run_metric_mcp.sh

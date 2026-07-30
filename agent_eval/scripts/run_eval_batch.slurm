@@ -27,7 +27,7 @@ WEAVE="${WEAVE:-1}"                                     # 1 = W&B/Weave tracing 
 cd "${SLURM_SUBMIT_DIR:?run sbatch from the repo root}"
 [ -d agent_eval ] || { echo "ERROR: no agent_eval/ package in $PWD — run sbatch from the repo root"; exit 1; }
 [ -f "$SAMPLE" ] || { echo "ERROR: $SAMPLE missing — run create_eval_mapping.py --sample N first"; exit 1; }
-source ~/venv/bin/activate
+source "$SLURM_SUBMIT_DIR/.venv/bin/activate"
 
 # 1. start the MCP server on a free local port
 PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')

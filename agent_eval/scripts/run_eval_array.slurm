@@ -31,7 +31,7 @@
 
 set -euo pipefail
 
-source ~/venv/bin/activate
+source "$SLURM_SUBMIT_DIR/.venv/bin/activate"
 
 : "${MCP_URL:?set MCP_URL to the running server, e.g. http://127.0.0.1:PORT/mcp}"
 

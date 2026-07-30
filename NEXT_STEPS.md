@@ -85,7 +85,7 @@ GPU_TYPE="NVIDIA A40" sbatch agent_eval/scripts/run_eval_batch.slurm   # (drop -
 
 ## Recipes (from repo root)
 ```bash
-source ~/venv/bin/activate
+source .venv/bin/activate
 cd agent_eval && EVAL_DISABLE_WEAVE=1 python -m pytest ; cd ..          # 145 tests
 # rebuild dashboard from the central store:
 python -m analysis.export_runs --out outputs/dashboard_cache

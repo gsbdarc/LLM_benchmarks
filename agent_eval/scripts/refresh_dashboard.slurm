@@ -18,7 +18,7 @@
 set -uo pipefail
 cd "${SLURM_SUBMIT_DIR:?run sbatch from the repo root}"
 [ -d agent_eval ] || { echo "ERROR: no agent_eval/ in $PWD — sbatch from the repo root"; exit 1; }
-source ~/venv/bin/activate
+source "$SLURM_SUBMIT_DIR/.venv/bin/activate"
 # Mongo creds for agentic_runs (harmless if the vars are already in the environment).
 set -a; source .env 2>/dev/null || true; set +a
 

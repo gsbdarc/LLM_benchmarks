@@ -8,8 +8,9 @@
 #SBATCH --array=0-500              # array_job
 
 
-# Activate venv
-source /zfs/projects/students/ltdarc-usf-intern-2025/venv/bin/activate
+# Activate the repo-local .venv (one venv from requirements.txt for both pipelines).
+# Submit this job from the scripts/ dir, so the repo root (and .venv) is one level up.
+source ../.venv/bin/activate
 
 # Run python script
 python 5_main.py ${SLURM_ARRAY_TASK_ID}
