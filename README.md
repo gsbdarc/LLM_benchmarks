@@ -2,6 +2,8 @@
 
 > Stanford's AI Playground allows researchers and staff access to almost 20 LLMs via their API. How do users determine which model is best suited for their needs? We built a pipeline that delivers a clear ranking of how different models perform on a set of benchmarks related to processing table based images.
 
+> **This repo has two pipelines** that share one `.env`, `inputs/`, and a MongoDB backend: (1) the **inference pipeline** (`scripts/`) documented below, which runs LLMs over images and writes their outputs to Mongo; and (2) the **agentic metric-eval** (`agent_eval/` + `analysis/`), which *judges* those outputs — see [Agentic Metric-Eval & Dashboard](#agentic-metric-eval--dashboard). The agentic work is the current active development (branch `mcp-metric-calc`).
+
 ---
 
 ## Table of Contents
@@ -9,6 +11,7 @@
 - [Context](#context)
 - [Pipeline Overview](#pipeline-overview)
 - [Try It Yourself](#try_it_yourself)
+- [Agentic Metric-Eval & Dashboard](#agentic-metric-eval--dashboard)
 - [Findings](#findings)
 - [Next Steps](#next-steps)
 
@@ -52,7 +55,7 @@ We designed the pipeline to be modular so that changes to inputs (models, images
 
 ## Try It Yourself
 
-If you're interested in reproducing this worflow, or customizing it for your specfic benchmarks, you can follow the below steps.
+If you're interested in reproducing this workflow, or customizing it for your specific benchmarks, you can follow the below steps.
 
 ### Clone the Repository
 
@@ -63,9 +66,11 @@ cd LLM_benchmarks
 
 ### Create and Activate a Virtual Environment (YENs)
 
+One repo-local `.venv/` serves both pipelines (it's gitignored):
+
 ```bash
-/usr/bin/python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -77,18 +82,20 @@ Request compute resources (normal, dev, or gsb) to create a venv.
 salloc -p normal -t 1:00:00 -c 1
 
 module load python/3.12
-/usr/bin/python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
 ### Environment Variables
 
-Create a `.env` file in the project root with:
+Create a `.env` file in the project root. See [`.env.example`](.env.example) for the full template; the inference pipeline needs at least:
 
 ```text
 STANFORD_API_KEY=your_key_here
 ```
+
+(The agentic metric-eval additionally needs `MONGO_DB_USERNAME` / `MONGO_DB_PASSWORD`.)
 
 > ⚠️ Note: as models get added & removed from the Stanford AI API you will need to submit a ticket to update your API key.
 
@@ -145,7 +152,7 @@ Scripts should be run in the order that they are numbered.
 #### `1_pdf_to_png.py`
 
 - Before running: upload PDFs to `LLM_Benchmarks/inputs/data/pdfs/`
-- Converts PDFS into grayscale PNGs, saves files to `LLM_Benchmarks/iputs/data/pngs/`.
+- Converts PDFS into grayscale PNGs, saves files to `LLM_Benchmarks/inputs/data/pngs/`.
 - Prints PNG paths and file sizes in MBs.
 
 #### `2_make_index.py`
@@ -200,11 +207,11 @@ day_of_week = csv_df['Day'][0]
 }
 ```
 
-Depending on whether you're working in YENs or Sherlock edit the appropriate SLURM script and run the array job.
+Depending on whether you're working in YENs or Sherlock edit the appropriate SLURM script and run the array job. These scripts activate the repo-local `.venv/` (one level up), so submit them from the `scripts/` directory.
 
 Example:
 ```bash
-sbatch sherlock.slurm
+cd scripts && sbatch yens.slurm      # YENs   (on Sherlock: sbatch sherlock.slurm)
 ```
 
 #### `6_combine_check_results.py`
@@ -217,6 +224,27 @@ sbatch sherlock.slurm
 - Loads combined_results.json and filters for tasks that have been processed.
 - Evaluates model outputs compared to ground truth, assigns a accuracy score based on exact matching.
 - Saves results as a `LLM_Benchmarks/outputs/results/metrics/metrics.json`
+
+---
+
+## Agentic Metric-Eval & Dashboard
+
+The scoring step above (`7_compute.py`, deterministic exact-match) has been reimagined as an **agent**. Instead of code picking a metric per field, an **MCP agent** — an LLM "judge" — reads each field's predicted-vs-expected values (the `llm_outputs` written by `5_main.py`) from Mongo, infers the data shape, routes it to the right composite scoring tool over MCP, and saves a verdict; results feed a live dashboard. We measure how well it routes plus performance/cost. This is the **current active work** (branch `mcp-metric-calc`) and lives in `agent_eval/` + `analysis/`.
+
+It reuses the same `.venv`, `.env`, and Mongo as above. Quickstart (**from the repo root**):
+
+```bash
+source .venv/bin/activate
+cd agent_eval && EVAL_DISABLE_WEAVE=1 python -m pytest ; cd ..        # tests (offline)
+python -m agent_eval.registry.create_eval_mapping --sample 100        # build a work sample
+sbatch agent_eval/scripts/run_eval_batch.slurm                        # run a batch (starts its own MCP server + fans out)
+python -m analysis.serve_dashboard                                    # live dashboard @ http://127.0.0.1:8787
+#   or a static file:  python -m analysis.build_dashboard --no-summaries --open
+```
+
+- **Design + module layout:** [`agent_eval/README.md`](agent_eval/README.md)
+- **Live status / roadmap:** [`NEXT_STEPS.md`](NEXT_STEPS.md)
+- **For AI coding agents:** [`CLAUDE.md`](CLAUDE.md) and the `agentic-eval` skill in [`.claude/skills/`](.claude/skills/) orient an agent automatically.
 
 ---
 
@@ -256,7 +284,7 @@ Looking at model accuracy alongside total token cost showed that even though o1 
 
 ![model_cost](./images/token_cost.png)
 
-Double clicking into metadata extraction benchmarks Newspaper Name and Newspaper Date found similar results could be produced for varying costs. Claude-3-haiku models returned Newspaper Name and Newspaper Datejust as accurately as gemini-2.5-pro (100%) but only cost $0.06 or 1/24 as much. Similarly gemini-2.0-flash-lite-001 got Newspaper Date correct 100% of the time but only cost $0.03 vs $1.49 for gemini-2.5-pro. 
+Double clicking into metadata extraction benchmarks Newspaper Name and Newspaper Date found similar results could be produced for varying costs. Claude-3-haiku models returned Newspaper Name and Newspaper Date just as accurately as gemini-2.5-pro (100%) but only cost $0.06 or 1/24 as much. Similarly gemini-2.0-flash-lite-001 got Newspaper Date correct 100% of the time but only cost $0.03 vs $1.49 for gemini-2.5-pro. 
 
 ### Limitations
 
@@ -268,8 +296,8 @@ Changes to avaiable models are not always consistently announced and often requi
 
 ## Next Steps
 
-In order to create a more robust pipeline that delivers a comprehensive assessment of LLM capabilities we're planning on implementing the following:
+Current development is the **agentic metric-eval** (branch `mcp-metric-calc`). Live detail + runbook in [`NEXT_STEPS.md`](NEXT_STEPS.md); the headline threads:
 
-- [] Add external models to the pipeline
-- [] Modify pipeline to evaluate effectiveness of OCR + LLM data extraction with a variety of OCRs (Textract, LLAMA Index, etc.) 
-
+- **Prompt A/B:** `composite_v2` was measured against `composite_v1` — it's leaner (fewer redundant tool calls, lower cost) but less reliable at finishing the save on weaker models. A `v2.1` that restores a "you're not done until you save" nudge is the next prompt iteration.
+- **Local judge:** add a local **Qwen-3.6-35B** vLLM judge (2× A40) as a 4th judge alongside the hosted Playground models (scaffolding built; needs a GPU allocation to run).
+- **Reliability:** harden malformed tool-call handling (a bad tool-call JSON currently poisons the conversation and hard-fails the run) and enforce valid tool JSON via constrained decoding on the local judge.
