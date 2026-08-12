@@ -111,10 +111,6 @@ payload fields used by the current pipelines, rather than every optional field a
 | `agentic_corrections` | Versioned date-repair decisions | `eval_id`, `git_commit`, `action`, `original_value`, `final_value`, review fields |
 | `agentic_runs` | Judge configuration, performance, cost, routing, and trace metadata | `eval_id`, `git_commit`, judge configuration, run metrics, outcome fields |
 
-MongoDB is the shared operational store. The agentic harness also writes flat run summaries to local
-Parquet files for analysis with DuckDB; those files complement the central database rather than
-replace it.
-
 The current implementation targets the `usf-internship` database in the DARC Atlas deployment.
 Replication therefore requires network access plus `MONGO_DB_USERNAME` and `MONGO_DB_PASSWORD`.
 
