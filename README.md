@@ -88,12 +88,39 @@ delete `.venv`, and recreate it with the commands above.
 
 Install dependencies from `requirements.txt`.
 
-### System and Service Requirements
+### MongoDB
 
-- **MongoDB:** inference persistence, agent data tools, and live dashboards require network access
-  to the DARC Atlas deployment plus `MONGO_DB_USERNAME` and `MONGO_DB_PASSWORD`.
-- **Tracing:** Weave/W&B is optional. Set `WANDB_API_KEY`, or disable tracing with `--no-weave` or
-  `EVAL_DISABLE_WEAVE=1` as appropriate.
+The pipeline uses MongoDB as a shared, persistent store because inference tasks run independently,
+often as parallel SLURM jobs. A database lets every worker write to the same place without
+coordinating local result files. Stable document identifiers and upserts make reruns safe: completed
+tasks can be skipped, while repeating the same task updates its logical record instead of creating
+an accidental duplicate. MongoDB's document model also fits model outputs and metadata whose shape
+can vary by benchmark, and gives the evaluation tools and live dashboards one central data source.
+
+MongoDB collections do not enforce one rigid schema. The table below lists the stable identity and
+payload fields used by the current pipelines, rather than every optional field a document may hold.
+
+| Collection | Purpose | Representative stable fields |
+|---|---|---|
+| `benchmarks` | Benchmark definitions and expected-output mappings | `_id`, `task_name`, `schema`, `ground_truth` |
+| `ground_truths` | Human-extracted expected values for each image | `_id`, `image_id`, benchmark-specific expected fields |
+| `llm_outputs` | Model outputs produced by upstream inference | `_id`, `task_id`, `run_id`, `benchmark_id`, `model_id`, `image_id`, `output`, `status` |
+| `evaluations` | Scores from the deterministic evaluation pipeline | `task_id`, `benchmark_id`, `model_id`, `field_details`, `weighted_score` |
+| `agentic_evaluations` | Versioned per-field verdicts from metric-eval agents | `eval_id`, `git_commit`, source identifiers, `field_evaluations` |
+| `agentic_corrections` | Versioned date-repair decisions | `eval_id`, `git_commit`, `action`, `original_value`, `final_value`, review fields |
+| `agentic_runs` | Judge configuration, performance, cost, routing, and trace metadata | `eval_id`, `git_commit`, judge configuration, run metrics, outcome fields |
+
+MongoDB is the shared operational store. The agentic harness also writes flat run summaries to local
+Parquet files for analysis with DuckDB; those files complement the central database rather than
+replace it.
+
+The current implementation targets the `usf-internship` database in the DARC Atlas deployment.
+Replication therefore requires network access plus `MONGO_DB_USERNAME` and `MONGO_DB_PASSWORD`.
+
+### Tracing
+
+Weave/W&B tracing is optional. Set `WANDB_API_KEY`, or disable tracing with `--no-weave` or
+`EVAL_DISABLE_WEAVE=1` as appropriate.
 
 ### Environment Variables
 
