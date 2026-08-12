@@ -12,6 +12,7 @@
 - [Pipeline Overview](#pipeline-overview)
 - [Try It Yourself](#try_it_yourself)
 - [Agentic Metric-Eval & Dashboard](#agentic-metric-eval--dashboard)
+- [Date-Fix Demo](#date-fix-demo)
 - [Findings](#findings)
 - [Next Steps](#next-steps)
 
@@ -242,9 +243,50 @@ python -m analysis.serve_dashboard                                    # live das
 #   or a static file:  python -m analysis.build_dashboard --no-summaries --open
 ```
 
+The harness runs **two tasks** on this same machinery — the metric-eval above, and a date-repair task
+covered in [Date-Fix Demo](#date-fix-demo) below.
+
 - **Design + module layout:** [`agent_eval/README.md`](agent_eval/README.md)
 - **Live status / roadmap:** [`NEXT_STEPS.md`](NEXT_STEPS.md)
 - **For AI coding agents:** [`CLAUDE.md`](CLAUDE.md) and the `agentic-eval` skill in [`.claude/skills/`](.claude/skills/) orient an agent automatically.
+
+---
+
+## Date-Fix Demo
+
+The same harness runs a **second task**, and it's the easiest one to see the point of. A TV guide
+covers one particular day — but that date is *not printed on the page*. It has to be derived from two
+things that are: the date the newspaper was published, and which day of the week the guide is for.
+The models above extracted all three values independently, so the derived `tv_guide_date` is often
+inconsistent with the other two.
+
+So we pointed an agent at it. For each case it loads the model's three answers, derives the correct
+date with a tool, and records one decision — **corrected**, **confirmed**, or **abstained** (some
+guides span several days, so no single date is right, and inventing one would be worse than saying
+so). It never sees the ground truth; that's held back and used only to grade it afterwards.
+
+The demo page reports what each judge fixed, what it left alone, what it handed back to a human, what
+it cost, and the step-by-step trace behind every row.
+
+### See it
+
+```bash
+source .venv/bin/activate
+python -m analysis.serve_demo        # prints the URL and the exact `ssh -L` line to reach it
+```
+
+The server binds localhost on the Yens node, so forward the port from your laptop — the command
+prints the line to copy, and VS Code's **Ports** panel does the same thing automatically. Reading
+the page needs Mongo credentials (`MONGO_DB_USERNAME` / `MONGO_DB_PASSWORD` in `.env`) and at least
+one date-fix batch already run; with no runs the page tells you so rather than erroring.
+
+For a self-contained file you can email or open from disk instead:
+
+```bash
+python -m analysis.build_date_fix_demo        # -> images/date_fix_demo.html
+```
+
+To run the task from scratch, see [`agent_eval/README.md`](agent_eval/README.md#two-tasks-on-one-harness).
 
 ---
 
