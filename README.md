@@ -65,38 +65,48 @@ git clone https://github.com/gsbdarc/LLM_benchmarks
 cd LLM_benchmarks
 ```
 
-### Create and Activate a Virtual Environment (YENs)
+### Create and Activate a Virtual Environment
 
-One repo-local `.venv/` serves both pipelines (it's gitignored):
+One repo-local Python 3.10 `.venv/` serves both pipelines and is gitignored. From the repository
+root:
 
 ```bash
-python3 -m venv .venv
+python3.10 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
-### Create and Activate a Virtual Environment (Sherlock)
+If an existing environment uses the wrong Python version or has dependency problems, deactivate it,
+delete `.venv`, and recreate it with the commands above.
 
-Request compute resources (normal, dev, or gsb) to create a venv.
+### Understand Dependencies
 
-```
-salloc -p normal -t 1:00:00 -c 1
+- `requirements.in` is the short, human-maintained list of packages this repository directly uses.
+- `requirements.txt` is the generated lock. It pins direct and indirect packages to exact versions
+  so different branches and machines install the same environment.
 
-module load python/3.12
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+Install dependencies from `requirements.txt`.
+
+### System and Service Requirements
+
+- **MongoDB:** inference persistence, agent data tools, and live dashboards require network access
+  to the DARC Atlas deployment plus `MONGO_DB_USERNAME` and `MONGO_DB_PASSWORD`.
+- **Tracing:** Weave/W&B is optional. Set `WANDB_API_KEY`, or disable tracing with `--no-weave` or
+  `EVAL_DISABLE_WEAVE=1` as appropriate.
 
 ### Environment Variables
 
-Create a `.env` file in the project root. See [`.env.example`](.env.example) for the full template; the inference pipeline needs at least:
+See [`.env.example`](.env.example) for the complete template. For example:
 
 ```text
+BASE_DIR=/path/to/LLM_benchmarks
 STANFORD_API_KEY=your_key_here
+MONGO_DB_USERNAME=your_username
+MONGO_DB_PASSWORD=your_password
 ```
 
-(The agentic metric-eval additionally needs `MONGO_DB_USERNAME` / `MONGO_DB_PASSWORD`.)
+Do not commit `.env` or paste credential values into logs or issues.
 
 > ⚠️ Note: as models get added & removed from the Stanford AI API you will need to submit a ticket to update your API key.
 
@@ -208,11 +218,12 @@ day_of_week = csv_df['Day'][0]
 }
 ```
 
-Depending on whether you're working in YENs or Sherlock edit the appropriate SLURM script and run the array job. These scripts activate the repo-local `.venv/` (one level up), so submit them from the `scripts/` directory.
+On YENs, edit `yens.slurm` for the desired array job. It activates the repo-local `.venv/` (one level
+up), so submit it from the `scripts/` directory.
 
 Example:
 ```bash
-cd scripts && sbatch yens.slurm      # YENs   (on Sherlock: sbatch sherlock.slurm)
+cd scripts && sbatch yens.slurm
 ```
 
 #### `6_combine_check_results.py`

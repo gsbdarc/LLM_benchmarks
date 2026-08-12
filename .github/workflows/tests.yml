@@ -15,13 +15,17 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.10"   # matches the YENS venv
+          # Python 3.10 is the one supported YENs runtime.
+          python-version: "3.10"
           cache: pip               # caches wheels keyed on requirements.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python -m pip install -r requirements.txt
+
+      - name: Check Python environment
+        run: python scripts/check_setup.py python
 
       - name: Run agent_eval tests
         env:

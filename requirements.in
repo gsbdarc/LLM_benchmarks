@@ -1,0 +1,31 @@
+# Shared Python environment for the YENs inference and agent-evaluation pipelines.
+ipykernel
+numpy
+pandas
+python-dotenv
+openai>=2.0,<3  # OpenAI 3.x is not yet validated against this repo's clients and Instructor usage.
+pdf2image
+Pillow
+pydantic
+packaging
+pymongo
+requests
+tabulate
+instructor
+ollama-instructor
+matplotlib
+seaborn
+
+# Agentic metric-eval (MCP/eval) and observability/analysis layer.
+mcp==1.28.1  # MCP 2.x removed streamablehttp_client, which runtime/agent.py imports.
+weave
+tenacity
+psutil
+pyarrow
+duckdb
+starlette
+uvicorn
+
+# Tests.
+pytest
+pytest-asyncio

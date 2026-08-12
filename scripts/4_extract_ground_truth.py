@@ -78,21 +78,23 @@ def update_ground_truth(
     for i in range(0, len(image_index)):
         index = str(i)  # consistent with how other inputs are indexed
 
-        if index not in ground_truth:  # only append to ground truth if image index does not yet exist in ground truth
-            image = image_index[index]['csv']
-            csv_path = os.path.join(BASE_DIR, "inputs", "data", "csvs", image)
+        if index in ground_truth:
+            continue
 
-            csv_df = pd.read_csv(csv_path)
+        image = image_index[index]['csv']
+        csv_path = os.path.join(BASE_DIR, "inputs", "data", "csvs", image)
 
-            day_of_week = csv_df['Day'][0]
+        csv_df = pd.read_csv(csv_path)
 
-            year = csv_df['Year'][0]
-            month = csv_df['Month'][0]
-            day = csv_df['Date'][0]
-            tv_guide_date = f"{month} {day} {year}"
+        day_of_week = csv_df['Day'][0]
 
-            file_name = csv_df['File Name'][0]
-            result = parse_newspaper_string(file_name)
+        year = csv_df['Year'][0]
+        month = csv_df['Month'][0]
+        day = csv_df['Date'][0]
+        tv_guide_date = f"{month} {day} {year}"
+
+        file_name = csv_df['File Name'][0]
+        result = parse_newspaper_string(file_name)
 
         if result:  # if able to parse
             name, date_obj = result
