@@ -90,12 +90,13 @@ Install dependencies from `requirements.txt`.
 
 ### MongoDB
 
-The pipeline uses MongoDB as a shared, persistent store because inference tasks run independently,
-often as parallel SLURM jobs. A database lets every worker write to the same place without
-coordinating local result files. Stable document identifiers and upserts make reruns safe: completed
-tasks can be skipped, while repeating the same task updates its logical record instead of creating
-an accidental duplicate. MongoDB's document model also fits model outputs and metadata whose shape
-can vary by benchmark, and gives the evaluation tools and live dashboards one central data source.
+MongoDB gives parallel inference jobs one shared place to store results.
+
+- **Shared storage:** SLURM workers do not need to coordinate local result files.
+- **Safe reruns:** Stable IDs and upserts let completed tasks be skipped and repeated writes update
+  existing records.
+- **Flexible records:** Document fields can vary as benchmark outputs and metadata evolve.
+- **Downstream reuse:** Evaluation tools and live dashboards read the same central data.
 
 MongoDB collections do not enforce one rigid schema. The table below lists the stable identity and
 payload fields used by the current pipelines, rather than every optional field a document may hold.
