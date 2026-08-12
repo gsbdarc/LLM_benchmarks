@@ -1,5 +1,7 @@
 """Tests for eval.observability — derivations, hashes, Prometheus parsing, scrape."""
 
+import json
+
 from agent_eval.reporting import observability as obs
 
 
@@ -187,3 +189,54 @@ def test_scrape_parses_mocked_response(monkeypatch):
     result = obs.scrape_vllm_metrics("http://fake/metrics")
     assert result["gpu_cache_usage_perc"] == 0.42
     assert "error" not in result
+
+
+# ── steps_trace: the per-step record error analysis reads ────────────────────
+
+def _step(n, visible="thinking out loud", args='{"city": "Palo Alto"}'):
+    return {
+        "step": n, "finish_reason": "tool_calls", "visible": visible,
+        "tool_calls": ["get_weather"],
+        "tool_call_args": [{"name": "get_weather", "arguments": args}],
+        "llm_time": 1.5, "llm_time_productive": 1.0, "attempts": 2,
+        "usage": {"prompt_tokens": 100, "completion_tokens": 20,
+                  "completion_tokens_details": {"reasoning_tokens": 64}},
+    }
+
+
+def test_steps_trace_keeps_order_prose_and_arguments():
+    trace = json.loads(obs.steps_trace([_step(1), _step(2)]))
+    assert [e["step"] for e in trace] == [1, 2]
+    assert trace[0]["visible"] == "thinking out loud"
+    # The ARGUMENTS are the diagnostic part — a wrong value passed to a tool is the bug.
+    assert trace[0]["tool_calls"] == [{"name": "get_weather", "arguments": '{"city": "Palo Alto"}'}]
+    assert trace[0]["prompt_tokens"] == 100 and trace[0]["attempts"] == 2
+
+
+def test_steps_trace_preserves_malformed_tool_json_verbatim():
+    """Raw argument strings, so a JSON failure stays visible instead of normalised away."""
+    trace = json.loads(obs.steps_trace([_step(1, args='{"city": "Palo A')]))
+    assert trace[0]["tool_calls"][0]["arguments"] == '{"city": "Palo A'
+
+
+def test_steps_trace_truncates_long_prose_and_marks_it():
+    trace = json.loads(obs.steps_trace([_step(1, visible="x" * 5000)], max_chars=100))
+    assert len(trace[0]["visible"]) == 101          # 100 chars + the ellipsis
+    assert trace[0]["truncated"] is True
+
+
+def test_steps_trace_bounds_step_count_and_says_so():
+    trace = json.loads(obs.steps_trace([_step(i) for i in range(1, 40)], max_steps=5))
+    assert len(trace) == 6                          # 5 steps + the omission note
+    assert "34 further steps omitted" in trace[-1]["note"]
+
+
+def test_steps_trace_none_when_no_steps():
+    assert obs.steps_trace(None) is None
+    assert obs.steps_trace([]) is None
+
+
+def test_reasoning_tokens_sums_when_reported_else_none():
+    assert obs.reasoning_tokens([_step(1), _step(2)]) == 128
+    assert obs.reasoning_tokens([{"usage": {"prompt_tokens": 5}}]) is None
+    assert obs.reasoning_tokens([]) is None

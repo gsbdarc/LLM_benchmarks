@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repairing TV guide dates — agent run report</title>
+<style>
+  /* Palette: validated categorical order blue, aqua, violet, red — both modes pass the
+     lightness band, chroma floor, CVD separation and normal-vision floor. Light-mode aqua
+     is below 3:1 on the surface, so every segment carries a direct label and a table view
+     exists (the documented relief). Status hues are never used as series. */
+  .viz-root {
+    color-scheme: light;
+    --surface-1: #fcfcfb; --plane: #f9f9f7;
+    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #898781;
+    --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10);
+    --series-1: #2a78d6; --series-2: #1baf7a; --series-3: #4a3aa7; --series-4: #e34948;
+    --good-ink: #006300; --warn-ink: #8a5a00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --surface-1: #1a1a19; --plane: #0d0d0d;
+      --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
+      --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+      --series-1: #3987e5; --series-2: #199e70; --series-3: #9085e9; --series-4: #e66767;
+      --good-ink: #0ca30c; --warn-ink: #fab219;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --surface-1: #1a1a19; --plane: #0d0d0d;
+    --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+    --series-1: #3987e5; --series-2: #199e70; --series-3: #9085e9; --series-4: #e66767;
+    --good-ink: #0ca30c; --warn-ink: #fab219;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--plane); color: var(--text-primary);
+         font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 15px; line-height: 1.5; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 26px 20px 64px; }
+  header.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+  h1 { font-size: 1.5rem; margin: 0 0 3px; letter-spacing: -0.01em; }
+  .sub { color: var(--text-secondary); margin: 0; font-size: 0.9rem; }
+  .meta { color: var(--text-muted); font-size: 0.8rem; text-align: right; white-space: nowrap; }
+  button.theme { display: block; margin: 8px 0 0 auto; font: inherit; font-size: 0.8rem;
+                 color: var(--text-secondary); background: var(--surface-1);
+                 border: 1px solid var(--ring); border-radius: 8px; padding: 5px 10px; cursor: pointer; }
+  /* One filter row above everything it scopes — never a filter inside a card. */
+  .filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+             margin: 18px 0 16px; padding: 10px 12px; background: var(--surface-1);
+             border: 1px solid var(--ring); border-radius: 10px; }
+  .filters .flabel { color: var(--text-secondary); font-size: 0.84rem; }
+  .seg-ctl { display: inline-flex; border: 1px solid var(--ring); border-radius: 8px; overflow: hidden; }
+  .seg-ctl button { font: inherit; font-size: 0.85rem; padding: 5px 12px; cursor: pointer;
+                    background: var(--surface-1); color: var(--text-secondary); border: 0;
+                    border-right: 1px solid var(--ring); }
+  .seg-ctl button:last-child { border-right: 0; }
+  .seg-ctl button[aria-pressed="true"] { background: var(--series-1); color: #fff; font-weight: 600; }
+  .filters .scope { color: var(--text-muted); font-size: 0.8rem; }
+  .card { background: var(--surface-1); border: 1px solid var(--ring); border-radius: 12px;
+          padding: 18px 20px; margin-bottom: 18px; }
+  h2 { font-size: 1.02rem; margin: 0 0 3px; }
+  h3 { font-size: 0.9rem; margin: 18px 0 3px; }
+  .hint { color: var(--text-secondary); font-size: 0.86rem; margin: 0 0 16px; max-width: 76ch; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(156px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .kpi { background: var(--surface-1); border: 1px solid var(--ring); border-radius: 12px;
+         padding: 13px 15px; display: flex; flex-direction: column; }
+  .kpi .label { color: var(--text-secondary); font-size: 0.8rem; }
+  /* proportional figures at display size; tabular-nums only in tables and ticks */
+  .kpi .value { font-size: 2rem; font-weight: 600; letter-spacing: -0.02em; margin-top: 2px; line-height: 1.15; }
+  .kpi .value.hero { font-size: 2.4rem; }
+  .kpi .value.good { color: var(--good-ink); }
+  .kpi .value.warn { color: var(--warn-ink); }
+  .kpi .foot { color: var(--text-muted); font-size: 0.78rem; margin-top: auto; padding-top: 4px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0 0 14px; font-size: 0.84rem; color: var(--text-secondary); }
+  .legend span.item { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+  /* Grouped + stacked bars: one row per judge inside each kind of row, all on one scale.
+     Thin marks; 2px surface spacers; 4px rounded data-ends. The 26px outer row is the
+     hover target (>=24px), the 15px inner div is the mark. */
+  .gband { margin-bottom: 18px; }
+  .gband-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+  .gband-name { font-weight: 600; font-size: 0.93rem; }
+  .gband-desc { color: var(--text-secondary); font-size: 0.82rem; }
+  .gband-n { color: var(--text-muted); font-size: 0.8rem; white-space: nowrap; }
+  .brow { display: grid; grid-template-columns: 168px 1fr; gap: 12px; align-items: center; margin-bottom: 4px; }
+  .brow .jname { color: var(--text-secondary); font-size: 0.82rem; text-align: right; white-space: nowrap;
+                 overflow: hidden; text-overflow: ellipsis; }
+  .track { display: flex; gap: 2px; align-items: center; height: 26px; }
+  .seg { height: 26px; display: flex; align-items: center; min-width: 3px; }
+  .seg > i { display: block; width: 100%; height: 15px; border-radius: 1px; }
+  .seg:first-child > i { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
+  .seg:last-child > i { border-top-right-radius: 4px; border-bottom-right-radius: 4px; }
+  .blabels { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.8rem; color: var(--text-secondary); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+  th { color: var(--text-secondary); font-weight: 600; font-size: 0.78rem; text-transform: uppercase;
+       letter-spacing: 0.03em; border-bottom: 1px solid var(--axis); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  /* Short cells never wrap: a wrapped label doubles every row's height in a long table. */
+  td.nw, th.nw { white-space: nowrap; }
+  td.why { max-width: 44ch; }
+  td.why > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  tbody tr.clickable { cursor: pointer; }
+  tbody tr.clickable:hover { background: color-mix(in oklab, var(--surface-1) 92%, var(--text-primary)); }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.86em; }
+  .tag { display: inline-flex; align-items: center; gap: 5px; font-size: 0.8rem; white-space: nowrap; }
+  .tag .swatch { width: 9px; height: 9px; }
+  /* The distinction that matters: flagged-and-wrong reached a human; unflagged-and-wrong
+     did not. Icon + label, never colour alone. */
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.76rem; padding: 1px 7px;
+           border-radius: 999px; border: 1px solid var(--ring); white-space: nowrap; }
+  .badge.flag { color: var(--warn-ink); }
+  .badge.silent { color: var(--series-4); font-weight: 600; }
+  /* Capped so the trace wraps at a readable width instead of stretching to the row
+     list's (wider, horizontally scrolled) table width. */
+  .trace { background: var(--plane); border: 1px solid var(--ring); border-radius: 10px;
+           padding: 12px 14px; margin: 4px 0 10px; max-width: 1000px; white-space: normal; }
+  .step { border-left: 2px solid var(--axis); padding: 0 0 12px 14px; margin-left: 4px; position: relative; }
+  .step:last-child { padding-bottom: 2px; }
+  .step::before { content: ""; position: absolute; left: -5px; top: 5px; width: 8px; height: 8px;
+                  border-radius: 50%; background: var(--series-1); box-shadow: 0 0 0 2px var(--plane); }
+  .step .hdr { font-size: 0.8rem; color: var(--text-muted); }
+  .step .call { margin-top: 3px; }
+  .step .said { color: var(--text-secondary); margin-top: 3px; }
+  .think { margin-top: 5px; padding: 7px 9px; border-left: 2px solid var(--series-3);
+           background: color-mix(in oklab, var(--surface-1) 94%, var(--series-3));
+           border-radius: 0 6px 6px 0; font-size: 0.83rem; color: var(--text-primary); }
+  .think .tlabel { color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase;
+                   letter-spacing: 0.04em; font-weight: 600; margin-bottom: 2px; }
+  .empty { color: var(--text-muted); font-style: italic; }
+  .tip { position: fixed; pointer-events: none; opacity: 0; transition: opacity .08s;
+         background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--ring);
+         border-radius: 8px; padding: 7px 10px; font-size: 0.82rem; box-shadow: 0 3px 12px rgba(0,0,0,.16); z-index: 20; }
+  details summary { cursor: pointer; color: var(--text-secondary); font-size: 0.84rem; }
+  .prompt-block { border: 1px solid var(--ring); border-radius: 10px; background: var(--plane);
+                  padding: 10px 12px; margin-top: 10px; }
+  .prompt-block .plabel { font-size: 0.78rem; color: var(--text-secondary); font-weight: 600; }
+  .prompt-block pre { margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; font-size: 0.8rem;
+                      font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text-primary); }
+  .footnote { color: var(--text-muted); font-size: 0.8rem; margin-top: 6px; }
+  .facet2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 20px; }
+  /* The row list carries 10 columns of real data; scroll it rather than truncate values
+     or shrink the type. Charts never get a nested scroll — a wide table legitimately does. */
+  .tscroll { overflow-x: auto; }
+</style>
+</head>
+<body class="viz-root">
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Repairing TV guide dates</h1>
+      <p class="sub" id="sub"></p>
+    </div>
+    <div class="meta" id="meta"></div>
+  </header>
+
+  <div class="filters">
+    <span class="flabel">Reviewed by</span>
+    <span class="seg-ctl" id="judgePick"></span>
+    <span class="scope" id="scopeNote"></span>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section class="card">
+    <h2>Summary</h2>
+    <p class="hint">Every answer was checked against a known-correct date afterwards. The three kinds
+    of row were chosen deliberately: ones that needed fixing, ones already right (where any change
+    would be damage), and ones where no single date can be correct. Each model gets its own bar in
+    each kind, all on one scale.</p>
+    <div class="legend" id="legend"></div>
+    <div id="bands"></div>
+    <div id="judgeMetrics"></div>
+    <details>
+      <summary>Show these numbers as a table</summary>
+      <div id="bandTable"></div>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2>The path each model took</h2>
+    <p class="hint">Three tools, and the job needs all three in order: read the case, work out the
+    date, record the decision. A wandering agent shows up as extra boxes or a line doubling back.</p>
+    <div class="facet2" id="flows"></div>
+  </section>
+
+  <section class="card">
+    <h2>Handed back to a person</h2>
+    <p class="hint">The agent marks a row when its answer is a judgment call rather than a certainty.
+    Being flagged is <em>not</em> the same as being wrong — most flagged rows are right. What matters
+    is the reverse: a wrong answer that was <strong>not</strong> flagged is a silent error, and a
+    wrong answer that was flagged still reached a human.</p>
+    <div id="queueSummary"></div>
+    <div id="queue"></div>
+  </section>
+
+  <section class="card">
+    <h2>What it costs at scale</h2>
+    <p class="hint">You would not review every answer. A free consistency check on the model's own
+    three values finds the suspect ones first; only those need a model at all.</p>
+    <div id="costCompare"></div>
+    <h3>How long each answer took</h3>
+    <div id="hist"></div>
+  </section>
+
+  <section class="card">
+    <h2>The instructions the agent was given</h2>
+    <p class="hint">Every run used exactly these words. Most of what the agent does well or badly
+    traces back to a line in here.</p>
+    <details id="promptBox">
+      <summary>Show the prompt</summary>
+      <div id="promptText"></div>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2>Every row, and how the agent got there</h2>
+    <p class="hint">Click any row to open the agent's own steps — the tool it called, the values it
+    passed, its reasoning, and how long each step took. Nothing here is reconstructed.</p>
+    <div class="tscroll"><div id="runs"></div></div>
+  </section>
+
+  <section class="card">
+    <h2>About these numbers</h2>
+    <p class="hint">For anyone reviewing this: where the figures come from, and what they do not yet
+    show. Please push on these first.</p>
+    <div id="provenance"></div>
+  </section>
+</div>
+<div class="tip" id="tip"></div>
+
+<script id="datefix-data" type="application/json">__DATEFIX_DATA__</script>
+<script>
+(function () {
+  var D = JSON.parse(document.getElementById("datefix-data").textContent);
+  var COLORS = { fixed_correct: "var(--series-1)", confirmed_correct: "var(--series-2)",
+                 flagged: "var(--series-3)", wrong: "var(--series-4)" };
+  var META = {}; D.outcomes.forEach(function (o) { META[o.key] = o; });
+  var esc = function (s) { return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); };
+  var money = function (v) { return "$" + (v == null ? "0" : Number(v).toFixed(2)); };
+  // Truncate on a word boundary, so a cut never lands mid-word.
+  function clip(s, n) {
+    if (s.length <= n) return s;
+    var cut = s.slice(0, n), sp = cut.lastIndexOf(" ");
+    return (sp > n * 0.6 ? cut.slice(0, sp) : cut) + "…";
+  }
+  var judgeOf = function (m) { return D.judges.filter(function (j) { return j.model === m; })[0]; };
+  var sel = D.default_judge;
+
+  document.getElementById("sub").textContent =
+    D.judges[0].n + " answers reviewed · prompt " + D.prompt.name;
+  document.getElementById("meta").innerHTML =
+    esc(D.generated_at) + "<br>code version <code>" + esc(D.git_commit) + "</code>";
+
+  // ── one filter row, scoping the per-row sections ─────────────────────────
+  document.getElementById("judgePick").innerHTML = D.judges.map(function (j) {
+    return '<button type="button" data-m="' + esc(j.model) + '" aria-pressed="' +
+      (j.model === sel) + '">' + esc(j.model) + "</button>";
+  }).join("");
+  document.getElementById("scopeNote").textContent =
+    "scopes the headline numbers, the review queue, the timings and the row list — " +
+    "the summary and the paths always show both";
+
+  // ── shared bar renderer ─────────────────────────────────────────────────
+  function track(counts, n, scaleMax, judge, gkey) {
+    var segs = D.outcomes.filter(function (o) { return counts[o.key] > 0; });
+    return '<div class="track" style="width:' + ((n / scaleMax) * 100).toFixed(1) +
+      '%" role="img" aria-label="' + esc(judge) + ", " + esc(gkey) + ": " +
+      segs.map(function (o) { return counts[o.key] + " " + o.label; }).join(", ") + '">' +
+      segs.map(function (o) {
+        return '<span class="seg" data-g="' + gkey + '" data-o="' + o.key + '" data-j="' + esc(judge) +
+          '" style="flex:' + counts[o.key] + '"><i style="background:' + COLORS[o.key] + '"></i></span>';
+      }).join("") + "</div>" +
+      '<div class="blabels">' + segs.map(function (o) {
+        return '<span class="tag"><span class="swatch" style="background:' + COLORS[o.key] + '"></span>' +
+          o.icon + " " + counts[o.key] + " " + esc(o.label) + "</span>";
+      }).join("") + "</div>";
+  }
+
+  // Grouped + stacked: kind of row is the band, each model a bar inside it. One scale
+  // across every bar, so equal widths mean equal counts everywhere on the page.
+  var scaleMax = 0;
+  D.judges.forEach(function (j) {
+    j.groups.forEach(function (g) { if (g.n > scaleMax) scaleMax = g.n; });
+  });
+  document.getElementById("legend").innerHTML = D.outcomes.map(function (o) {
+    return '<span class="item"><span class="swatch" style="background:' + COLORS[o.key] + '"></span>' +
+      o.icon + " " + esc(o.label) + ' <span style="color:var(--text-muted)">— ' + esc(o.blurb) + "</span></span>";
+  }).join("");
+  document.getElementById("bands").innerHTML = D.group_meta.map(function (gm) {
+    var rows = D.judges.map(function (j) {
+      var g = j.groups.filter(function (x) { return x.key === gm.key; })[0];
+      return '<div class="brow"><div class="jname">' + esc(j.model) + "</div><div>" +
+        track(g, g.n, scaleMax, j.model, gm.key) + "</div></div>";
+    }).join("");
+    var n = D.judges[0].groups.filter(function (x) { return x.key === gm.key; })[0].n;
+    return '<div class="gband"><div class="gband-head"><div><span class="gband-name">' + esc(gm.label) +
+      '</span> <span class="gband-desc">' + esc(gm.description) + '</span></div><span class="gband-n">' +
+      n + " rows each</span></div>" + rows + "</div>";
+  }).join("");
+
+  // ── metrics table: judges as columns, bold where they differ ─────────────
+  var MEASURES = [
+    ["Dates repaired", function (j) { return j.fixed; }],
+    ["Correctly left alone", function (j) { return j.confirmed; }],
+    ["Left for a person", function (j) { return j.abstained; }],
+    ["Still wrong", function (j) { return j.wrong; }],
+    ["…of those, wrong with no flag", function (j) { return j.confidently_wrong; }],
+    ["Correct rows damaged", function (j) { return j.regressions; }],
+    ["Flagged for review", function (j) { return j.flagged; }],
+    ["Distinct tool paths", function (j) { return j.n_paths; }],
+    ["Reasoning captured", function (j) { return j.traces + "/" + j.n; }],
+    ["Median time", function (j) { return j.median_s + "s"; }],
+    ["Time lost to rate limits", function (j) { return j.retry_s + "s"; }],
+    ["Tokens per answer", function (j) { return j.tokens_per_answer.toLocaleString(); }],
+    ["Thinking tokens", function (j) { return (j.reasoning_tokens / 1000).toFixed(1) + "k"; }],
+    ["Cost per answer", function (j) { return "$" + j.per_answer.toFixed(4); }],
+    ["Cost for this batch", function (j) { return money(j.cost); }]
+  ];
+  document.getElementById("judgeMetrics").innerHTML =
+    "<table style='margin-top:6px'><thead><tr><th>Measure</th>" +
+    D.judges.map(function (j) { return "<th class='num nw'>" + esc(j.model) + "</th>"; }).join("") +
+    "</tr></thead><tbody>" + MEASURES.map(function (r) {
+      var vals = D.judges.map(r[1]);
+      var differs = vals.some(function (v) { return String(v) !== String(vals[0]); });
+      return "<tr><td" + (differs ? " style='font-weight:600'" : "") + ">" + esc(r[0]) + "</td>" +
+        vals.map(function (v) {
+          return "<td class='num nw'" + (differs ? " style='font-weight:600'" : "") + ">" + esc(v) + "</td>";
+        }).join("") + "</tr>";
+    }).join("") + "</tbody></table>" +
+    '<p class="footnote">Bold rows are where the models differ.</p>';
+
+  document.getElementById("bandTable").innerHTML =
+    "<table><thead><tr><th>Model</th><th>Kind of row</th><th class='num'>Rows</th>" +
+    D.outcomes.map(function (o) { return "<th class='num'>" + o.icon + " " + esc(o.label) + "</th>"; }).join("") +
+    "</tr></thead><tbody>" + D.judges.map(function (j) {
+      return j.groups.map(function (g) {
+        return "<tr><td class='nw'>" + esc(j.model) + "</td><td>" + esc(g.label) + "</td><td class='num'>" +
+          g.n + "</td>" + D.outcomes.map(function (o) { return "<td class='num'>" + g[o.key] + "</td>"; }).join("") +
+          "</tr>";
+      }).join("");
+    }).join("") + "</tbody></table>";
+
+  // ── tool-call flow, one per model ───────────────────────────────────────
+  function flowSvg(flow, label) {
+    var cols = flow.columns, NW = 150, NH = 30, GAPX = 46, GAPY = 10, PADX = 8, PADY = 12;
+    if (!cols.length) return '<p class="empty">No tool calls recorded.</p>';
+    var rowsMax = Math.max.apply(null, cols.map(function (c) { return c.length; }));
+    var W = PADX * 2 + 40 + GAPX + cols.length * NW + (cols.length - 1) * GAPX + GAPX + 40;
+    var H = PADY * 2 + rowsMax * NH + (rowsMax - 1) * GAPY;
+    var pos = {}, svg = [], midY = PADY + (H - 2 * PADY) / 2 - NH / 2;
+    function cx(i) { return PADX + 40 + GAPX + i * (NW + GAPX); }
+    cols.forEach(function (col, i) {
+      var blockH = col.length * NH + (col.length - 1) * GAPY;
+      col.forEach(function (nd, jj) {
+        pos[i + "|" + nd.tool] = { x: cx(i), y: PADY + (H - 2 * PADY - blockH) / 2 + jj * (NH + GAPY) };
+      });
+    });
+    var maxE = Math.max.apply(null, flow.edges.map(function (e) { return e.count; }).concat([1]));
+    flow.edges.forEach(function (e) {
+      var a = pos[e.col + "|" + e["from"]], b = pos[(e.col + 1) + "|" + e.to];
+      if (!a || !b) return;
+      svg.push('<path d="M' + (a.x + NW) + ' ' + (a.y + NH / 2) + ' C' + (a.x + NW + GAPX / 2) + ' ' +
+        (a.y + NH / 2) + ', ' + (b.x - GAPX / 2) + ' ' + (b.y + NH / 2) + ', ' + b.x + ' ' + (b.y + NH / 2) +
+        '" fill="none" stroke="var(--series-1)" stroke-opacity=".3" stroke-width="' +
+        Math.max(2, Math.round((e.count / maxE) * 8)) + '"/>');
+    });
+    ["start", "done"].forEach(function (word, k) {
+      var x = k ? cx(cols.length - 1) + NW + GAPX : PADX;
+      svg.push('<rect x="' + x + '" y="' + midY + '" width="40" height="' + NH +
+        '" rx="6" fill="none" stroke="var(--axis)" stroke-width="2"/><text x="' + (x + 20) + '" y="' +
+        (midY + NH / 2 + 4) + '" font-size="11" text-anchor="middle" fill="var(--text-secondary)">' + word + "</text>");
+      (k ? cols[cols.length - 1] : cols[0]).forEach(function (nd) {
+        var p = pos[(k ? cols.length - 1 : 0) + "|" + nd.tool];
+        svg.push('<path d="M' + (k ? p.x + NW : PADX + 40) + ' ' + (k ? p.y + NH / 2 : midY + NH / 2) +
+          ' L' + (k ? x : p.x) + ' ' + (k ? midY + NH / 2 : p.y + NH / 2) +
+          '" fill="none" stroke="var(--axis)" stroke-width="2"/>');
+      });
+    });
+    cols.forEach(function (col, i) {
+      col.forEach(function (nd) {
+        var p = pos[i + "|" + nd.tool];
+        svg.push('<rect x="' + p.x + '" y="' + p.y + '" width="' + NW + '" height="' + NH +
+          '" rx="6" fill="var(--surface-1)" stroke="var(--series-1)" stroke-width="2"/><text x="' +
+          (p.x + 8) + '" y="' + (p.y + NH / 2 + 4) + '" font-size="11" fill="var(--text-primary)">' +
+          esc(nd.tool) + '</text><text x="' + (p.x + NW - 8) + '" y="' + (p.y + NH / 2 + 4) +
+          '" font-size="11" text-anchor="end" fill="var(--text-muted)">' + nd.count + "</text>");
+      });
+    });
+    return '<svg viewBox="0 0 ' + W + " " + H + '" width="100%" height="' + Math.min(H, 200) +
+      '" role="img" aria-label="' + esc(label) + '">' + svg.join("") + "</svg>";
+  }
+  document.getElementById("flows").innerHTML = D.judges.map(function (j) {
+    return '<div><div style="font-weight:600;font-size:.9rem;margin-bottom:8px">' + esc(j.model) +
+      ' <span style="font-weight:400;color:var(--text-muted)">· ' + j.n_paths +
+      " distinct path" + (j.n_paths === 1 ? "" : "s") + "</span></div>" +
+      flowSvg(j.flow, j.model + " tool path") +
+      "<table style='margin-top:8px'><tbody>" + j.paths.map(function (p) {
+        return "<tr><td><code>" + esc(p.path.join(" → ")) + "</code></td><td class='num nw'>" +
+          p.count + "</td><td class='num nw'>" + Math.round((p.count / j.n) * 100) + "%</td></tr>";
+      }).join("") + "</tbody></table></div>";
+  }).join("");
+
+  // ── cost at scale (judge-independent table + selected judge's histogram) ─
+  function renderCost(j) {
+    var o = D.original;
+    document.getElementById("costCompare").innerHTML =
+      "<table><tbody>" +
+      "<tr><td>Producing all " + o.n.toLocaleString() + " dates in the first place</td>" +
+      "<td class='num nw'>" + money(o.total) + "</td><td class='num nw'>$" + o.per_answer.toFixed(4) + " each</td></tr>" +
+      "<tr><td>Finding the suspect ones — consistency check on the model's own three answers" +
+      "<br><span style='color:var(--text-muted)'>flags " + o.flagged_free.toLocaleString() + " of " +
+      o.n.toLocaleString() + ", no model call</span></td><td class='num nw'>$0.00</td>" +
+      "<td class='num nw'>free</td></tr>" +
+      "<tr><td><strong>Reviewing the " + o.target.toLocaleString() +
+      " wrong-with-sound-inputs rows</strong> with " + esc(j.model) + "</td>" +
+      "<td class='num nw'><strong>" + money(j.per_answer * o.target) + "</strong></td>" +
+      "<td class='num nw'>$" + j.per_answer.toFixed(4) + " each</td></tr>" +
+      "</tbody></table>" +
+      '<p class="footnote">Per answer, reviewing costs about ' +
+      Math.round(j.per_answer / o.per_answer) + "× as much as producing one, but only " +
+      Math.round((o.target / o.n) * 100) + "% of answers are worth reviewing — so with " +
+      esc(j.model) + " the whole repair costs " + money(j.per_answer * o.target) + " against " +
+      money(o.total) + " to produce the data.</p>";
+
+    var vals = j.wall_times,
+        lo = Math.floor(Math.min.apply(null, vals) / 5) * 5,
+        hi = Math.ceil(Math.max.apply(null, vals) / 5) * 5,
+        step = Math.max(5, Math.round((hi - lo) / 8 / 5) * 5), bins = [];
+    for (var s = lo; s < hi; s += step) bins.push({ lo: s, hi: s + step, n: 0 });
+    vals.forEach(function (v) {
+      var bn = bins[Math.min(Math.floor((v - lo) / step), bins.length - 1)]; if (bn) bn.n++;
+    });
+    var maxN = Math.max.apply(null, bins.map(function (bn) { return bn.n; }));
+    document.getElementById("hist").innerHTML =
+      '<p class="hint" style="margin-bottom:8px">' + esc(j.model) + " · median " + j.median_s +
+      "s, range " + j.min_s + "–" + j.max_s + "s. A tight cluster means predictable cost at scale.</p>" +
+      bins.map(function (bn) {
+        return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:3px">' +
+          '<span style="width:74px;text-align:right;color:var(--text-muted);font-size:.8rem;' +
+          'font-variant-numeric:tabular-nums">' + bn.lo + "–" + bn.hi + "s</span>" +
+          '<span style="flex:1;display:flex;align-items:center;gap:7px">' +
+          '<span style="width:' + (bn.n / maxN * 100) + '%;height:14px;background:var(--series-1);' +
+          'border-radius:1px 4px 4px 1px;min-width:' + (bn.n ? 3 : 0) + 'px"></span>' +
+          '<span style="color:var(--text-secondary);font-size:.8rem">' + (bn.n || "") + "</span></span></div>";
+      }).join("");
+  }
+
+  // ── per-judge sections ──────────────────────────────────────────────────
+  function renderKpis(j) {
+    var k = [
+      { label: "Wrong dates, before → after", value: j.wrong_before + " → " + j.wrong, hero: true,
+        foot: "among the " + j.n + " answers reviewed", good: j.wrong < j.wrong_before },
+      { label: "Dates repaired", value: j.fixed, foot: "of the " + j.wrong_before + " that were wrong" },
+      { label: "Correct rows damaged", value: j.regressions,
+        foot: "of " + j.controls + " already right", good: j.regressions === 0 },
+      { label: "Wrong with no flag", value: j.confidently_wrong,
+        foot: j.confidently_wrong === 0 ? "no silent errors" : "went out unmarked",
+        good: j.confidently_wrong === 0 },
+      { label: "Flagged for a person", value: j.flagged, warn: j.flagged > 0,
+        foot: j.flagged_but_correct + " of them were already right" },
+      { label: "Cost", value: money(j.cost), foot: "$" + j.per_answer.toFixed(4) + " per answer" }
+    ];
+    document.getElementById("kpis").innerHTML = k.map(function (x) {
+      return '<div class="kpi"><div class="label">' + esc(x.label) + '</div><div class="value' +
+        (x.hero ? " hero" : "") + (x.good ? " good" : "") + (x.warn ? " warn" : "") + '">' +
+        esc(x.value) + '</div><div class="foot">' + esc(x.foot) + "</div></div>";
+    }).join("");
+  }
+
+  function badge(r) {
+    if (r.display_outcome === "wrong") {
+      return r.needs_review
+        ? '<span class="badge flag">⚑ wrong, but flagged</span>'
+        : '<span class="badge silent">✖ wrong, not flagged</span>';
+    }
+    return r.needs_review ? '<span class="badge flag">⚑ flagged</span>' : "";
+  }
+
+  function renderQueue(j) {
+    var flagged = j.rows.filter(function (r) {
+      return r.needs_review || r.fix_outcome === "abstained" || r.display_outcome === "wrong";
+    });
+    document.getElementById("queueSummary").innerHTML =
+      '<div style="display:flex;gap:22px;flex-wrap:wrap;margin-bottom:12px;font-size:.88rem">' +
+      '<span><strong>' + j.flagged + "</strong> flagged by the agent" +
+      '<span style="color:var(--text-muted)"> · ' + j.flagged_but_correct + " already right</span></span>" +
+      '<span><strong>' + j.wrong_and_flagged + "</strong> wrong <em>and</em> flagged" +
+      '<span style="color:var(--text-muted)"> · reached a human anyway</span></span>' +
+      '<span><strong>' + j.confidently_wrong + "</strong> wrong with <em>no</em> flag" +
+      '<span style="color:var(--text-muted)"> · ' +
+      (j.confidently_wrong ? "silent errors" : "none — no silent errors") + "</span></span></div>" +
+      // Known reporting wrinkle, stated rather than smoothed over.
+      '<p class="footnote" style="margin:0 0 12px">Note: a row the agent <em>abstained</em> on is ' +
+      "already a row for a human, but the instructions only require the review flag for two other " +
+      "situations — so whether an abstention also carries the flag is left to the model's discretion, " +
+      "and the two models differ (and " + esc(D.judges[D.judges.length - 1].model) +
+      " is inconsistent with itself). Every abstained row is listed here either way; only the " +
+      '"flagged" count is affected. Fixing the wording is a one-line prompt change and a re-run.</p>';
+    if (flagged.length === 0) {
+      document.getElementById("queue").innerHTML =
+        '<p class="empty">Nothing flagged and nothing wrong in this batch.</p>';
+      return;
+    }
+    document.getElementById("queue").innerHTML =
+      "<table><thead><tr><th class='nw'>Page</th><th class='nw'>Status</th>" +
+      "<th class='nw'>Action</th><th>Value kept</th><th>Why a person should look</th>" +
+      "</tr></thead><tbody>" +
+      flagged.map(function (r, i) {
+        var why = r.review_reason || r.reason || "";
+        return '<tr class="clickable" data-q="' + i + '"><td class="nw">image ' + esc(r.image_id) +
+          "</td><td class='nw'>" + badge(r) + "</td><td class='nw'>" + esc(r.action) +
+          "</td><td><code>" + esc(r.final_value) + "</code></td>" +
+          '<td class="why" title="' + esc(why) + '"><span>' + esc(why) + "</span></td></tr>" +
+          '<tr id="q' + i + '" style="display:none"><td colspan="5"></td></tr>';
+      }).join("") + "</tbody></table>" +
+      '<p class="footnote">Click a row for the model\'s own reasoning at the moment it decided.</p>';
+
+    Array.prototype.forEach.call(document.querySelectorAll("#queue tr.clickable"), function (tr) {
+      tr.addEventListener("click", function () {
+        var i = tr.dataset.q, row = document.getElementById("q" + i);
+        var open = row.style.display !== "none";
+        row.style.display = open ? "none" : "table-row";
+        if (!open && !row.dataset.filled) {
+          row.firstChild.innerHTML = reasoningHtml(flagged[i]);
+          row.dataset.filled = "1";
+        }
+      });
+    });
+  }
+
+  // The reasoning that matters for a flagged row is whatever the model was thinking at the
+  // step where it committed the decision, so prefer the save_correction step.
+  function decisionStep(r) {
+    var steps = r.trace || [], hit = null;
+    steps.forEach(function (s) {
+      (s.tool_calls || []).forEach(function (tc) {
+        if (tc.name === "save_correction") hit = s;
+      });
+    });
+    if (hit && hit.thinking_api) return hit;
+    for (var i = steps.length - 1; i >= 0; i--) if (steps[i].thinking_api) return steps[i];
+    return hit;
+  }
+
+  function reasoningHtml(r) {
+    var s = decisionStep(r);
+    var head = '<div class="trace"><div style="font-size:.82rem;color:var(--text-secondary);margin-bottom:8px">' +
+      "Truth (never shown to the agent): <code>" + esc(r.expected_date) + "</code> · was <code>" +
+      esc(r.original_value) + "</code> · kept <code>" + esc(r.final_value) + "</code> · " + badge(r) + "</div>";
+    if (!s) return head + '<p class="empty">No reasoning recorded for this run.</p></div>';
+    var body = "";
+    if (s.thinking_api) {
+      body += '<div class="think"><div class="tlabel">Model reasoning at the deciding step</div>' +
+        esc(clip(String(s.thinking_api), 1800)) + "</div>";
+    }
+    (s.tool_calls || []).forEach(function (tc) {
+      body += '<div class="call" style="margin-top:6px"><code><strong>' + esc(tc.name) + "</strong>(" +
+        esc(clip(String(tc.arguments || ""), 300)) + ")</code></div>";
+    });
+    return head + body + "</div>";
+  }
+
+  function traceHtml(r) {
+    if (!r.trace || !r.trace.length) return '<p class="empty">No step trace recorded.</p>';
+    var out = ['<div class="trace"><div style="font-size:.82rem;color:var(--text-secondary);margin-bottom:8px">' +
+      "Truth (never shown to the agent): <code>" + esc(r.expected_date) + "</code> · " +
+      esc(r.path.join(" → ")) + " · " + badge(r) + "</div>"];
+    r.trace.forEach(function (s) {
+      out.push('<div class="step"><div class="hdr">step ' + esc(s.step) +
+        (s.llm_time == null ? "" : " · " + Number(s.llm_time).toFixed(1) + "s") +
+        (s.attempts > 1 ? " · " + s.attempts + " attempts" : "") +
+        (s.prompt_tokens ? " · " + s.prompt_tokens + " tokens in" : "") + "</div>");
+      (s.tool_calls || []).forEach(function (tc) {
+        out.push('<div class="call"><code><strong>' + esc(tc.name) + "</strong>(" +
+          esc(clip(String(tc.arguments || ""), 260)) + ")</code></div>");
+      });
+      // The model's own reasoning, when the provider returns it. Cut on a word boundary
+      // with an ellipsis — a mid-word chop reads like a rendering fault.
+      if (s.thinking_api) {
+        out.push('<div class="think"><div class="tlabel">Model reasoning</div>' +
+          esc(clip(String(s.thinking_api), 1500)) + "</div>");
+      }
+      if (s.visible) out.push('<div class="said">' + esc(clip(String(s.visible), 500)) + "</div>");
+      out.push("</div>");
+    });
+    return out.join("") + "</div>";
+  }
+
+  function renderRuns(j) {
+    // Result and flag status share one column: 11 columns overflowed the card, and the
+    // two belong together anyway ("wrong, not flagged" is one fact, not two).
+    var html = ["<table><thead><tr><th class='nw'>Page</th><th class='nw'>Model under test</th>" +
+      "<th class='nw'>Kind of row</th><th class='nw'>Result</th>" +
+      "<th>Was</th><th>Now</th><th class='num nw'>Steps</th><th class='num nw'>Seconds</th>" +
+      "<th class='num nw'>Tokens</th><th class='num nw'>Cost</th></tr></thead><tbody>"];
+    j.rows.forEach(function (r, i) {
+      var o = META[r.display_outcome];
+      var gm = D.group_meta.filter(function (x) { return x.key === r.group; })[0];
+      html.push('<tr class="clickable" data-i="' + i + '"><td class="nw">image ' + esc(r.image_id) +
+        '</td><td class="nw">' + esc(r.model_under_test) + '</td><td class="nw">' +
+        esc(gm ? gm.label : r.group) + '</td><td class="nw"><span class="tag">' +
+        '<span class="swatch" style="background:' + COLORS[r.display_outcome] + '"></span>' +
+        o.icon + " " + esc(o.label) + "</span> " + badge(r) +
+        "</td><td><code>" + esc(r.original_value) + "</code></td><td><code>" + esc(r.final_value) +
+        "</code></td><td class='num nw'>" + esc(r.steps) + "</td><td class='num nw'>" +
+        (r.wall_time == null ? "-" : Number(r.wall_time).toFixed(1)) + "</td><td class='num nw'>" +
+        (r.total_tokens == null ? "-" : r.total_tokens.toLocaleString()) + "</td><td class='num nw'>" +
+        money(r.cost) + "</td></tr>");
+      html.push('<tr id="tr' + i + '" style="display:none"><td colspan="10"></td></tr>');
+    });
+    document.getElementById("runs").innerHTML = html.join("") + "</tbody></table>";
+    Array.prototype.forEach.call(document.querySelectorAll("#runs tr.clickable"), function (tr) {
+      tr.addEventListener("click", function () {
+        var i = tr.dataset.i, row = document.getElementById("tr" + i);
+        var open = row.style.display !== "none";
+        row.style.display = open ? "none" : "table-row";
+        if (!open && !row.dataset.filled) {
+          row.firstChild.innerHTML = traceHtml(j.rows[i]);
+          row.dataset.filled = "1";
+        }
+      });
+    });
+  }
+
+  function renderProvenance(j) {
+    document.getElementById("provenance").innerHTML =
+      "<h3 style='margin-top:2px'>Where the figures come from</h3>" +
+      "<ul style='margin:0 0 12px;padding-left:20px;color:var(--text-secondary);font-size:.87rem'>" +
+      "<li>" + j.n + " answers, each reviewed once by <strong>" + esc(j.model) +
+      "</strong> using the prompt above, at code version <code>" + esc(D.git_commit) + "</code> on " +
+      esc(D.generated_at) + ". Every judge shown in the switcher ran the same answers.</li>" +
+      "<li>Checked against a known-correct date the agent never saw, comparing the DAY named rather " +
+      "than the text, so '2014-08-09' and 'August 9 2014' count as the same answer.</li>" +
+      "<li>Every row was verified to have inputs the model read correctly — judging a derivation " +
+      "only makes sense on sound inputs.</li></ul>" +
+      "<h3 style='margin-top:2px'>What this does not show</h3>" +
+      "<ul style='margin:0;padding-left:20px;color:var(--text-secondary);font-size:.87rem'>" +
+      "<li><strong>The wrong answer is a limit of the rule, not a slip.</strong> Two of the 35 pages " +
+      "publish on the same weekday the guide covers and mean the FOLLOWING week, while four others " +
+      "mean the same day. The source data disagrees, so no rule gets both — and the agent flagged it.</li>" +
+      "<li><strong>" + j.flagged_but_correct + " of " + j.flagged + " flagged rows were already right.</strong> " +
+      "The flag errs toward caution, costing reviewer time rather than accuracy. Whether that trade is " +
+      "right is a judgment call, not a measurement.</li>" +
+      "<li><strong>One prompt, " + j.n + " rows per model.</strong> Enough to choose a default, not " +
+      "to settle which model is better at harder judging.</li>" +
+      "<li><strong>Costs use published list prices</strong> from the backend config, not an invoice.</li></ul>";
+  }
+
+  function select(model) {
+    sel = model;
+    var j = judgeOf(model);
+    Array.prototype.forEach.call(document.querySelectorAll("#judgePick button"), function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.m === model));
+    });
+    renderKpis(j); renderQueue(j); renderRuns(j); renderCost(j); renderProvenance(j);
+  }
+  document.getElementById("judgePick").addEventListener("click", function (e) {
+    if (e.target.dataset && e.target.dataset.m) select(e.target.dataset.m);
+  });
+
+  // ── prompt ──────────────────────────────────────────────────────────────
+  document.getElementById("promptText").innerHTML =
+    '<div class="prompt-block"><div class="plabel">System prompt — the standing instructions</div><pre>' +
+    esc(D.prompt.system) + '</pre></div><div class="prompt-block"><div class="plabel">Per-answer ' +
+    "instruction — sent once per row with the identifiers filled in</div><pre>" +
+    esc(D.prompt.user) + "</pre></div>";
+  document.getElementById("promptBox").addEventListener("toggle", function (e) {
+    e.target.querySelector("summary").textContent = e.target.open ? "Hide the prompt" : "Show the prompt";
+  });
+
+  // ── delegated hover: works for bars rendered at any point ───────────────
+  var tip = document.getElementById("tip");
+  document.addEventListener("mousemove", function (e) {
+    var seg = e.target.closest && e.target.closest("span.seg");
+    if (!seg) { tip.style.opacity = 0; return; }
+    var j = judgeOf(seg.dataset.j);
+    var g = (j ? j.groups : []).filter(function (x) { return x.key === seg.dataset.g; })[0];
+    var o = META[seg.dataset.o];
+    if (!g || !o) { tip.style.opacity = 0; return; }
+    tip.innerHTML = "<strong>" + esc(g.label) + "</strong> · " + esc(j.model) + "<br>" + o.icon + " " +
+      esc(o.label) + ": " + g[o.key] + " of " + g.n +
+      " rows<br><span style='color:var(--text-secondary)'>" + esc(o.blurb) + "</span>";
+    tip.style.opacity = 1;
+    tip.style.left = Math.min(e.clientX + 14, window.innerWidth - 270) + "px";
+    tip.style.top = (e.clientY + 16) + "px";
+  });
+
+  // ── theme toggle: dark steps are selected, not an automatic flip ─────────
+  var btn = document.createElement("button");
+  btn.className = "theme"; btn.textContent = "Toggle light / dark";
+  btn.addEventListener("click", function () {
+    var cur = document.documentElement.getAttribute("data-theme");
+    var dark = cur ? cur === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.setAttribute("data-theme", dark ? "light" : "dark");
+  });
+  document.getElementById("meta").appendChild(btn);
+
+  select(sel);
+})();
+</script>
+</body>
+</html>

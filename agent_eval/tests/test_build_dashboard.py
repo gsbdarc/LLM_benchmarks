@@ -55,6 +55,27 @@ def test_build_snapshot_embeds_prompts_and_glossary(tmp_path):
     assert snap["path_summaries"] == {}
 
 
+def test_build_snapshot_embeds_every_registered_prompt(tmp_path):
+    """All prompt variants in the runs render their real text; unknown names are omitted.
+
+    Comparing prompt versions in the UI needs BOTH texts, not just the default one.
+    """
+    from agent_eval.prompts import prompt_names
+    names = prompt_names()
+    assert len(names) >= 2, "expected at least two prompt variants on disk"
+    rows = [sink.flatten_run(sample_result(), sample_meta(prompt_name=n))
+            for n in names + ["deleted_variant_v0"]]
+    sink.write_runs(rows, base_dir=tmp_path)
+    snap = build_dashboard.build_snapshot(tmp_path, summarize=False)
+    for n in names:
+        assert snap["prompts"][n]["system"], f"{n} system text missing"
+        assert snap["prompts"][n]["user"], f"{n} user text missing"
+    # distinct variants must not collapse to the same text
+    assert len({snap["prompts"][n]["system"] for n in names}) == len(names)
+    # a name the registry no longer knows degrades to the UI's "(not embedded)" placeholder
+    assert "deleted_variant_v0" not in snap["prompts"]
+
+
 def test_render_html_injects_and_escapes(tmp_path):
     _write_runs(tmp_path)
     snap = build_dashboard.build_snapshot(tmp_path, summarize=False)

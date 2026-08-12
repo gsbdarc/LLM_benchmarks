@@ -59,7 +59,26 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="path to eval_mapping.csv; with --row, evaluate just that row")
     p.add_argument("--row", type=int, default=None,
                    help="0-based row index into --eval-mapping (e.g. $SLURM_ARRAY_TASK_ID)")
+    p.add_argument("--rows", default=None,
+                   help="0-based INCLUSIVE slice of --eval-mapping, e.g. '0-49'. One shard "
+                        "of an array job: many rows, one agent run each. The slice must "
+                        "share one judge config.")
     return p.parse_args(argv)
+
+
+def _work_row(row: dict[str, Any]) -> dict[str, Any]:
+    """One mapping CSV row as a work row. `expected_date`/`original_value` are the
+    date-fix task's grading inputs — read by the scorer, never shown to the agent,
+    and absent (None) for metric-eval mappings."""
+    return {
+        "eval_id": int(row["eval_id"]) if row.get("eval_id") not in (None, "") else None,
+        "task_id": row["task_id"],
+        "run_id": mapping.coerce_run_id(row.get("run_id")),
+        "benchmark_id": row["benchmark_id"],
+        "model_id": row.get("model_id"),
+        "expected_date": row.get("expected_date") or None,
+        "original_value": row.get("original_value") or None,
+    }
 
 
 def _row_mode_work(
@@ -68,18 +87,45 @@ def _row_mode_work(
     """Resolve (backend, model, prompt, work-rows) from one eval_mapping row. The row's
     judge config is authoritative so the array does exactly what the mapping says."""
     row = mapping.read_mapping_row(args.eval_mapping, args.row)
-    backend = row.get("judge_backend") or args.backend
-    model = row.get("judge_model") or args.model
-    prompt = row.get("judge_prompt") or args.prompt
-    eval_id = int(row["eval_id"]) if row.get("eval_id") not in (None, "") else None
-    work = [{
-        "eval_id": eval_id,
-        "task_id": row["task_id"],
-        "run_id": mapping.coerce_run_id(row.get("run_id")),
-        "benchmark_id": row["benchmark_id"],
-        "model_id": row.get("model_id"),
-    }]
-    return backend, model, prompt, work
+    return (row.get("judge_backend") or args.backend,
+            row.get("judge_model") or args.model,
+            row.get("judge_prompt") or args.prompt,
+            [_work_row(row)])
+
+
+def _rows_mode_work(
+    args: argparse.Namespace,
+) -> tuple[str, str | None, str | None, list[dict[str, Any]]]:
+    """Resolve a SLICE of mapping rows ("A-B", inclusive) as one shard of work.
+
+    One process per shard, one agent run per row, so per-task attribution survives.
+    The whole slice must share a judge config — one context is built for it — which
+    is why mapping files are written grouped by judge. Spanning configs is an error
+    rather than a silent half-run.
+    """
+    start, _, end = args.rows.partition("-")
+    try:
+        lo, hi = int(start), int(end if end else start)
+    except ValueError:
+        raise SystemExit(f"--rows expects 'A-B' (0-based, inclusive), got {args.rows!r}")
+    if lo > hi:
+        raise SystemExit(f"--rows start {lo} is after end {hi}")
+
+    all_rows = mapping.read_csv(args.eval_mapping)
+    if lo >= len(all_rows):
+        raise SystemExit(f"--rows {args.rows}: mapping has only {len(all_rows)} rows")
+    chunk = all_rows[lo:hi + 1]
+
+    configs = {(r.get("judge_backend"), r.get("judge_model"), r.get("judge_prompt")) for r in chunk}
+    if len(configs) > 1:
+        raise SystemExit(
+            f"--rows {args.rows} spans {len(configs)} judge configs {sorted(configs)}; "
+            "shard within one config (mapping files are written grouped by judge)"
+        )
+    backend, model, prompt = configs.pop()
+    print(f"Shard rows {lo}-{min(hi, len(all_rows) - 1)} ({len(chunk)} rows) of {args.eval_mapping}")
+    return (backend or args.backend, model or args.model, prompt or args.prompt,
+            [_work_row(r) for r in chunk])
 
 
 async def _amain(args: argparse.Namespace) -> None:
@@ -92,9 +138,13 @@ async def _amain(args: argparse.Namespace) -> None:
         weave.init(config.WEAVE_PROJECT)
         print(f"Weave project: {config.WEAVE_PROJECT}")
 
-    row_mode = args.eval_mapping is not None and args.row is not None
+    if args.eval_mapping is not None and args.row is not None and args.rows is not None:
+        raise SystemExit("pass either --row or --rows, not both")
+    row_mode = args.eval_mapping is not None and (args.row is not None or args.rows is not None)
     if row_mode:
-        backend, model, prompt, rows = _row_mode_work(args)
+        backend, model, prompt, rows = (
+            _rows_mode_work(args) if args.rows is not None else _row_mode_work(args)
+        )
     else:
         backend, model, prompt = args.backend, args.model, args.prompt
 
@@ -105,9 +155,12 @@ async def _amain(args: argparse.Namespace) -> None:
           f"Prompt: {ctx['prompt_name']} (#{ctx['prompt_key']}) | GPU: {ctx['gpu_type']} | "
           f"tools_hash={ctx['tools_hash']} | git={ctx['git_commit']}")
 
-    if row_mode:
+    if args.row is not None:
         print(f"Row mode: eval_mapping={args.eval_mapping} row={args.row} -> "
               f"task {rows[0]['task_id']} run {rows[0]['run_id']} benchmark {rows[0]['benchmark_id']}")
+    elif row_mode:
+        print(f"Shard mode: eval_mapping={args.eval_mapping} rows={args.rows} -> "
+              f"{len(rows)} outputs, concurrency {args.concurrency}")
     else:
         benchmark_ids = [b.strip() for b in args.benchmarks.split(",") if b.strip()]
         rows = await discover_rows(args.mcp_url, benchmark_ids, args.limit)
@@ -115,7 +168,9 @@ async def _amain(args: argparse.Namespace) -> None:
 
     results = await run_batch(
         rows, ctx,
-        concurrency=1 if row_mode else args.concurrency,
+        # Single-row mode is one run by definition; a --rows shard keeps the requested
+        # concurrency (offered load = shards x concurrency, kept under the rate limit).
+        concurrency=1 if args.row is not None else args.concurrency,
         max_steps=args.max_steps,
         verbose=args.verbose,
         write_sink=not args.no_sink,

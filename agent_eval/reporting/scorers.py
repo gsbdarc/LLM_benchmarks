@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Optional, Union
 
 from ..config import PKG_DIR
+from ..tools import parse_date
 from .integrity import METRIC_TOOLS, check_score_consistency, extract_saved_evaluation, save_outcome
 from .observability import op
 
@@ -199,4 +200,62 @@ def routing_path_scorer(
     return {
         "routing_path_correct": correct,
         "routing_path_reason": "clean path" if correct else "; ".join(reasons),
+    }
+
+
+# ── date-fix task: did the agent repair the derived date correctly? ──────────
+
+@op
+def date_fix_scorer(
+    output: dict[str, Any],
+    expected_date: Optional[Any] = None,
+    original_value: Optional[Any] = None,
+    **kwargs: Any,
+) -> Optional[dict[str, Any]]:
+    """Grade one date-fix run against the true guide date.
+
+    `expected_date` and `original_value` come from the work-list row, NOT from the
+    agent — the agent is never shown ground truth, and judging a regression from a
+    value it reported itself would let it grade its own baseline. Returns None when
+    `expected_date` is absent, which is how a metric-eval run is skipped.
+
+    `fix_outcome` splits confirmations by whether they were actually right:
+    "confirmed" is a recordable success, so an agent that blesses everything would
+    otherwise score perfectly. `truth_parseable` is False for the images whose
+    ground truth is a date RANGE ("April 4-8 2005") — no single date can be correct
+    there, so an abstention is the right answer and a confident date is not.
+    """
+    if expected_date is None:
+        return None
+
+    saves, _ = extract_saved_evaluation(output.get("messages", []), tool_name="save_correction")
+    truth = parse_date(expected_date)
+    if not saves:
+        return {"fix_outcome": "no_action", "regression": False,
+                "truth_parseable": truth is not None, "needs_review": False}
+
+    args = saves[0]
+    action = args.get("action")
+    final = parse_date(args.get("final_value"))
+    orig_was_right = truth is not None and parse_date(original_value) == truth
+    matches = truth is not None and final is not None and final == truth
+
+    if action == "abstained":
+        outcome = "abstained"
+    elif action == "corrected":
+        outcome = "fixed_correct" if matches else "fixed_wrong"
+    elif action == "confirmed":
+        outcome = "confirmed_correct" if matches else "confirmed_wrong"
+    else:
+        outcome = "no_action"  # unknown/absent action: the save tool rejects these
+
+    return {
+        "fix_outcome": outcome,
+        # Did we make a right answer wrong? Only meaningful when it started right.
+        "regression": bool(orig_was_right and not matches and action != "abstained"),
+        "truth_parseable": truth is not None,
+        # The agent's own uncertainty flag: a row it answered but wants a human to confirm.
+        # Tracked separately from correctness so we can ask whether it flags the rows it
+        # actually gets wrong — a flag that never fires on real errors is decoration.
+        "needs_review": bool(args.get("needs_review")),
     }

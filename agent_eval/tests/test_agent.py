@@ -332,3 +332,101 @@ async def test_run_agent_parse_failure_returns_error_not_empty_call(monkeypatch)
     tool_msgs = [m for m in result["messages"] if isinstance(m, dict) and m.get("role") == "tool"]
     assert len(tool_msgs) == 1 and '"error"' in tool_msgs[0]["content"]
     assert result["tool_errors_by_name"].get("get_task_output") == 1
+
+
+# ── tool-list filtering: a run must see only its own task's tools ────────────
+
+class _FakeTool:
+    def __init__(self, name):
+        self.name = name
+        self.description = f"does {name}"
+        self.inputSchema = {"type": "object", "properties": {}}
+
+
+SERVER_TOOLS = [
+    "list_outputs", "get_task_output", "save_evaluation",
+    "evaluate_raw_string", "evaluate_extracted_string", "evaluate_list",
+    "get_guide_date_case", "compute_guide_date", "save_correction",
+]
+
+
+def _fake_mcp_session(monkeypatch):
+    from contextlib import asynccontextmanager
+
+    class Session:
+        async def list_tools(self):
+            return SimpleNamespace(tools=[_FakeTool(n) for n in SERVER_TOOLS])
+
+    @asynccontextmanager
+    async def fake(url):
+        yield Session()
+
+    monkeypatch.setattr(agent, "mcp_session", fake)
+
+
+async def test_load_tools_unfiltered_shows_everything(monkeypatch):
+    _fake_mcp_session(monkeypatch)
+    tools = await agent.load_tools_from_mcp("http://unused/mcp")
+    assert {t["function"]["name"] for t in tools} == set(SERVER_TOOLS)
+    assert tools[0]["function"]["description"] and tools[0]["function"]["parameters"]
+
+
+async def test_date_fix_run_cannot_see_list_outputs(monkeypatch):
+    """The measured hazard: list_outputs exists for work-list discovery, but its
+    description tells the model to use it first, and runs that called it fared worse."""
+    _fake_mcp_session(monkeypatch)
+    tools = await agent.load_tools_from_mcp(
+        "http://unused/mcp", allow=agent.tools_for_prompt("date_fix_v1"))
+    names = {t["function"]["name"] for t in tools}
+    assert names == {"get_guide_date_case", "compute_guide_date", "save_correction"}
+    assert "list_outputs" not in names
+
+
+async def test_metric_eval_run_sees_its_five_tools(monkeypatch):
+    _fake_mcp_session(monkeypatch)
+    tools = await agent.load_tools_from_mcp(
+        "http://unused/mcp", allow=agent.tools_for_prompt("composite_v2"))
+    names = {t["function"]["name"] for t in tools}
+    assert names == {"get_task_output", "save_evaluation", "evaluate_raw_string",
+                     "evaluate_extracted_string", "evaluate_list"}
+    assert "list_outputs" not in names and "compute_guide_date" not in names
+
+
+def test_tools_for_prompt_defaults_to_metric_eval():
+    assert agent.tools_for_prompt(None) is agent.METRIC_EVAL_TOOLS
+    assert agent.tools_for_prompt("something_new") is agent.METRIC_EVAL_TOOLS
+    assert agent.tools_for_prompt("date_fix_v1") is agent.DATE_FIX_TOOLS
+
+
+# ── LLM time: productive latency vs retry waste ──────────────────────────────
+
+def test_summarize_attempts_splits_productive_from_retry_wait():
+    tally = [{"seconds": 0.1, "ok": False, "error": "APIConnectionError"},
+             {"seconds": 0.1, "ok": False, "error": "RateLimitError"},
+             {"seconds": 2.0, "ok": True}]
+    got = agent._summarize_attempts(tally, step_total=12.0)   # 10s of it was backoff
+    assert got["llm_time_productive"] == 2.0
+    assert got["llm_retry_wait"] == 10.0
+    assert got["attempts"] == 3
+    assert got["retry_errors"] == "APIConnectionError,RateLimitError"
+
+
+def test_summarize_attempts_without_a_tally_keeps_old_behaviour():
+    """Faked clients (and older code paths) record nothing; the step total stands in
+    so numbers stay comparable rather than collapsing to zero."""
+    got = agent._summarize_attempts([], step_total=3.0)
+    assert got == {"llm_time_productive": 3.0, "llm_retry_wait": 0.0,
+                   "attempts": 1, "retry_errors": None}
+
+
+def test_retry_after_header_is_honoured_over_short_backoff():
+    def state(headers, attempt=1):
+        exc = SimpleNamespace(response=SimpleNamespace(headers=headers))
+        return SimpleNamespace(attempt_number=attempt, idle_for=0, seconds_since_start=0,
+                               retry_object=None, outcome=SimpleNamespace(exception=lambda: exc))
+    assert agent._wait_honoring_retry_after(state({"retry-after": "45"})) == 45.0
+    # capped, so an absurd header cannot stall a batch
+    assert agent._wait_honoring_retry_after(state({"Retry-After": "9999"})) == agent._MAX_RETRY_AFTER
+    # absent/garbage -> plain exponential backoff
+    assert agent._wait_honoring_retry_after(state({})) == 0.5
+    assert agent._wait_honoring_retry_after(state({"retry-after": "soon"})) == 0.5

@@ -1,13 +1,47 @@
-# Next steps — v2 measurement, then local Qwen judge
+# Next steps — date-fix demo shipped; local Qwen judge is the open thread
 
-Post-review roadmap Phase 1 (+ parts of 2/3) is **built, committed, and v1-baselined**. The
-immediate next step is the **composite_v2 measurement** (the real test of the prompt rework).
+Branch `mcp-metric-calc`. **183 tests green.**
 
-Branch `mcp-metric-calc`; 3 new commits this session — `082117c` (routing + cost + versioned
-stores), `a8d6f22` (living dashboard), `06fe561` (skip-existing ignores errored + error_detail).
-**136 tests green.**
+**Most recent work: the date-fix task** — a *second* task on the same harness, plus the dashboard
+honesty fixes. See "Date-fix task — shipped" below, and `agent_eval/README.md` §"Two tasks on one
+harness" for the design. The composite_v2 measurement below is done (result: MIXED); the local
+Qwen judge is still the open thread.
 
-## Shipped
+## Date-fix task — shipped (the newest work)
+A repair task, not a grading task: `tv_guide_date` is derivable from `newspaper_date` +
+`day_of_week`, earlier models extracted all three independently, so many are inconsistent. The agent
+loads the case, derives the date with a tool, and records `corrected` / `confirmed` / `abstained`.
+- **3 MCP tools** (`get_guide_date_case`, `compute_guide_date`, `save_correction`) → `agentic_corrections`.
+- **Prompt-selected tool sets**: `tools_for_prompt` / `_TOOLS_BY_TASK` in `runtime/agent.py` show a
+  run only its task's tools (by prompt-name prefix). One entry per new task.
+- **`date_fix_scorer`** → `fix_outcome` / `fix_regression` / `fix_needs_review`; returns `None` on
+  metric-eval runs. Ground truth (`expected_date`, `original_value`) rides the mapping row to the
+  scorer and is never shown to the agent.
+- **Mixed work list** (`create_date_fix_mapping.py`): wrong / control / range, so a batch can expose
+  a regression rather than only rewarding action. Rows whose *inputs* the model misread are excluded
+  and counted.
+- **Demo page** `analysis/build_date_fix_demo.py` + `serve_demo.py` (:8788) — reader-facing, headline
+  number is `confidently_wrong` (wrong *and* unflagged).
+- **`tests/test_date_fix.py`** pins the rule on the real corpus: 30 matched / 3 ambiguous / 2 known
+  misses (images 13 and 32 — Sunday-for-Sunday, where the corpus is genuinely inconsistent; 30/32 is
+  the ceiling for any single rule).
+
+Reproduce:
+```bash
+python -m agent_eval.registry.create_date_fix_mapping
+sbatch --export=ALL,SAMPLE=inputs/date_fix_mapping.csv agent_eval/scripts/run_eval_batch.slurm
+python -m analysis.serve_demo
+```
+
+Also in that batch of work: **dashboard honesty** (paths table splits Misrouted from Unscored, so
+"never measured" no longer displays as "no errors"; every on-disk prompt variant renders its real
+text via `resolve_prompt`) and **observability** (`reasoning_tokens`, `steps_trace`,
+`llm_time_productive`, `llm_retry_wait`, `llm_attempts`).
+
+**Open lead:** 22 runs that saved but were ungradeable — a run can save successfully and still have
+no field matching `gold_metrics.csv`. Now visible as Unscored rather than hidden; not yet explained.
+
+## Shipped earlier
 - **composite_v2** prompt (goal-based; drops the numbered procedure, the "Call get_task_output"
   imperative, and "retry once") — APPROVED. Selectable via `--prompt` / the mapping `judge_prompt`.
 - **args-parse fix** (malformed tool-call JSON → error back to the model, no phantom `get_task_output({})`).
@@ -86,7 +120,7 @@ GPU_TYPE="NVIDIA A40" sbatch agent_eval/scripts/run_eval_batch.slurm   # (drop -
 ## Recipes (from repo root)
 ```bash
 source .venv/bin/activate
-cd agent_eval && EVAL_DISABLE_WEAVE=1 python -m pytest ; cd ..          # 145 tests
+cd agent_eval && EVAL_DISABLE_WEAVE=1 python -m pytest ; cd ..          # 183 tests
 # rebuild dashboard from the central store:
 python -m analysis.export_runs --out outputs/dashboard_cache
 python -m analysis.build_dashboard --base-dir outputs/dashboard_cache --no-summaries \

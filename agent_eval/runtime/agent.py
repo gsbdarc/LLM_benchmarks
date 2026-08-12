@@ -38,6 +38,7 @@ from tenacity import (
 )
 
 from ..reporting import observability as obs
+from ..reporting.integrity import SAVE_TOOLS
 from ..reporting.observability import op
 
 # The active MCP session for the current asyncio task. asyncio.gather wraps each
@@ -84,10 +85,31 @@ def _is_retryable(exc: BaseException) -> bool:
 # 5 attempts / backoff to 30s: rate-limit (429) windows can need a longer wait than a
 # connection blip. tenacity is the SINGLE retry layer (AsyncOpenAI is built with
 # max_retries=0 in config.build_backend) so attempts don't multiply with the SDK's own.
+_MAX_RETRY_AFTER = 120.0  # ignore an absurd header rather than stalling a batch
+
+
+def _wait_honoring_retry_after(retry_state: Any) -> float:
+    """Exponential backoff, but never shorter than a 429's `Retry-After`.
+
+    Blind exponential backoff retries into a rate-limit window that the server has
+    already told us the length of. When the header is present we wait at least that
+    long (capped), otherwise this is exactly the previous behaviour.
+    """
+    base = wait_exponential(multiplier=0.5, min=0.5, max=30)(retry_state)
+    exc = retry_state.outcome.exception() if retry_state.outcome else None
+    headers = getattr(getattr(exc, "response", None), "headers", None) or {}
+    raw = headers.get("retry-after") or headers.get("Retry-After")
+    try:
+        after = float(raw)
+    except (TypeError, ValueError):
+        return base
+    return max(base, min(after, _MAX_RETRY_AFTER))
+
+
 _retry_policy = dict(
     retry=retry_if_exception(_is_retryable),
     stop=stop_after_attempt(5),
-    wait=wait_exponential(multiplier=0.5, min=0.5, max=30),
+    wait=_wait_honoring_retry_after,
     reraise=True,
 )
 
@@ -120,8 +142,36 @@ async def use_session(url: str) -> AsyncIterator[ClientSession]:
             _session_var.reset(token)
 
 
-async def load_tools_from_mcp(url: str) -> list[dict[str, Any]]:
-    """Discover tools from the live server, as OpenAI Chat Completions schemas."""
+# The server hosts tools for several tasks; a run should see only its own. Measured
+# reason: `list_outputs` exists for runner.discover_rows to build the work list, but its
+# description tells the model to "use this first" — of 360 stored runs, the 200 that
+# called it saved less often (85% vs 100%) and cost ~75% more. Filtering is per-task
+# rather than a blanket exclusion because the tool IS legitimate for discovery.
+METRIC_EVAL_TOOLS = frozenset({
+    "get_task_output", "save_evaluation",
+    "evaluate_raw_string", "evaluate_extracted_string", "evaluate_list",
+})
+DATE_FIX_TOOLS = frozenset({"get_guide_date_case", "compute_guide_date", "save_correction"})
+
+# prompt-name prefix -> the tools that task needs. A new task adds one entry.
+_TOOLS_BY_TASK = (("date_fix", DATE_FIX_TOOLS),)
+
+
+def tools_for_prompt(prompt_name: str | None) -> frozenset[str]:
+    """The tool set a run should be shown, chosen by its prompt variant."""
+    for prefix, allowed in _TOOLS_BY_TASK:
+        if (prompt_name or "").startswith(prefix):
+            return allowed
+    return METRIC_EVAL_TOOLS
+
+
+async def load_tools_from_mcp(url: str, allow: frozenset[str] | None = None) -> list[dict[str, Any]]:
+    """Discover tools from the live server, as OpenAI Chat Completions schemas.
+
+    `allow` restricts what the AGENT is shown; the server still serves everything and
+    `call_mcp_tool` can still reach it, so discovery (runner.discover_rows) is unaffected.
+    None means show every tool — the pre-existing behaviour.
+    """
     async with mcp_session(url) as session:
         listed = await session.list_tools()
     return [
@@ -134,6 +184,7 @@ async def load_tools_from_mcp(url: str) -> list[dict[str, Any]]:
             },
         }
         for t in listed.tools
+        if allow is None or t.name in allow
     ]
 
 
@@ -178,6 +229,39 @@ def log_parse_failure(tool_name: str, raw_args: Optional[str], error_msg: str) -
     return {"tool_name": tool_name, "raw_args": raw_args, "error": error_msg}
 
 
+# Per-step attempt tally, written by llm_step and read by run_agent. A contextvar
+# because make_llm_step's closure is shared across concurrent runs — a counter on the
+# function (or tenacity's own retry.statistics) would mix runs together.
+_attempts_var: contextvars.ContextVar = contextvars.ContextVar("llm_attempts", default=None)
+
+
+def _record_attempt(seconds: float, ok: bool, error: Optional[str] = None) -> None:
+    """Record one LLM attempt's duration and outcome, if a step is collecting."""
+    tally = _attempts_var.get()
+    if tally is not None:
+        tally.append({"seconds": seconds, "ok": ok, **({"error": error} if error else {})})
+
+
+def _summarize_attempts(tally: list[dict[str, Any]], step_total: float) -> dict[str, Any]:
+    """Split a step's wall time into productive model latency vs retry overhead.
+
+    Productive = the attempt that succeeded (the last one). Everything else — failed
+    attempts and tenacity's backoff sleeps — is retry_wait. With no tally (a faked
+    client in tests) productive falls back to the step total, so old numbers hold.
+    """
+    if not tally:
+        return {"llm_time_productive": step_total, "llm_retry_wait": 0.0,
+                "attempts": 1, "retry_errors": None}
+    productive = next((a["seconds"] for a in reversed(tally) if a["ok"]), 0.0)
+    errors = [a["error"] for a in tally if not a["ok"] and a.get("error")]
+    return {
+        "llm_time_productive": productive,
+        "llm_retry_wait": max(0.0, step_total - productive),
+        "attempts": len(tally),
+        "retry_errors": ",".join(errors) if errors else None,
+    }
+
+
 def make_llm_step(
     client: Any,
     model: str,
@@ -196,13 +280,24 @@ def make_llm_step(
     @op
     @retry(**_retry_policy)
     async def llm_step(messages: list[Any]) -> Any:
-        return await client.chat.completions.create(
-            model=model,
-            messages=messages,
-            tools=tools,
-            tool_choice="auto",
-            **completion_kwargs,
-        )
+        # Time each ATTEMPT individually. The caller's timer spans the whole retry
+        # sequence, so without this the backoff sleep (up to 30 s x 5) is booked as
+        # model latency. One closure is shared by every concurrent run, so the tally
+        # lives in a contextvar rather than on the function object.
+        t0 = time.perf_counter()
+        try:
+            response = await client.chat.completions.create(
+                model=model,
+                messages=messages,
+                tools=tools,
+                tool_choice="auto",
+                **completion_kwargs,
+            )
+        except BaseException as e:
+            _record_attempt(time.perf_counter() - t0, ok=False, error=type(e).__name__)
+            raise
+        _record_attempt(time.perf_counter() - t0, ok=True)
+        return response
 
     return llm_step
 
@@ -245,6 +340,9 @@ async def run_agent(
     tool_errors_by_name: dict = {}
     steps_detail: list = []
     llm_time_total = 0.0
+    llm_time_productive_total = 0.0
+    llm_retry_wait_total = 0.0
+    attempts_total = 0
     steps_run = 0
     stopped_reason = "max_steps"
     answer = "Stopped after maximum tool-calling steps."
@@ -266,16 +364,27 @@ async def run_agent(
                 obs.log(f"LLM CALL {step}", f"{len(messages)} messages")
 
             t0 = time.perf_counter()
+            attempt_tally: list[dict[str, Any]] = []
+            tally_token = _attempts_var.set(attempt_tally)
             try:
                 response = await llm_step(messages)
             except Exception as e:  # noqa: BLE001
+                _attempts_var.reset(tally_token)
+                timing = _summarize_attempts(attempt_tally, time.perf_counter() - t0)
+                llm_retry_wait_total += timing["llm_retry_wait"]
+                attempts_total += timing["attempts"]
                 stopped_reason = "error"
                 answer = f"LLM error: {e}"
                 if verbose:
                     obs.log("LLM ERROR", str(e))
                 break
+            _attempts_var.reset(tally_token)
             dt = time.perf_counter() - t0
             llm_time_total += dt
+            timing = _summarize_attempts(attempt_tally, dt)
+            llm_time_productive_total += timing["llm_time_productive"]
+            llm_retry_wait_total += timing["llm_retry_wait"]
+            attempts_total += timing["attempts"]
 
             usage = obs.usage_to_dict(response)
             if usage:
@@ -298,7 +407,17 @@ async def run_agent(
                 "thinking_nim": thinking_nim or None,
                 "thinking_api": str(thinking_api) if thinking_api else None,
                 "tool_calls": [tc.function.name for tc in (msg.tool_calls or [])],
+                # The model's own prose and the ARGUMENTS it chose — for these models
+                # that is the whole reasoning record, and the arguments localise an
+                # error faster than the prose (which often rationalises).
+                # Raw argument strings, so malformed JSON stays visible.
+                "visible": visible or None,
+                "tool_call_args": [
+                    {"name": tc.function.name, "arguments": tc.function.arguments}
+                    for tc in (msg.tool_calls or [])
+                ],
                 "llm_time": dt,
+                **timing,
                 "usage": usage,
             })
 
@@ -342,7 +461,10 @@ async def run_agent(
                         }),
                     })
                     continue
-                if name == "save_evaluation":
+                # Every save tool is version-stamped here, not by the LLM: the row must
+                # key on (eval_id, git_commit) to join its run row and to keep results
+                # from different code versions apart.
+                if name in SAVE_TOOLS:
                     if eval_id is not None:
                         args["eval_id"] = eval_id        # authoritative id, not the LLM's
                     if git_commit is not None:
@@ -376,6 +498,11 @@ async def run_agent(
         "tool_time_by_name": tool_time_by_name,
         "tool_errors_by_name": tool_errors_by_name,
         "llm_time_total": llm_time_total,
+        # llm_time_total spans the whole retry sequence; these split out what the model
+        # actually spent from what throttling cost us (backoff + failed attempts).
+        "llm_time_productive": llm_time_productive_total,
+        "llm_retry_wait": llm_retry_wait_total,
+        "llm_attempts": attempts_total,
         "wall_time_total": wall_time_total,
         # wall_time minus model latency ≈ tool-execution + agent-loop overhead. The MCP
         # tool server is local for both backends, so this is backend-independent and lets

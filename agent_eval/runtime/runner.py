@@ -15,11 +15,23 @@ from contextlib import nullcontext
 from typing import Any, Optional
 
 from .. import config
-from .agent import call_mcp_tool, load_tools_from_mcp, make_llm_step, run_agent, use_session
+from .agent import (
+    call_mcp_tool,
+    load_tools_from_mcp,
+    make_llm_step,
+    run_agent,
+    tools_for_prompt,
+    use_session,
+)
 from ..reporting.integrity import run_integrity_report
 from ..reporting.observability import compute_prompt_hash, compute_tools_hash, get_git_commit
 from ..prompts import resolve_prompt
-from ..reporting.scorers import _load_gold_metrics, routing_path_scorer, selection_accuracy_scorer
+from ..reporting.scorers import (
+    _load_gold_metrics,
+    date_fix_scorer,
+    routing_path_scorer,
+    selection_accuracy_scorer,
+)
 from ..reporting.sink import flatten_run, write_run_row
 
 
@@ -51,7 +63,8 @@ async def aprepare(
     _, _, agent_model_key = config.resolve_model(backend, model)
     client, model, completion_kwargs, base_url = config.build_backend(backend, model)
     prompt_name, prompt_system, prompt_user, prompt_key = resolve_prompt(prompt)
-    tools = await load_tools_from_mcp(mcp_url)
+    # Show the agent only its own task's tools — the prompt variant picks the set.
+    tools = await load_tools_from_mcp(mcp_url, allow=tools_for_prompt(prompt_name))
     return {
         "client": client,
         "model": model,
@@ -166,6 +179,10 @@ async def run_one(
     integrity = run_integrity_report(result, verbose=verbose)
     sel = selection_accuracy_scorer(result, benchmark_id=row["benchmark_id"], gold=gold)
     path = routing_path_scorer(result, benchmark_id=row["benchmark_id"], gold=gold)
+    # Date-fix rows carry expected_date/original_value in the work list; for every other
+    # task expected_date is absent and the scorer returns None.
+    fix = date_fix_scorer(result, expected_date=row.get("expected_date"),
+                          original_value=row.get("original_value"))
 
     meta = {
         **row,
@@ -187,7 +204,8 @@ async def run_one(
         "weave_trace_url": result.get("weave_trace_url"),
     }
     if write_sink or write_mongo:
-        flat = flatten_run(result, meta, integrity, {"selection_accuracy": sel, "routing_path": path})
+        flat = flatten_run(result, meta, integrity,
+                           {"selection_accuracy": sel, "routing_path": path, "date_fix": fix})
     if write_sink:
         path = write_run_row(flat)
         result["_sink_path"] = str(path)

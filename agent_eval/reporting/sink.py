@@ -19,7 +19,7 @@ from typing import Any, Optional, Union
 import pandas as pd
 
 from ..config import AGENT_RUNS_DIR, model_price
-from .observability import reasoning_blob, tool_sequence
+from .observability import reasoning_blob, reasoning_tokens, steps_trace, tool_sequence
 
 
 def _gpu(gpu: Any, key: str) -> Optional[float]:
@@ -102,6 +102,11 @@ def flatten_run(
                          if result.get("stopped_reason") == "error" else None),
         "wall_time_total": result.get("wall_time_total"),
         "llm_time_total": result.get("llm_time_total"),
+        # llm_time_total includes retry backoff; these separate real model latency
+        # from what throttling cost. Null on rows written before the split existed.
+        "llm_time_productive": result.get("llm_time_productive"),
+        "llm_retry_wait": result.get("llm_retry_wait"),
+        "llm_attempts": result.get("llm_attempts"),
         "overhead_time": result.get("overhead_time"),
         "tokens_per_sec": result.get("tokens_per_sec"),
         "prompt_tokens": usage.get("prompt_tokens"),
@@ -128,6 +133,10 @@ def flatten_run(
         if isinstance(scores.get("selection_accuracy"), dict) else scores.get("selection_accuracy"),
         "routing_path_correct": (scores.get("routing_path") or {}).get("routing_path_correct"),
         "routing_path_reason": (scores.get("routing_path") or {}).get("routing_path_reason"),
+        # ── date-fix task (null for metric-eval runs) ──
+        "fix_outcome": (scores.get("date_fix") or {}).get("fix_outcome"),
+        "fix_regression": (scores.get("date_fix") or {}).get("regression"),
+        "fix_needs_review": (scores.get("date_fix") or {}).get("needs_review"),
         # ── tool detail ──
         "n_tool_calls": sum(calls.values()),
         "n_metric_calls": n_metric_calls,
@@ -136,6 +145,11 @@ def flatten_run(
         "tool_sequence_json": json.dumps(tool_sequence(result.get("steps_detail"))),
         # ── reasoning (bounded; feeds Part 4 path-summaries) ──
         "reasoning_json": reasoning_blob(result.get("steps_detail")),
+        # ── per-step trace: prose + tool ARGUMENTS + per-step timing/tokens. The
+        # record error analysis reads; reasoning_json only exists for models that
+        # expose provider reasoning, this one always does.
+        "steps_json": steps_trace(result.get("steps_detail")),
+        "reasoning_tokens": reasoning_tokens(result.get("steps_detail")),
         # ── trace + time ──
         "weave_trace_url": meta.get("weave_trace_url"),
         "evaluated_at": datetime.now(timezone.utc),

@@ -29,6 +29,9 @@ from .tools import (
     composite_raw_string as _composite_raw_string,
     composite_extracted_string as _composite_extracted_string,
     composite_list as _composite_list,
+    compute_guide_date as _compute_guide_date,
+    get_guide_date_case as _get_guide_date_case,
+    save_correction as _save_correction,
 )
 
 logging.basicConfig(
@@ -158,6 +161,109 @@ def save_evaluation(
         )
     except Exception as e:  # noqa: BLE001
         logging.exception("save_evaluation failed")
+        return {"error": f"db error: {e}", "saved": False}
+
+
+# ---------------------------------------------------------------------------
+#  Date-fix tools — a SEPARATE task from metric evaluation: repair tv_guide_date
+#  outputs, which are derived from newspaper_date + day_of_week. A run judging
+#  dates sees only these three (see runtime/agent.py DATE_FIX_TOOLS).
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def get_guide_date_case(task_id: str, run_id: int | None = None) -> dict:
+    """
+    Load one TV-guide-date case to review.
+
+    Returns what this model answered for this image across the three related
+    benchmarks: `newspaper_date` (when the paper was published), `day_of_week`
+    (which day the guide covers), and `tv_guide_date` (the derived date it
+    produced). The first two are what the third should follow from.
+
+    Ground truth is NOT provided. Decide whether `tv_guide_date` is consistent
+    with the other two values — do not rely on your own knowledge of the date.
+    """
+    try:
+        return _get_guide_date_case(task_id, run_id=run_id)
+    except Exception as e:  # noqa: BLE001
+        logging.exception("get_guide_date_case failed")
+        return {"error": f"db error: {e}"}
+
+
+@mcp.tool()
+def compute_guide_date(publication_date: str, day_of_week: str) -> dict:
+    """
+    Derive the correct TV guide date from a publication date and a weekday.
+
+    The guide date is the first occurrence of `day_of_week` on or after
+    `publication_date`. Returns {"date": "YYYY-MM-DD"} plus the weekday the paper
+    was published on and how many days after publication the guide falls.
+
+    Returns {"ambiguous": <reason>} with NO date when the inputs do not describe a
+    single day — a weekday range like "Monday-Friday" covers a span, and an
+    unparseable value cannot be resolved. Treat an ambiguous result as a case for a
+    human: record it with action="abstained" rather than guessing a date.
+
+    Always use this tool for the arithmetic. Do not compute the date yourself.
+    """
+    try:
+        return _compute_guide_date(publication_date, day_of_week)
+    except Exception as e:  # noqa: BLE001
+        logging.exception("compute_guide_date failed")
+        return {"error": f"compute error: {e}"}
+
+
+@mcp.tool()
+def save_correction(
+    task_id: str,
+    action: str,
+    original_value: Any,
+    final_value: Any,
+    reason: str,
+    image_id: Any = None,
+    run_id: int | None = None,
+    model_id: Any = None,
+    computed_date: Any = None,
+    needs_review: bool = False,
+    review_reason: str | None = None,
+    eval_id: int | None = None,
+    git_commit: str | None = None,
+) -> dict:
+    """
+    Record your decision for one reviewed case. Call this EXACTLY ONCE per case,
+    whichever way you decided — every reviewed case must end with a row.
+
+    `action` is one of:
+      - "corrected" — the date was inconsistent; `final_value` is the corrected date
+      - "confirmed" — the date already followed from the other two values; repeat it
+                      in `final_value`
+      - "abstained" — it cannot be determined (e.g. compute_guide_date returned
+                      "ambiguous"); keep the original in `final_value` and say why
+
+    `final_value` is what a downstream consumer will use, so it must always be set.
+    Put compute_guide_date's returned date in `computed_date` as the basis for your
+    decision, and give a one-line `reason`. Pass identifiers back exactly as
+    get_guide_date_case returned them.
+
+    Set `needs_review=True` with a short `review_reason` whenever your answer is a
+    judgment call rather than a certainty — above all when compute_guide_date came back
+    with "needs_review", or when get_guide_date_case included an "input_warning".
+    This is independent of `action`: a corrected or confirmed row can still need review.
+    Flagging costs nothing; an unflagged wrong answer is far more expensive.
+
+    Leave `eval_id` and `git_commit` unset — the client stamps them; any value you
+    pass is overwritten. Nothing you do here modifies the original model outputs.
+    """
+    try:
+        return _save_correction(
+            task_id=task_id, action=action, original_value=original_value,
+            final_value=final_value, reason=reason, image_id=image_id, run_id=run_id,
+            model_id=model_id, computed_date=computed_date,
+            needs_review=needs_review, review_reason=review_reason,
+            eval_id=eval_id, git_commit=git_commit,
+        )
+    except Exception as e:  # noqa: BLE001
+        logging.exception("save_correction failed")
         return {"error": f"db error: {e}", "saved": False}
 
 

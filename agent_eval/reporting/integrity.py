@@ -21,13 +21,24 @@ METRIC_TOOLS = {
     "evaluate_raw_string", "evaluate_extracted_string", "evaluate_list",
 }
 
+# The terminal "record your verdict" tool, one per task: metric eval saves an
+# evaluation, the date-fix task saves a correction. A run uses exactly one of them,
+# so save_success/save_count work for either task without extra plumbing.
+SAVE_TOOLS = frozenset({"save_evaluation", "save_correction"})
 
-def extract_saved_evaluation(messages: list[Any]) -> tuple[list[dict[str, Any]], int]:
-    """Return (list_of_save_args, call_count) by scanning assistant tool_calls."""
+
+def extract_saved_evaluation(
+    messages: list[Any], tool_name: str | None = None
+) -> tuple[list[dict[str, Any]], int]:
+    """Return (list_of_save_args, call_count) by scanning assistant tool_calls.
+
+    `tool_name` restricts to one save tool; None counts any of SAVE_TOOLS.
+    """
+    wanted = {tool_name} if tool_name else SAVE_TOOLS
     saves = []
     for msg in messages:
         for tc in getattr(msg, "tool_calls", None) or []:
-            if tc.function.name == "save_evaluation":
+            if tc.function.name in wanted:
                 try:
                     args = json.loads(tc.function.arguments or "{}")
                 except json.JSONDecodeError:
@@ -36,16 +47,17 @@ def extract_saved_evaluation(messages: list[Any]) -> tuple[list[dict[str, Any]],
     return saves, len(saves)
 
 
-def count_failed_saves(messages: list[Any]) -> int:
-    """Number of save_evaluation TOOL RESULTS that reported failure.
+def count_failed_saves(messages: list[Any], tool_name: str | None = None) -> int:
+    """Number of save TOOL RESULTS that reported failure.
 
     Reads the results (not just the calls) so we can tell a save that errored on
-    the first attempt from a redundant second save — save_agentic_evaluation
-    returns {"saved": false, "error": ...} on failure.
+    the first attempt from a redundant second save — the save tools return
+    {"saved": false, "error": ...} on failure.
     """
+    wanted = {tool_name} if tool_name else SAVE_TOOLS
     failed = 0
     for msg in messages:
-        if isinstance(msg, dict) and msg.get("role") == "tool" and msg.get("name") == "save_evaluation":
+        if isinstance(msg, dict) and msg.get("role") == "tool" and msg.get("name") in wanted:
             content = msg.get("content", "")
             try:
                 data = json.loads(content)
@@ -57,10 +69,10 @@ def count_failed_saves(messages: list[Any]) -> int:
     return failed
 
 
-def save_outcome(messages: list[Any]) -> tuple[int, int, int]:
-    """(attempts, failed, succeeded) for save_evaluation across a run."""
-    _, attempts = extract_saved_evaluation(messages)
-    failed = count_failed_saves(messages)
+def save_outcome(messages: list[Any], tool_name: str | None = None) -> tuple[int, int, int]:
+    """(attempts, failed, succeeded) for the run's save tool."""
+    _, attempts = extract_saved_evaluation(messages, tool_name)
+    failed = count_failed_saves(messages, tool_name)
     return attempts, failed, max(0, attempts - failed)
 
 
@@ -136,7 +148,7 @@ def run_integrity_report(result: dict[str, Any], verbose: bool = True) -> dict[s
 
     if verbose:
         print("\n--- INTEGRITY REPORT ---")
-        print(f"  save_evaluation calls  : {save_count}x  (failed={save_failed}, "
+        print(f"  save calls             : {save_count}x  (failed={save_failed}, "
               f"save_success={save_success})")
         print(f"  score consistency      : consistent={consistency['consistent']}  "
               f"missing={consistency.get('missing', [])}")

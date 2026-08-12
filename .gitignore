@@ -24,6 +24,8 @@ outputs/
 inputs/eval_mapping.csv
 inputs/eval_mapping_sample.csv
 
-# Generated (data-laden) dashboard from the self-rescheduling refresh — the tracked
-# dashboard_template.html is the data-free shell (tokenviz hygiene).
-images/agent_dashboard_live.html
+# Generated (data-laden) result pages — the tracked *_template.html files are the
+# data-free shells (tokenviz hygiene). Rebuild with `python -m analysis.build_dashboard`
+# / `build_date_fix_demo`, or just serve them (`serve_dashboard` / `serve_demo`).
+images/agent_dashboard_*.html
+images/date_fix_demo*.html

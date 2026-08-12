@@ -209,15 +209,80 @@ def peak_context(steps_detail: Optional[list[dict[str, Any]]]) -> Optional[float
     return max(vals) if vals else None
 
 
+def reasoning_tokens(steps_detail: Optional[list[dict[str, Any]]]) -> Optional[int]:
+    """Total reasoning tokens across steps, when the provider reports them.
+
+    `usage_to_dict` keeps the full usage payload, so this reads
+    completion_tokens_details.reasoning_tokens. The gpt-5/o1 family bills reasoning
+    without ever returning the text, so this is the only signal of how much thinking
+    happened there. None when no step reported it.
+    """
+    total = None
+    for s in steps_detail or []:
+        details = (s.get("usage") or {}).get("completion_tokens_details") or {}
+        v = details.get("reasoning_tokens")
+        if isinstance(v, (int, float)):
+            total = (total or 0) + int(v)
+    return total
+
+
+def steps_trace(
+    steps_detail: Optional[list[dict[str, Any]]],
+    max_steps: int = 24,
+    max_chars: int = 2000,
+) -> Optional[str]:
+    """Per-step trace of what the agent did, as a JSON string. None if no steps.
+
+    This is the record error analysis reads: for each step, the prose the model
+    emitted, the tool calls WITH their raw argument strings, and that step's latency
+    and tokens. Arguments are kept unparsed so malformed tool JSON — a real failure
+    mode here — stays visible instead of being normalised away.
+
+    Bounded (default ~24 steps, ~2000 prose chars each ≈ 12 KB/run) so one runaway
+    run cannot bloat the row; `truncated` marks where that happened.
+    """
+    if not steps_detail:
+        return None
+    out = []
+    for s in steps_detail[:max_steps]:
+        visible = s.get("visible")
+        if isinstance(visible, str) and len(visible) > max_chars:
+            visible, clipped = visible[:max_chars] + "…", True
+        else:
+            clipped = False
+        usage = s.get("usage") or {}
+        entry = {
+            "step": s.get("step"),
+            "finish_reason": s.get("finish_reason"),
+            "visible": visible,
+            "tool_calls": s.get("tool_call_args") or [],
+            "llm_time": s.get("llm_time"),
+            "llm_time_productive": s.get("llm_time_productive"),
+            "attempts": s.get("attempts"),
+            "prompt_tokens": usage.get("prompt_tokens"),
+            "completion_tokens": usage.get("completion_tokens"),
+        }
+        for key in ("thinking_api", "thinking_nim", "retry_errors"):
+            if s.get(key):
+                entry[key] = s[key]
+        if clipped:
+            entry["truncated"] = True
+        out.append(entry)
+    if len(steps_detail) > max_steps:
+        out.append({"note": f"{len(steps_detail) - max_steps} further steps omitted"})
+    return json.dumps(out)
+
+
 def reasoning_blob(
     steps_detail: Optional[list[dict[str, Any]]], max_chars: int = 4000
 ) -> Optional[str]:
     """Compact, bounded per-run reasoning for the dashboard path-summaries.
 
-    Returns a JSON string of [{"step", "reasoning", "tool_calls"}] for steps that
-    produced any reasoning (NIM <think> or API reasoning), truncated to a total of
-    ~max_chars so one wordy run can't bloat the Parquet row. None if no reasoning
-    was captured. This is the persisted input Part 4's LLM path-summaries read.
+    Captures PROVIDER reasoning only (NIM <think> blocks or an API reasoning field),
+    so it is None for models that don't expose one — which is every model configured
+    before gemini-2.5-pro, hence the null `reasoning_json` on older rows. It is not
+    broken; there was simply nothing to record. `steps_trace` above is the record that
+    always exists.
     """
     out = []
     budget = max_chars

@@ -30,7 +30,7 @@ from typing import Any
 
 from analysis.queries import connect
 from agent_eval import config
-from agent_eval.prompts import METRIC_EVAL_SYSTEM, PROMPT_NAME, eval_user_prompt
+from agent_eval.prompts import eval_user_prompt, resolve_prompt
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = Path(__file__).resolve().parent / "dashboard_template.html"
@@ -53,9 +53,12 @@ RUN_COLUMNS = [
     "n_tool_calls", "n_metric_calls", "n_tool_errors", "tool_sequence_json",
     "prompt_tokens", "completion_tokens", "total_tokens",
     "input_dollar_cost", "output_dollar_cost", "total_dollar_cost",
-    "tokens_per_sec", "peak_context", "wall_time_total", "llm_time_total", "overhead_time",
+    "tokens_per_sec", "peak_context", "wall_time_total", "llm_time_total",
+    "llm_time_productive", "llm_retry_wait", "llm_attempts", "reasoning_tokens",
+    "overhead_time",
     "save_success", "save_count", "save_failed", "score_consistent", "selection_accuracy",
     "routing_path_correct", "routing_path_reason",
+    "fix_outcome", "fix_regression", "fix_needs_review",
     "gpu_cache_usage_end", "requests_running_end", "weave_trace_url",
 ]
 
@@ -65,6 +68,8 @@ GLOSSARY = [
     {"term": "score_consistent", "def": "The composite score the agent SAVED matches the score recomputed from the tool's own sub-scores (integrity check)."},
     {"term": "Metric identified — selection_accuracy", "def": "Did the agent route the field to the CORRECT composite type-tool, graded against the gold field_type — from the agent's SAVED declaration (what it says it did, per field)."},
     {"term": "Optimal route — routing_path_correct", "def": "Did the agent take the correct tool-call PATH (what it actually did): exactly one get_task_output, the SUCCESSFUL metric calls exactly equal the expected set (one correct type-tool per field, any order), and exactly one successful save_evaluation. Stricter, behavior-based complement to Metric identified; routing_path_reason gives the failure detail."},
+    {"term": "Misrouted (paths table)", "def": "Runs on this path that declared the WRONG scoring method (selection_accuracy = 0, graded against the gold field_type). A measured failure."},
+    {"term": "Unscored (paths table)", "def": "Runs on this path with NO gradeable verdict (selection_accuracy is null) — usually the agent never called save_evaluation, but a run can also save successfully and still be ungradeable when no saved field matches gold_metrics.csv. Counted separately from Misrouted so 'never measured' is never displayed as 'no errors'."},
     {"term": "evaluate_raw_string", "def": "Composite tool for free-form prose fields. Scores with word-IoU."},
     {"term": "evaluate_extracted_string", "def": "Composite tool for a single extracted value that may be absent. null_accuracy × max(levenshtein, char_f1)."},
     {"term": "evaluate_list", "def": "Composite tool for set/sequence fields. max(set_f1, sequence_lcs, set_inclusion)."},
@@ -90,18 +95,20 @@ def _present_columns(con: Any) -> set[str]:
 def build_prompt_registry(prompt_names: set[str] | list[str]) -> dict[str, dict[str, str]]:
     """{prompt_name: {system, user}} for the prompt versions we can source.
 
-    Seeded from the agent_eval/prompts registry, so the CURRENT prompt renders its real text.
-    Historical prompt versions whose text we don't have are omitted (the UI shows
-    a "(not embedded)" placeholder); persisting prompt text per version over time
-    is the follow-up for full historical fidelity.
+    Resolved per name from the agent_eval/prompts registry, so EVERY variant still on
+    disk renders its real text (comparing v1 vs v2 in the UI needs both). A name the
+    registry doesn't know — a variant since renamed or deleted — is omitted, and the UI
+    shows a "(not embedded)" placeholder; persisting prompt text per run at run time is
+    the follow-up for full historical fidelity.
     """
     registry = {}
     for name in prompt_names:
-        if name == PROMPT_NAME:
-            registry[name] = {
-                "system": METRIC_EVAL_SYSTEM.strip(),
-                "user": eval_user_prompt("<task_id>", "<run_id>"),
-            }
+        try:
+            _, system, _, _ = resolve_prompt(name)
+            user = eval_user_prompt("<task_id>", "<run_id>", prompt=name)
+        except KeyError:
+            continue
+        registry[name] = {"system": system.strip(), "user": user}
     return registry
 
 

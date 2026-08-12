@@ -102,6 +102,7 @@
   .agentviz .prompt-block pre { margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; font-size: 0.82rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: #374151; }
   .agentviz .route-ok { color: #15803d; }
   .agentviz .route-bad { color: var(--brand); font-weight: 600; }
+  .agentviz .route-warn { color: #b45309; font-weight: 600; }
   .agentviz .path-note { color: var(--muted); font-size: 0.84rem; margin: 2px 0 0; }
   @media (min-width: 900px) {
     .agentviz .layout { grid-template-columns: minmax(240px, 280px) minmax(0, 1fr); }
@@ -167,7 +168,7 @@
 
       <section class="card">
         <h2>Tool-call paths &amp; routing</h2>
-        <div class="helper" style="margin-bottom:10px;">With 3 composite type-tools the path collapses to <code>get_task_output → evaluate_&lt;type&gt; → save_evaluation</code>. A field routed to the wrong type-tool (chosen ≠ gold) shows as a <span class="route-bad">divergent path</span>.</div>
+        <div class="helper" style="margin-bottom:10px;">With 3 composite type-tools the path collapses to <code>get_task_output → evaluate_&lt;type&gt; → save_evaluation</code>. A field routed to the wrong type-tool (chosen ≠ gold) shows as a <span class="route-bad">divergent path</span>. <span class="route-warn">Unscored</span> runs produced no gradeable verdict at all (usually they never saved) — they are NOT clean routes.</div>
         <div class="chart-frame" id="flowChartWrap"></div>
         <h3 style="margin-top:16px;">Top paths <span class="helper">(routing summary)</span></h3>
         <div id="pathTableWrap"></div>
@@ -672,26 +673,32 @@
     list.forEach(function (r) {
       var s = parseSeq(r); if (!s.length) return;
       var key = s.join(" → ");
-      var p = byPath[key] || (byPath[key] = { path: key, count: 0, misrouted: 0 });
+      var p = byPath[key] || (byPath[key] = { path: key, count: 0, misrouted: 0, unscored: 0 });
       p.count += 1;
-      if (r.selection_accuracy === 0) p.misrouted += 1;
+      // A null score means the run produced no gradeable verdict (usually it never saved).
+      // Counted separately so "never measured" is never rendered as "no errors".
+      if (r.selection_accuracy == null) p.unscored += 1;
+      else if (r.selection_accuracy === 0) p.misrouted += 1;
     });
     var rows = Object.keys(byPath).map(function (k) { return byPath[k]; })
       .sort(function (a, b) { return b.count - a.count; });
     var total = rows.reduce(function (s, r) { return s + r.count; }, 0);
-    var html = ["<table><thead><tr><th>Path (ordered tool calls)</th><th class='num'>Runs</th><th class='num'>%</th><th class='num'>Routing errors</th></tr></thead><tbody>"];
+    var html = ["<table><thead><tr><th>Path (ordered tool calls)</th><th class='num'>Runs</th><th class='num'>%</th><th class='num'>Misrouted</th><th class='num'>Unscored</th></tr></thead><tbody>"];
     rows.slice(0, 12).forEach(function (r) {
-      var routeCls = r.misrouted ? "route-bad" : "route-ok";
-      var routeTxt = r.misrouted ? (r.misrouted + " ✗") : "0 ✓";
+      var clean = !r.misrouted && !r.unscored;
+      var misTxt = r.misrouted ? (r.misrouted + " ✗") : (clean ? "0 ✓" : "0");
+      var unsTxt = r.unscored ? (r.unscored + " ⌀") : (clean ? "0 ✓" : "0");
       html.push("<tr><td>" + escapeXml(r.path) + "</td><td class='num'>" + r.count +
         "</td><td class='num'>" + (total ? Math.round(r.count / total * 100) : 0) +
-        "%</td><td class='num " + routeCls + "'>" + routeTxt + "</td></tr>");
+        // green only on a genuinely clean row, so a bare "0" beside a flagged sibling never reads as a pass
+        "%</td><td class='num " + (r.misrouted ? "route-bad" : clean ? "route-ok" : "") + "'>" + misTxt +
+        "</td><td class='num " + (r.unscored ? "route-warn" : clean ? "route-ok" : "") + "'>" + unsTxt + "</td></tr>");
       var note = summaries[r.path];
       if (note) {
-        html.push("<tr><td colspan='4'><div class='path-note'><strong>Why:</strong> " + escapeXml(note) + "</div></td></tr>");
+        html.push("<tr><td colspan='5'><div class='path-note'><strong>Why:</strong> " + escapeXml(note) + "</div></td></tr>");
       }
     });
-    if (!rows.length) html.push("<tr><td colspan='4' class='helper'>No tool-call sequences recorded.</td></tr>");
+    if (!rows.length) html.push("<tr><td colspan='5' class='helper'>No tool-call sequences recorded.</td></tr>");
     html.push("</tbody></table>");
     document.getElementById("pathTableWrap").innerHTML = html.join("");
   }
