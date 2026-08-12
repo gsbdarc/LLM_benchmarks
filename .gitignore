@@ -8,6 +8,15 @@ inputs/data/
 .ipynb_checkpoints/
 outputs/
 
+# PDF harness local development state
+.streamlit/secrets.toml
+.harness-data/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
 # Secrets — never commit
 .env
 

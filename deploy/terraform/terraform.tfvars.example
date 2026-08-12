@@ -1,0 +1,33 @@
+project_id      = "your-gcp-project"
+region          = "us-west1"
+artifact_bucket = "your-globally-unique-private-bucket"
+
+# Pin immutable Artifact Registry image digests after building the Dockerfile.
+app_image    = "us-west1-docker.pkg.dev/PROJECT/REPOSITORY/pdf-harness@sha256:DIGEST"
+worker_image = "us-west1-docker.pkg.dev/PROJECT/REPOSITORY/pdf-harness@sha256:DIGEST"
+code_version = "git-sha-or-release-id"
+
+mongo_database     = "pdf_extraction_harness"
+mongo_uri_secret   = "pdf-harness-mongo-uri"
+app_password_secret = "pdf-harness-app-password"
+
+# Metadata and Secret Manager resource references only; never put secret values here.
+llm_connectors_json = <<-JSON
+[
+  {
+    "id": "stanford",
+    "label": "Stanford AI API",
+    "base_url": "https://aiapi-prod.stanford.edu/v1",
+    "secret_ref": "projects/PROJECT/secrets/stanford-ai-api-key/versions/latest",
+    "allowed_models": ["gpt-5-mini"]
+  }
+]
+JSON
+llm_secret_ids = ["stanford-ai-api-key"]
+
+# Keep the service private to explicit internal identities.
+app_invoker_members = ["group:research-team@example.edu"]
+
+# Optional W&B Weave mirror.
+weave_project        = ""
+wandb_api_key_secret = ""

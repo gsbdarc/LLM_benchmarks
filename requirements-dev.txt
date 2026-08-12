@@ -1,0 +1,5 @@
+-r requirements.txt
+pytest>=8.3,<10
+pytest-asyncio>=0.24,<2
+mongomock>=4.2,<5
+python-hcl2>=7,<8

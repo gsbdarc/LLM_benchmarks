@@ -1,26 +1,30 @@
 ipykernel
 pandas
 python-dotenv
-openai
+openai>=2.0,<3
 pdf2image
-pydantic
+pydantic>=2.8,<3
+jsonschema>=4.23,<5
 tabulate
 instructor
 ollama-instructor
 matplotlib
 
-# Agentic metric-eval (mcp/eval) + observability/analysis layer
-mcp==1.28.1       # PINNED: 2.x removed mcp.client.streamable_http.streamablehttp_client (breaks runtime/agent.py)
-pymongo
-weave
-tenacity          # retry/backoff on NIM/MCP connection drops
-requests          # scrape vLLM /v1/metrics
-psutil            # client RAM sampling
-pyarrow           # Parquet run-summary sink
-duckdb            # OLAP queries over the Parquet runs
-starlette         # analysis/serve_dashboard.py ASGI app (ships with mcp, pinned here for clarity)
-uvicorn           # analysis/serve_dashboard.py server
+# Generalized PDF extraction harness
+streamlit>=1.42,<2
+pymongo>=4.8,<5
+google-cloud-storage>=2.18,<4
+google-cloud-secret-manager>=2.21,<3
+google-cloud-run>=0.10,<1
+functions-framework>=3.8,<4
+requests>=2.32,<3
 
-# Tests
-pytest
-pytest-asyncio
+# Agentic metric-eval (existing harness)
+mcp==1.28.1
+weave
+tenacity
+psutil
+pyarrow
+duckdb
+starlette
+uvicorn

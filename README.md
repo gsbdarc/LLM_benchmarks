@@ -1,5 +1,11 @@
 # [DARC Intern Project] Building Customizable LLM Evaluation Pipelines for Research
 
+> **New generalized harness:** the `feature/pdf-extraction-harness` work adds a
+> Streamlit + MongoDB + Google Cloud application for configurable PDF-to-data extraction,
+> prompt/model experiments, typed evaluation, trusted MCP functions, and agent traces.
+> Start with [`pdf_harness/README.md`](pdf_harness/README.md); deployment and credential
+> setup are in [`deploy/README.md`](deploy/README.md).
+
 > Stanford's AI Playground allows researchers and staff access to almost 20 LLMs via their API. How do users determine which model is best suited for their needs? We built a pipeline that delivers a clear ranking of how different models perform on a set of benchmarks related to processing table based images.
 
 > **This repo has two pipelines** that share one `.env`, `inputs/`, and a MongoDB backend: (1) the **inference pipeline** (`scripts/`) documented below, which runs LLMs over images and writes their outputs to Mongo; and (2) the **agentic metric-eval** (`agent_eval/` + `analysis/`), which *judges* those outputs — see [Agentic Metric-Eval & Dashboard](#agentic-metric-eval--dashboard). The agentic work is the current active development (branch `mcp-metric-calc`).
@@ -73,6 +79,8 @@ One repo-local `.venv/` serves both pipelines (it's gitignored):
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+# For development and tests:
+pip install -r requirements-dev.txt
 ```
 
 ### Create and Activate a Virtual Environment (Sherlock)
@@ -86,6 +94,8 @@ module load python/3.12
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+# For development and tests:
+pip install -r requirements-dev.txt
 ```
 
 ### Environment Variables
