@@ -40,7 +40,7 @@ OUTCOMES = [
      "blurb": "was wrong; the agent corrected it to the right date"},
     {"key": "confirmed_correct", "label": "Confirmed", "icon": "=",
      "blurb": "was already right; the agent left it alone"},
-    {"key": "flagged", "label": "Left for a person", "icon": "⚑",
+    {"key": "flagged", "label": "Abstained — no single date", "icon": "⚑",
      "blurb": "no single date is correct, so the agent declined to invent one"},
     {"key": "wrong", "label": "Wrong", "icon": "✖",
      "blurb": "the agent's answer does not match the truth"},
@@ -99,6 +99,7 @@ def _flow(paths: list[list[str]]) -> dict[str, Any]:
 
 def build_snapshot(judge: str | None = None) -> dict[str, Any]:
     """Join runs, corrections and the work lists into the page payload."""
+    from agent_eval import config
     from agent_eval.prompts import resolve_prompt
     from agent_eval.registry import mapping as mapping_mod
     from agent_eval.registry.create_date_fix_mapping import build_candidates
@@ -236,6 +237,7 @@ def build_snapshot(judge: str | None = None) -> dict[str, Any]:
         "group_meta": GROUPS,
         "judges": judges,
         "default_judge": focus,
+        "pricing": config.BACKENDS.get("playground", {}).get("pricing", {}),
         "original": {
             "n": orig["n"], "total": round(orig["cost"], 2), "per_answer": round(orig_per, 5),
             "flagged_free": scope["flagged_by_free_check"],

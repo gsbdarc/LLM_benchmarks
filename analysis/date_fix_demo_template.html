@@ -102,6 +102,9 @@
   td.nw, th.nw { white-space: nowrap; }
   td.why { max-width: 44ch; }
   td.why > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  [data-full-text] { cursor: help; }
+  td.diff { font-weight: 750; color: var(--text-primary);
+            background: color-mix(in oklab, var(--surface-1) 88%, var(--series-1)); }
   tbody tr.clickable { cursor: pointer; }
   tbody tr.clickable:hover { background: color-mix(in oklab, var(--surface-1) 92%, var(--text-primary)); }
   code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.86em; }
@@ -132,7 +135,8 @@
   .empty { color: var(--text-muted); font-style: italic; }
   .tip { position: fixed; pointer-events: none; opacity: 0; transition: opacity .08s;
          background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--ring);
-         border-radius: 8px; padding: 7px 10px; font-size: 0.82rem; box-shadow: 0 3px 12px rgba(0,0,0,.16); z-index: 20; }
+         border-radius: 8px; padding: 7px 10px; font-size: 0.82rem; box-shadow: 0 3px 12px rgba(0,0,0,.16);
+         z-index: 20; max-width: min(560px, calc(100vw - 24px)); white-space: normal; }
   details summary { cursor: pointer; color: var(--text-secondary); font-size: 0.84rem; }
   .prompt-block { border: 1px solid var(--ring); border-radius: 10px; background: var(--plane);
                   padding: 10px 12px; margin-top: 10px; }
@@ -141,9 +145,18 @@
                       font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text-primary); }
   .footnote { color: var(--text-muted); font-size: 0.8rem; margin-top: 6px; }
   .facet2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 20px; }
+  .comparison-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
+                     margin-bottom: 10px; }
+  .comparison-item { border: 1px solid var(--ring); border-radius: 7px; padding: 7px 9px;
+                     min-width: 0; background: var(--surface-1); }
+  .comparison-item .clabel { color: var(--text-muted); font-size: 0.72rem; text-transform: uppercase;
+                             letter-spacing: 0.03em; margin-bottom: 3px; }
+  .comparison-item code { white-space: normal; overflow-wrap: anywhere; }
+  .footer { color: var(--text-muted); font-size: 0.78rem; text-align: center; margin-top: 28px; }
   /* The row list carries 10 columns of real data; scroll it rather than truncate values
      or shrink the type. Charts never get a nested scroll — a wide table legitimately does. */
   .tscroll { overflow-x: auto; }
+  @media (max-width: 700px) { .comparison-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body class="viz-root">
@@ -155,6 +168,27 @@
     </div>
     <div class="meta" id="meta"></div>
   </header>
+
+  <section class="card" id="about">
+    <h2>What this tests</h2>
+    <p class="hint">This demo tests whether an agent can safely repair an LLM’s derived TV guide
+    date. It receives the source dates and the existing derived value, decides whether one date is
+    supported, and records either a correction or an abstention.</p>
+    <p class="hint"><strong>Agent decision</strong> is the value the agent saved. A
+    <strong>human-review flag</strong> is a separate warning that someone should inspect the row;
+    an answer can be correct and still carry that warning.</p>
+    <div id="provenance"></div>
+  </section>
+
+  <section class="card" id="promptCard">
+    <h2>The instructions the agent was given</h2>
+    <p class="hint">Every run used exactly these words. The prompt is shown up front because it
+    defines what counts as a repair, an abstention, and a human-review flag.</p>
+    <details id="promptBox" open>
+      <summary>Hide the prompt</summary>
+      <div id="promptText"></div>
+    </details>
+  </section>
 
   <div class="filters">
     <span class="flabel">Reviewed by</span>
@@ -187,47 +221,31 @@
   </section>
 
   <section class="card">
-    <h2>Handed back to a person</h2>
-    <p class="hint">The agent marks a row when its answer is a judgment call rather than a certainty.
-    Being flagged is <em>not</em> the same as being wrong — most flagged rows are right. What matters
-    is the reverse: a wrong answer that was <strong>not</strong> flagged is a silent error, and a
-    wrong answer that was flagged still reached a human.</p>
+    <h2>Rows requiring human review</h2>
+    <p class="hint">An abstention is the agent’s decision that no single date is supportable. A
+    human-review flag is separate metadata requesting inspection. This queue also includes wrong
+    answers so silent errors remain visible even when the agent did not set the flag.</p>
     <div id="queueSummary"></div>
     <div id="queue"></div>
   </section>
 
   <section class="card">
     <h2>What it costs at scale</h2>
-    <p class="hint">You would not review every answer. A free consistency check on the model's own
-    three values finds the suspect ones first; only those need a model at all.</p>
+    <p class="hint">The original extraction already produced three date fields. Comparing those
+    existing fields can identify candidate rows without another model call; only the candidates are
+    sent to the review agent.</p>
     <div id="costCompare"></div>
     <h3>How long each answer took</h3>
     <div id="hist"></div>
   </section>
 
   <section class="card">
-    <h2>The instructions the agent was given</h2>
-    <p class="hint">Every run used exactly these words. Most of what the agent does well or badly
-    traces back to a line in here.</p>
-    <details id="promptBox">
-      <summary>Show the prompt</summary>
-      <div id="promptText"></div>
-    </details>
-  </section>
-
-  <section class="card">
     <h2>Every row, and how the agent got there</h2>
     <p class="hint">Click any row to open the agent's own steps — the tool it called, the values it
-    passed, its reasoning, and how long each step took. Nothing here is reconstructed.</p>
+    passed, its reasoning, and how long each step took.</p>
     <div class="tscroll"><div id="runs"></div></div>
   </section>
-
-  <section class="card">
-    <h2>About these numbers</h2>
-    <p class="hint">For anyone reviewing this: where the figures come from, and what they do not yet
-    show. Please push on these first.</p>
-    <div id="provenance"></div>
-  </section>
+  <footer class="footer" id="footerMeta"></footer>
 </div>
 <div class="tip" id="tip"></div>
 
@@ -252,8 +270,11 @@
 
   document.getElementById("sub").textContent =
     D.judges[0].n + " answers reviewed · prompt " + D.prompt.name;
-  document.getElementById("meta").innerHTML =
-    esc(D.generated_at) + "<br>code version <code>" + esc(D.git_commit) + "</code>";
+  var dirtyVersion = /-dirty$/.test(D.git_commit || "");
+  var cleanVersion = String(D.git_commit || "unknown").replace(/-dirty$/, "");
+  document.getElementById("footerMeta").innerHTML = "Generated " + esc(D.generated_at) +
+    " · code <code>" + esc(cleanVersion.slice(0, 7)) + "</code>" +
+    (dirtyVersion ? " · modified working tree" : "");
 
   // ── one filter row, scoping the per-row sections ─────────────────────────
   document.getElementById("judgePick").innerHTML = D.judges.map(function (j) {
@@ -306,11 +327,11 @@
   var MEASURES = [
     ["Dates repaired", function (j) { return j.fixed; }],
     ["Correctly left alone", function (j) { return j.confirmed; }],
-    ["Left for a person", function (j) { return j.abstained; }],
+    ["Abstained — no single date", function (j) { return j.abstained; }],
     ["Still wrong", function (j) { return j.wrong; }],
     ["…of those, wrong with no flag", function (j) { return j.confidently_wrong; }],
     ["Correct rows damaged", function (j) { return j.regressions; }],
-    ["Flagged for review", function (j) { return j.flagged; }],
+    ["Human-review flag set", function (j) { return j.flagged; }],
     ["Distinct tool paths", function (j) { return j.n_paths; }],
     ["Reasoning captured", function (j) { return j.traces + "/" + j.n; }],
     ["Median time", function (j) { return j.median_s + "s"; }],
@@ -326,9 +347,9 @@
     "</tr></thead><tbody>" + MEASURES.map(function (r) {
       var vals = D.judges.map(r[1]);
       var differs = vals.some(function (v) { return String(v) !== String(vals[0]); });
-      return "<tr><td" + (differs ? " style='font-weight:600'" : "") + ">" + esc(r[0]) + "</td>" +
+      return "<tr><td" + (differs ? " class='diff'" : "") + ">" + esc(r[0]) + "</td>" +
         vals.map(function (v) {
-          return "<td class='num nw'" + (differs ? " style='font-weight:600'" : "") + ">" + esc(v) + "</td>";
+          return "<td class='num nw" + (differs ? " diff" : "") + "'>" + esc(v) + "</td>";
         }).join("") + "</tr>";
     }).join("") + "</tbody></table>" +
     '<p class="footnote">Bold rows are where the models differ.</p>';
@@ -409,22 +430,21 @@
     var o = D.original;
     document.getElementById("costCompare").innerHTML =
       "<table><tbody>" +
-      "<tr><td>Producing all " + o.n.toLocaleString() + " dates in the first place</td>" +
+      "<tr><td>Original extraction: generated all " + o.n.toLocaleString() + " TV guide dates</td>" +
       "<td class='num nw'>" + money(o.total) + "</td><td class='num nw'>$" + o.per_answer.toFixed(4) + " each</td></tr>" +
-      "<tr><td>Finding the suspect ones — consistency check on the model's own three answers" +
-      "<br><span style='color:var(--text-muted)'>flags " + o.flagged_free.toLocaleString() + " of " +
-      o.n.toLocaleString() + ", no model call</span></td><td class='num nw'>$0.00</td>" +
-      "<td class='num nw'>free</td></tr>" +
-      "<tr><td><strong>Reviewing the " + o.target.toLocaleString() +
-      " wrong-with-sound-inputs rows</strong> with " + esc(j.model) + "</td>" +
+      "<tr><td>Consistency screen: compared the three existing extracted values" +
+      "<br><span style='color:var(--text-muted)'>identified " + o.flagged_free.toLocaleString() + " of " +
+      o.n.toLocaleString() + " candidate rows; no additional model call</span></td><td class='num nw'>$0.00</td>" +
+      "<td class='num nw'>No model cost</td></tr>" +
+      "<tr><td><strong>Agent review: " + o.target.toLocaleString() +
+      " candidate rows with reliable input fields</strong> using " + esc(j.model) + "</td>" +
       "<td class='num nw'><strong>" + money(j.per_answer * o.target) + "</strong></td>" +
       "<td class='num nw'>$" + j.per_answer.toFixed(4) + " each</td></tr>" +
       "</tbody></table>" +
-      '<p class="footnote">Per answer, reviewing costs about ' +
-      Math.round(j.per_answer / o.per_answer) + "× as much as producing one, but only " +
-      Math.round((o.target / o.n) * 100) + "% of answers are worth reviewing — so with " +
-      esc(j.model) + " the whole repair costs " + money(j.per_answer * o.target) + " against " +
-      money(o.total) + " to produce the data.</p>";
+      '<p class="footnote">At the recorded rates, one agent review costs about ' +
+      Math.round(j.per_answer / o.per_answer) + " times one original extraction. Reviewing only the " +
+      Math.round((o.target / o.n) * 100) + "% candidate rows costs " + money(j.per_answer * o.target) +
+      " with " + esc(j.model) + ", compared with " + money(o.total) + " for the original batch.</p>";
 
     var vals = j.wall_times,
         lo = Math.floor(Math.min.apply(null, vals) / 5) * 5,
@@ -460,7 +480,7 @@
       { label: "Wrong with no flag", value: j.confidently_wrong,
         foot: j.confidently_wrong === 0 ? "no silent errors" : "went out unmarked",
         good: j.confidently_wrong === 0 },
-      { label: "Flagged for a person", value: j.flagged, warn: j.flagged > 0,
+      { label: "Human-review flags", value: j.flagged, warn: j.flagged > 0,
         foot: j.flagged_but_correct + " of them were already right" },
       { label: "Cost", value: money(j.cost), foot: "$" + j.per_answer.toFixed(4) + " per answer" }
     ];
@@ -474,10 +494,17 @@
   function badge(r) {
     if (r.display_outcome === "wrong") {
       return r.needs_review
-        ? '<span class="badge flag">⚑ wrong, but flagged</span>'
-        : '<span class="badge silent">✖ wrong, not flagged</span>';
+        ? '<span class="badge flag">⚑ wrong · review requested</span>'
+        : '<span class="badge silent">✖ wrong · no review flag</span>';
     }
-    return r.needs_review ? '<span class="badge flag">⚑ flagged</span>' : "";
+    return r.needs_review ? '<span class="badge flag">⚑ review requested</span>' : "";
+  }
+
+  function queueReason(r) {
+    if (r.fix_outcome === "abstained") return "Agent abstained";
+    if (r.display_outcome === "wrong" && r.needs_review) return "Wrong answer; review requested";
+    if (r.display_outcome === "wrong") return "Wrong answer; no review flag";
+    return "Agent requested review";
   }
 
   function renderQueue(j) {
@@ -486,35 +513,28 @@
     });
     document.getElementById("queueSummary").innerHTML =
       '<div style="display:flex;gap:22px;flex-wrap:wrap;margin-bottom:12px;font-size:.88rem">' +
-      '<span><strong>' + j.flagged + "</strong> flagged by the agent" +
+      '<span><strong>' + j.flagged + "</strong> human-review flags set" +
       '<span style="color:var(--text-muted)"> · ' + j.flagged_but_correct + " already right</span></span>" +
-      '<span><strong>' + j.wrong_and_flagged + "</strong> wrong <em>and</em> flagged" +
-      '<span style="color:var(--text-muted)"> · reached a human anyway</span></span>' +
-      '<span><strong>' + j.confidently_wrong + "</strong> wrong with <em>no</em> flag" +
+      '<span><strong>' + j.wrong_and_flagged + "</strong> wrong and review requested" +
+      '<span style="color:var(--text-muted)"> · reached a human</span></span>' +
+      '<span><strong>' + j.confidently_wrong + "</strong> wrong with no review flag" +
       '<span style="color:var(--text-muted)"> · ' +
-      (j.confidently_wrong ? "silent errors" : "none — no silent errors") + "</span></span></div>" +
-      // Known reporting wrinkle, stated rather than smoothed over.
-      '<p class="footnote" style="margin:0 0 12px">Note: a row the agent <em>abstained</em> on is ' +
-      "already a row for a human, but the instructions only require the review flag for two other " +
-      "situations — so whether an abstention also carries the flag is left to the model's discretion, " +
-      "and the two models differ (and " + esc(D.judges[D.judges.length - 1].model) +
-      " is inconsistent with itself). Every abstained row is listed here either way; only the " +
-      '"flagged" count is affected. Fixing the wording is a one-line prompt change and a re-run.</p>';
+      (j.confidently_wrong ? "silent errors" : "none — no silent errors") + "</span></span></div>";
     if (flagged.length === 0) {
       document.getElementById("queue").innerHTML =
         '<p class="empty">Nothing flagged and nothing wrong in this batch.</p>';
       return;
     }
     document.getElementById("queue").innerHTML =
-      "<table><thead><tr><th class='nw'>Page</th><th class='nw'>Status</th>" +
-      "<th class='nw'>Action</th><th>Value kept</th><th>Why a person should look</th>" +
+      "<table><thead><tr><th class='nw'>Page</th><th class='nw'>Why included</th>" +
+      "<th class='nw'>Agent decision</th><th>Value retained</th><th>Explanation</th>" +
       "</tr></thead><tbody>" +
       flagged.map(function (r, i) {
         var why = r.review_reason || r.reason || "";
         return '<tr class="clickable" data-q="' + i + '"><td class="nw">image ' + esc(r.image_id) +
-          "</td><td class='nw'>" + badge(r) + "</td><td class='nw'>" + esc(r.action) +
+          "</td><td class='nw'>" + esc(queueReason(r)) + "</td><td class='nw'>" + esc(r.action) +
           "</td><td><code>" + esc(r.final_value) + "</code></td>" +
-          '<td class="why" title="' + esc(why) + '"><span>' + esc(why) + "</span></td></tr>" +
+          '<td class="why" tabindex="0" data-full-text="' + esc(why) + '"><span>' + esc(why) + "</span></td></tr>" +
           '<tr id="q' + i + '" style="display:none"><td colspan="5"></td></tr>';
       }).join("") + "</tbody></table>" +
       '<p class="footnote">Click a row for the model\'s own reasoning at the moment it decided.</p>';
@@ -546,16 +566,25 @@
     return hit;
   }
 
+  function comparisonHtml(r) {
+    return '<div class="comparison-grid">' +
+      '<div class="comparison-item"><div class="clabel">Ground truth</div><code>' +
+      esc(r.expected_date) + '</code></div>' +
+      '<div class="comparison-item"><div class="clabel">Original model output</div><code>' +
+      esc(r.original_value) + '</code></div>' +
+      '<div class="comparison-item"><div class="clabel">Agent’s final value</div><code>' +
+      esc(r.final_value) + '</code></div></div>';
+  }
+
   function reasoningHtml(r) {
     var s = decisionStep(r);
-    var head = '<div class="trace"><div style="font-size:.82rem;color:var(--text-secondary);margin-bottom:8px">' +
-      "Truth (never shown to the agent): <code>" + esc(r.expected_date) + "</code> · was <code>" +
-      esc(r.original_value) + "</code> · kept <code>" + esc(r.final_value) + "</code> · " + badge(r) + "</div>";
+    var head = '<div class="trace">' + comparisonHtml(r) +
+      '<div style="font-size:.82rem;color:var(--text-secondary);margin-bottom:8px">' + badge(r) + "</div>";
     if (!s) return head + '<p class="empty">No reasoning recorded for this run.</p></div>';
     var body = "";
     if (s.thinking_api) {
       body += '<div class="think"><div class="tlabel">Model reasoning at the deciding step</div>' +
-        esc(clip(String(s.thinking_api), 1800)) + "</div>";
+        esc(String(s.thinking_api)) + "</div>";
     }
     (s.tool_calls || []).forEach(function (tc) {
       body += '<div class="call" style="margin-top:6px"><code><strong>' + esc(tc.name) + "</strong>(" +
@@ -566,8 +595,8 @@
 
   function traceHtml(r) {
     if (!r.trace || !r.trace.length) return '<p class="empty">No step trace recorded.</p>';
-    var out = ['<div class="trace"><div style="font-size:.82rem;color:var(--text-secondary);margin-bottom:8px">' +
-      "Truth (never shown to the agent): <code>" + esc(r.expected_date) + "</code> · " +
+    var out = ['<div class="trace">' + comparisonHtml(r) +
+      '<div style="font-size:.82rem;color:var(--text-secondary);margin-bottom:8px">' +
       esc(r.path.join(" → ")) + " · " + badge(r) + "</div>"];
     r.trace.forEach(function (s) {
       out.push('<div class="step"><div class="hdr">step ' + esc(s.step) +
@@ -578,11 +607,9 @@
         out.push('<div class="call"><code><strong>' + esc(tc.name) + "</strong>(" +
           esc(clip(String(tc.arguments || ""), 260)) + ")</code></div>");
       });
-      // The model's own reasoning, when the provider returns it. Cut on a word boundary
-      // with an ellipsis — a mid-word chop reads like a rendering fault.
       if (s.thinking_api) {
         out.push('<div class="think"><div class="tlabel">Model reasoning</div>' +
-          esc(clip(String(s.thinking_api), 1500)) + "</div>");
+          esc(String(s.thinking_api)) + "</div>");
       }
       if (s.visible) out.push('<div class="said">' + esc(clip(String(s.visible), 500)) + "</div>");
       out.push("</div>");
@@ -595,7 +622,7 @@
     // two belong together anyway ("wrong, not flagged" is one fact, not two).
     var html = ["<table><thead><tr><th class='nw'>Page</th><th class='nw'>Model under test</th>" +
       "<th class='nw'>Kind of row</th><th class='nw'>Result</th>" +
-      "<th>Was</th><th>Now</th><th class='num nw'>Steps</th><th class='num nw'>Seconds</th>" +
+      "<th>Original</th><th>Agent final</th><th class='num nw'>Steps</th><th class='num nw'>Seconds</th>" +
       "<th class='num nw'>Tokens</th><th class='num nw'>Cost</th></tr></thead><tbody>"];
     j.rows.forEach(function (r, i) {
       var o = META[r.display_outcome];
@@ -627,16 +654,22 @@
   }
 
   function renderProvenance(j) {
+    var priceSource = D.pricing && D.pricing.source_url;
+    var priceBasis = D.pricing && D.pricing.basis;
     document.getElementById("provenance").innerHTML =
       "<h3 style='margin-top:2px'>Where the figures come from</h3>" +
       "<ul style='margin:0 0 12px;padding-left:20px;color:var(--text-secondary);font-size:.87rem'>" +
       "<li>" + j.n + " answers, each reviewed once by <strong>" + esc(j.model) +
-      "</strong> using the prompt above, at code version <code>" + esc(D.git_commit) + "</code> on " +
-      esc(D.generated_at) + ". Every judge shown in the switcher ran the same answers.</li>" +
-      "<li>Checked against a known-correct date the agent never saw, comparing the DAY named rather " +
-      "than the text, so '2014-08-09' and 'August 9 2014' count as the same answer.</li>" +
+      "</strong> using the prompt above. Every judge shown in the switcher ran the same answers.</li>" +
+      "<li>Scoring compared calendar days against a known-correct date that was never available to " +
+      "the agent. Equivalent formats such as <code>2014-08-09</code> and <code>August 9 2014</code> " +
+      "therefore count as the same date.</li>" +
       "<li>Every row was verified to have inputs the model read correctly — judging a derivation " +
-      "only makes sense on sound inputs.</li></ul>" +
+      "only makes sense on sound inputs.</li>" +
+      "<li>Displayed costs are the estimates stored with these historical runs; updating the backend " +
+      "price configuration does not rewrite them." +
+      (priceSource ? " Future estimates use <a href='" + esc(priceSource) + "'>" +
+        esc(priceBasis || "the configured rate source") + "</a>." : "") + "</li></ul>" +
       "<h3 style='margin-top:2px'>What this does not show</h3>" +
       "<ul style='margin:0;padding-left:20px;color:var(--text-secondary);font-size:.87rem'>" +
       "<li><strong>The wrong answer is a limit of the rule, not a slip.</strong> Two of the 35 pages " +
@@ -647,7 +680,8 @@
       "right is a judgment call, not a measurement.</li>" +
       "<li><strong>One prompt, " + j.n + " rows per model.</strong> Enough to choose a default, not " +
       "to settle which model is better at harder judging.</li>" +
-      "<li><strong>Costs use published list prices</strong> from the backend config, not an invoice.</li></ul>";
+      "<li><strong>Cost figures are estimates, not invoices.</strong> Provider billing, cached tokens, " +
+      "and discounts can make an invoice differ.</li></ul>";
   }
 
   function select(model) {
@@ -675,6 +709,14 @@
   // ── delegated hover: works for bars rendered at any point ───────────────
   var tip = document.getElementById("tip");
   document.addEventListener("mousemove", function (e) {
+    var full = e.target.closest && e.target.closest("[data-full-text]");
+    if (full) {
+      tip.textContent = full.dataset.fullText;
+      tip.style.opacity = 1;
+      tip.style.left = Math.min(e.clientX + 14, window.innerWidth - 280) + "px";
+      tip.style.top = Math.min(e.clientY + 16, window.innerHeight - 120) + "px";
+      return;
+    }
     var seg = e.target.closest && e.target.closest("span.seg");
     if (!seg) { tip.style.opacity = 0; return; }
     var j = judgeOf(seg.dataset.j);
@@ -687,6 +729,18 @@
     tip.style.opacity = 1;
     tip.style.left = Math.min(e.clientX + 14, window.innerWidth - 270) + "px";
     tip.style.top = (e.clientY + 16) + "px";
+  });
+  document.addEventListener("focusin", function (e) {
+    var full = e.target.closest && e.target.closest("[data-full-text]");
+    if (!full) return;
+    var box = full.getBoundingClientRect();
+    tip.textContent = full.dataset.fullText;
+    tip.style.opacity = 1;
+    tip.style.left = Math.min(box.left, window.innerWidth - 280) + "px";
+    tip.style.top = Math.min(box.bottom + 8, window.innerHeight - 120) + "px";
+  });
+  document.addEventListener("focusout", function (e) {
+    if (e.target.closest && e.target.closest("[data-full-text]")) tip.style.opacity = 0;
   });
 
   // ── theme toggle: dark steps are selected, not an automatic flip ─────────

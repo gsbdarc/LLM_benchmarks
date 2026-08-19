@@ -2,13 +2,19 @@
   "framework": "openai",
   "base_url": "https://aiapi-prod.stanford.edu/v1",
   "api_key_env": "STANFORD_API_KEY",
+  "pricing": {
+    "basis": "Stanford AI API Gateway rates",
+    "source_url": "https://uit.stanford.edu/service/ai-api-gateway/rates",
+    "verified_at": "2026-08-18"
+  },
   "models": {
     "1": {
       "model": "gpt-5-mini",
       "label": "gpt-5-mini",
       "completion_kwargs": { "temperature": 0},
-      "input_price": 0.25,
-      "output_price": 2
+      "input_price": 0.125,
+      "output_price": 1,
+      "_price_note": "Stanford rate is 50% off the vendor's 0.25/2 standard price."
     },
     "2": {
       "model": "DeepSeek-V3.2",
@@ -21,8 +27,9 @@
       "model": "claude-sonnet-4-6",
       "label": "claude-sonnet-4-6",
       "completion_kwargs": { "temperature": 0 },
-      "input_price": 3,
-      "output_price": 15
+      "input_price": 1.5,
+      "output_price": 7.5,
+      "_price_note": "Stanford rate is 50% off the vendor's 3/15 standard price."
     },
     "4": {
       "model": "gemini-2.5-pro",
@@ -34,7 +41,7 @@
       },
       "input_price": 2.5,
       "output_price": 15,
-      "_price_note": "2.5/15 matches inputs/models.json. Google's published STANDARD rate is 1.25/10, rising to 2.5/15 only above ~200k-token prompts; ours peak at 4.6k. If 1.25/10 is what Stanford bills, every cost here is ~45% lower — confirm before quoting."
+      "_price_note": "Stanford publishes 2.5/15 for Gemini 2.5 Pro."
     },
     "5": {
       "model": "gemini-2.5-flash",

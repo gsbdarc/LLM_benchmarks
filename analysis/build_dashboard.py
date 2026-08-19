@@ -63,28 +63,28 @@ RUN_COLUMNS = [
 ]
 
 # Static definitions surfaced in the dashboard glossary panel.
-GLOSSARY = [
-    {"term": "save_success", "def": "Fraction of runs where the agent successfully wrote its evaluation via save_evaluation."},
-    {"term": "score_consistent", "def": "The composite score the agent SAVED matches the score recomputed from the tool's own sub-scores (integrity check)."},
-    {"term": "Metric identified — selection_accuracy", "def": "Did the agent route the field to the CORRECT composite type-tool, graded against the gold field_type — from the agent's SAVED declaration (what it says it did, per field)."},
-    {"term": "Optimal route — routing_path_correct", "def": "Did the agent take the correct tool-call PATH (what it actually did): exactly one get_task_output, the SUCCESSFUL metric calls exactly equal the expected set (one correct type-tool per field, any order), and exactly one successful save_evaluation. Stricter, behavior-based complement to Metric identified; routing_path_reason gives the failure detail."},
-    {"term": "Misrouted (paths table)", "def": "Runs on this path that declared the WRONG scoring method (selection_accuracy = 0, graded against the gold field_type). A measured failure."},
-    {"term": "Unscored (paths table)", "def": "Runs on this path with NO gradeable verdict (selection_accuracy is null) — usually the agent never called save_evaluation, but a run can also save successfully and still be ungradeable when no saved field matches gold_metrics.csv. Counted separately from Misrouted so 'never measured' is never displayed as 'no errors'."},
-    {"term": "evaluate_raw_string", "def": "Composite tool for free-form prose fields. Scores with word-IoU."},
-    {"term": "evaluate_extracted_string", "def": "Composite tool for a single extracted value that may be absent. null_accuracy × max(levenshtein, char_f1)."},
-    {"term": "evaluate_list", "def": "Composite tool for set/sequence fields. max(set_f1, sequence_lcs, set_inclusion)."},
-    {"term": "llm_time_total", "def": "Sum of the agent's LLM request round-trips (model/service latency). For remote endpoints (playground) it includes network + shared-API queueing, so read it as SERVICE latency, not pure inference; only local models approximate inference time."},
-    {"term": "overhead_time", "def": "wall_time_total − llm_time_total ≈ tool-execution + agent-loop time. The MCP tool server is local for all backends, so this is backend-independent."},
-    {"term": "wall_time_total", "def": "End-to-end agent time = llm_time_total + overhead_time (excludes the GPU-metrics scrapes, which are timed outside it)."},
-    {"term": "total_tokens", "def": "prompt + completion tokens summed across ALL agent steps. Each step re-sends the growing conversation as its prompt, so this is ~95% prompt tokens and far larger than tokens_per_sec × time (which reconstructs only generated tokens)."},
-    {"term": "total_dollar_cost", "def": "USD to run THIS judge on this eval = prompt_tokens×input_price + completion_tokens×output_price (per-model prices in backends/*.json, USD per 1M tokens). Input-token-dominated (context re-sent each step). Local judges = $0; null when a model is unpriced."},
-    {"term": "tokens_per_sec", "def": "completion (generated) tokens per second of llm_time — generation throughput. Excludes prompt tokens, so tokens_per_sec × llm_time ≈ completion tokens, NOT total_tokens."},
-    {"term": "steps", "def": "Number of agent turns (tool-call rounds) taken to finish a task."},
-    {"term": "stopped_reason", "def": "Why the agent loop ended: answered, max_steps, or error."},
-    {"term": "prompt", "def": "The AGENT's system+user prompt (versioned by prompt_name) — NOT the original benchmark prompt given to the model under test."},
-    {"term": "framework", "def": "Serving engine behind the model endpoint (vllm, nim, ollama, openai). Determines whether concurrent requests batch."},
-    {"term": "gpu_type", "def": "GPU model of the server hosting the model under test (from nvidia-smi on the server host)."},
-]
+GLOSSARY = sorted([
+    {"id": "evaluate-extracted-string", "term": "evaluate_extracted_string", "def": "Checks one short answer, such as a date or newspaper name. It gives some credit when the wording is close and correctly handles answers that are missing."},
+    {"id": "evaluate-list", "term": "evaluate_list", "def": "Checks an answer that contains several items. It looks at which items are present and whether they are in the expected order."},
+    {"id": "evaluate-raw-string", "term": "evaluate_raw_string", "def": "Checks a longer written answer by comparing its words with the words in the expected answer."},
+    {"id": "framework", "term": "framework", "def": "The software or online service that runs the model doing the review."},
+    {"id": "gpu-type", "term": "gpu_type", "def": "The kind of graphics processor used to run a model on our own computers. Online model services do not share this information."},
+    {"id": "llm-time-total", "term": "llm_time_total", "def": "The total time spent waiting for the reviewing model to answer. For an online service, this also includes network delays and time spent waiting in the service's queue."},
+    {"id": "metric-identified", "term": "Metric identified — selection_accuracy", "def": "Whether the agent said it chose the right way to check each answer."},
+    {"id": "misrouted", "term": "Misrouted (paths table)", "def": "Runs where the agent chose the wrong way to check an answer. These are confirmed mistakes, not missing results."},
+    {"id": "optimal-route", "term": "Optimal route — routing_path_correct", "def": "Whether the agent followed the entire correct process: load the answer once, check every part in the right way, and save the result once."},
+    {"id": "overhead-time", "term": "overhead_time", "def": "Time spent running the agent and its checking tools, apart from time spent waiting for model replies."},
+    {"id": "prompt", "term": "prompt", "def": "The instructions given to the agent doing the review. They are different from the instructions originally given to the model whose answer is being checked."},
+    {"id": "save-success", "term": "save_success", "def": "The percentage of runs in which the agent successfully recorded its final result."},
+    {"id": "score-consistent", "term": "score_consistent", "def": "Whether the final score the agent recorded agrees with the detailed scores produced during the same run."},
+    {"id": "steps", "term": "steps", "def": "The number of times the agent asked the model what to do next before the task ended."},
+    {"id": "stopped-reason", "term": "stopped_reason", "def": "Why the run ended: the agent finished, reached the allowed number of steps, or encountered a problem."},
+    {"id": "total-dollar-cost", "term": "total_dollar_cost", "def": "The estimated cost in US dollars recorded when this run happened. Models run on our own computers cost $0 here; runs without a known price are shown as unpriced."},
+    {"id": "total-tokens", "term": "total_tokens", "def": "The total amount of text the reviewing model read and wrote across all steps. A token is a small piece of a word or sentence."},
+    {"id": "tokens-per-sec", "term": "tokens_per_sec", "def": "How quickly the reviewing model wrote its answer, measured in small pieces of text per second. It does not count the text the model read."},
+    {"id": "unscored", "term": "Unscored (paths table)", "def": "Runs for which no final result could be checked, usually because the agent did not save one or the saved answer could not be matched to the expected task."},
+    {"id": "wall-time-total", "term": "wall_time_total", "def": "The total time from the beginning to the end of a run, including model response time and work done by the agent's tools."},
+], key=lambda item: item["term"].casefold())
 
 
 def _present_columns(con: Any) -> set[str]:
@@ -251,6 +251,33 @@ def _version_dates(commits: set[str | None]) -> dict[str, str]:
     return out
 
 
+def _version_metadata(commits: set[str | None]) -> dict[str, dict[str, Any]]:
+    """Reader-facing labels for stored code versions, without losing the raw key."""
+    dates = _version_dates(commits)
+    out: dict[str, dict[str, Any]] = {}
+    for commit in commits:
+        if not commit:
+            continue
+        dirty = commit.endswith("-dirty")
+        clean = commit[:-6] if dirty else commit
+        short = clean[:7]
+        date = dates.get(commit)
+        if date:
+            pretty = datetime.strptime(date, "%Y-%m-%d").strftime("%b %d, %Y").replace(" 0", " ")
+            label = f"{pretty} · code {short}"
+        else:
+            label = f"Code {short}"
+        if dirty:
+            label += " · modified"
+        out[commit] = {
+            "short_sha": short,
+            "commit_date": date,
+            "dirty": dirty,
+            "label": label,
+        }
+    return out
+
+
 def build_snapshot(
     base_dir: str | Path | None = None, summarizer_backend: str = "summarizer",
     summarize: bool = True, top_n: int = 6, cache_path: str | Path = DEFAULT_CACHE,
@@ -285,6 +312,8 @@ def build_snapshot(
         "path_summaries": path_summaries,
         "type_tools": TYPE_TOOLS,
         "version_dates": _version_dates({r.get("git_commit") for r in runs}),
+        "version_metadata": _version_metadata({r.get("git_commit") for r in runs}),
+        "pricing": config.BACKENDS.get("playground", {}).get("pricing", {}),
     }
 
 

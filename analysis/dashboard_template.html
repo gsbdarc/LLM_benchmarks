@@ -62,12 +62,12 @@
     border-radius: 10px; padding: 8px 10px; background: #fcfcfd;
   }
   .agentviz .account-item label { cursor: pointer; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .agentviz .summary-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+  .agentviz .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
   .agentviz .summary-card {
     border: 1px solid var(--border); border-radius: 14px; padding: 16px;
     background: linear-gradient(180deg, #fff, #fbfbfc); min-width: 0; overflow: hidden;
   }
-  .agentviz .summary-card .label { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .agentviz .summary-card .label { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; overflow-wrap: anywhere; }
   .agentviz .summary-card .value { margin-top: 8px; font-size: clamp(1.2rem, 2.4vw, 1.7rem); font-weight: 700; }
   .agentviz .chart-frame { width: 100%; overflow-x: auto; }
   .agentviz svg.chart { width: 100%; height: auto; display: block; }
@@ -94,6 +94,10 @@
   .agentviz .scroll-table { max-height: 460px; overflow: auto; border: 1px solid var(--border); border-radius: 12px; }
   .agentviz .scroll-table table { table-layout: auto; }
   .agentviz .scroll-table thead th { position: sticky; top: 0; background: #fff; z-index: 1; }
+  .agentviz .wide-table { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
+  .agentviz .wide-table table { min-width: 1280px; table-layout: auto; }
+  .agentviz .wide-table th { white-space: nowrap; }
+  .agentviz .run-table table { min-width: 1680px; }
   .agentviz .glossary { display: grid; gap: 10px; }
   .agentviz .glossary dt { font-weight: 600; font-size: 0.9rem; }
   .agentviz .glossary dd { margin: 2px 0 0; color: var(--muted); font-size: 0.86rem; }
@@ -104,13 +108,32 @@
   .agentviz .route-bad { color: var(--brand); font-weight: 600; }
   .agentviz .route-warn { color: #b45309; font-weight: 600; }
   .agentviz .path-note { color: var(--muted); font-size: 0.84rem; margin: 2px 0 0; }
+  .agentviz .section-toggle {
+    display: flex; align-items: baseline; gap: 12px; cursor: pointer; list-style: none;
+  }
+  .agentviz .section-toggle::-webkit-details-marker { display: none; }
+  .agentviz .section-toggle h2 { flex: 1; margin: 0; }
+  .agentviz .section-toggle::after {
+    content: "▾"; color: var(--muted); font-size: 1rem; transition: transform 120ms ease;
+  }
+  .agentviz .section-details:not([open]) > .section-toggle::after { transform: rotate(-90deg); }
+  .agentviz .section-details[open] > .section-toggle { margin-bottom: 14px; }
+  .agentviz .section-content { min-width: 0; }
+  .agentviz abbr { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
+  .agentviz .glossary-term { display: inline-block; cursor: help; }
+  .agentviz .definition-tooltip {
+    position: fixed; z-index: 20; max-width: min(360px, calc(100vw - 24px));
+    padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px;
+    background: #1f2937; color: #fff; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    font-size: 0.82rem; font-weight: 400; line-height: 1.35; text-align: left;
+    text-transform: none; letter-spacing: normal; white-space: normal;
+    opacity: 0; pointer-events: none; transition: opacity 0.08s;
+  }
   @media (min-width: 900px) {
     .agentviz .layout { grid-template-columns: minmax(240px, 280px) minmax(0, 1fr); }
   }
   @media (max-width: 899px) { .agentviz .sticky-stack { position: static; } }
-  @media (max-width: 960px) {
-    .agentviz .summary-grid { grid-template-columns: repeat(2, 1fr); }
-  }
+  @media (max-width: 520px) { .agentviz .summary-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -126,80 +149,116 @@
     <aside class="sidebar">
       <div class="sticky-stack">
         <section class="card">
-          <h2>Filters</h2>
-          <div class="control-label">Models</div>
-          <div class="toolbar" style="margin-bottom:8px;">
-            <button type="button" id="allModels">All</button>
-            <button type="button" id="noModels">Clear</button>
-          </div>
-          <div class="account-list" id="modelList"></div>
-          <div class="control-label" style="margin-top:14px;">Prompts</div>
-          <div class="account-list" id="promptList"></div>
-          <div class="control-label" style="margin-top:14px;">Version</div>
-          <div class="account-list" id="versionList"></div>
-          <div class="control-label" style="margin-top:14px;">Benchmarks</div>
-          <div class="account-list" id="benchmarkList"></div>
-          <div class="control-label" style="margin-top:14px;">Framework</div>
-          <div class="account-list" id="frameworkList"></div>
-          <div class="control-label" style="margin-top:14px;">GPU type</div>
-          <div class="account-list" id="gpuList"></div>
+          <details class="section-details" open>
+            <summary class="section-toggle"><h2>Filters</h2></summary>
+            <div class="section-content">
+              <div class="control-label">Models</div>
+              <div class="toolbar" style="margin-bottom:8px;">
+                <button type="button" id="allModels">All</button>
+                <button type="button" id="noModels">Clear</button>
+              </div>
+              <div class="account-list" id="modelList"></div>
+              <div class="control-label" style="margin-top:14px;">Prompts</div>
+              <div class="account-list" id="promptList"></div>
+              <div class="control-label" style="margin-top:14px;">Version</div>
+              <div class="account-list" id="versionList"></div>
+              <div class="control-label" style="margin-top:14px;">Benchmarks</div>
+              <div class="account-list" id="benchmarkList"></div>
+              <div class="control-label" style="margin-top:14px;">Framework</div>
+              <div class="account-list" id="frameworkList"></div>
+              <div class="control-label" style="margin-top:14px;">GPU type</div>
+              <div class="account-list" id="gpuList"></div>
+            </div>
+          </details>
         </section>
       </div>
     </aside>
 
     <main class="main">
       <section class="card">
-        <h2>Summary <span class="helper" id="summaryScope"></span></h2>
-        <div class="summary-grid" id="summaryGrid"></div>
+        <details class="section-details" open>
+          <summary class="section-toggle"><h2>Summary <span class="helper" id="summaryScope"></span></h2></summary>
+          <div class="section-content"><div class="summary-grid" id="summaryGrid"></div></div>
+        </details>
       </section>
 
       <section class="card">
-        <div class="control-label">Group by</div>
-        <div class="pill-row" id="groupControls"></div>
-        <div class="control-label">Metric (average per group)</div>
-        <div class="pill-row" id="metricControls"></div>
-        <div class="chart-frame" id="groupChartWrap"></div>
+        <details class="section-details" open>
+          <summary class="section-toggle"><h2>Group comparison</h2></summary>
+          <div class="section-content">
+            <div class="control-label">Group by</div>
+            <div class="pill-row" id="groupControls"></div>
+            <div class="control-label">Metric (average per group)</div>
+            <div class="pill-row" id="metricControls"></div>
+            <div class="chart-frame" id="groupChartWrap"></div>
+          </div>
+        </details>
       </section>
 
       <section class="card">
-        <h2>Group breakdown</h2>
-        <div id="groupTableWrap"></div>
+        <details class="section-details" open>
+          <summary class="section-toggle"><h2>Group breakdown</h2></summary>
+          <div class="section-content">
+            <div class="helper" style="margin-bottom:10px;">Costs are historical estimates stored with each run. “Unpriced” means no configured rate was available; “Partial” means the total excludes one or more unpriced runs.</div>
+            <div class="wide-table" id="groupTableWrap"></div>
+          </div>
+        </details>
       </section>
 
       <section class="card">
-        <h2>Tool-call paths &amp; routing</h2>
-        <div class="helper" style="margin-bottom:10px;">With 3 composite type-tools the path collapses to <code>get_task_output → evaluate_&lt;type&gt; → save_evaluation</code>. A field routed to the wrong type-tool (chosen ≠ gold) shows as a <span class="route-bad">divergent path</span>. <span class="route-warn">Unscored</span> runs produced no gradeable verdict at all (usually they never saved) — they are NOT clean routes.</div>
-        <div class="chart-frame" id="flowChartWrap"></div>
-        <h3 style="margin-top:16px;">Top paths <span class="helper">(routing summary)</span></h3>
-        <div id="pathTableWrap"></div>
+        <details class="section-details" open>
+          <summary class="section-toggle"><h2>Tool-call paths &amp; routing</h2></summary>
+          <div class="section-content">
+            <div class="helper" style="margin-bottom:10px;">With 3 composite type-tools the path collapses to <code>get_task_output → evaluate_&lt;type&gt; → save_evaluation</code>. A field routed to the wrong type-tool (chosen ≠ gold) shows as a <span class="route-bad">divergent path</span>. <span class="route-warn">Unscored</span> runs produced no gradeable verdict at all (usually they never saved) — they are NOT clean routes.</div>
+            <div class="helper" style="margin-bottom:10px;">Line width shows run count; hover for the exact number. Tool labels are shortened visually; focus or hover a node for its full name.</div>
+            <div class="chart-frame" id="flowChartWrap"></div>
+            <h3 style="margin-top:16px;">Top paths <span class="helper">(routing summary)</span></h3>
+            <div class="helper" style="margin-bottom:8px;"><span class="route-ok">✓ Clean</span> · <span class="route-bad">✗ Misrouted</span> · <span class="route-warn">⌀ Unscored</span></div>
+            <div id="pathTableWrap"></div>
+          </div>
+        </details>
       </section>
 
       <section class="card">
-        <h2>Infra comparison <span class="helper">concurrency × framework × GPU</span></h2>
-        <div class="helper" style="margin-bottom:10px;">Throughput and GPU pressure by serving framework, GPU type, and concurrency. Batching engines (vLLM/NIM) raise <code>requests_running</code> under load; Ollama serializes unless <code>OLLAMA_NUM_PARALLEL</code> is set.</div>
-        <div class="scroll-table" id="concTableWrap"></div>
+        <details class="section-details" open>
+          <summary class="section-toggle"><h2>Infra comparison <span class="helper">concurrency × framework × GPU</span></h2></summary>
+          <div class="section-content">
+            <div class="helper" style="margin-bottom:10px;">Throughput and GPU pressure by serving framework, GPU type, and concurrency. Batching engines (vLLM/NIM) raise <code>requests_running</code> under load; Ollama serializes unless <code>OLLAMA_NUM_PARALLEL</code> is set.</div>
+            <div class="scroll-table" id="concTableWrap"></div>
+          </div>
+        </details>
       </section>
 
       <section class="card">
-        <h2>Agent prompts <span class="helper" id="promptScope"></span></h2>
-        <div class="helper" style="margin-bottom:10px;">The agent's system + user prompt, by prompt version present in the selection. This is the <em>agent</em> prompt, not the benchmark prompt.</div>
-        <div id="promptWrap"></div>
+        <details class="section-details" open>
+          <summary class="section-toggle"><h2>Agent prompts <span class="helper" id="promptScope"></span></h2></summary>
+          <div class="section-content">
+            <div class="helper" style="margin-bottom:10px;">The agent's system + user prompt, by prompt version present in the selection. This is the <em>agent</em> prompt, not the benchmark prompt.</div>
+            <div id="promptWrap"></div>
+          </div>
+        </details>
       </section>
 
       <section class="card">
-        <h2>Individual runs</h2>
-        <input class="table-filter" type="search" id="runFilter" placeholder="Filter by task, model, or prompt">
-        <div class="scroll-table" id="runTableWrap"></div>
+        <details class="section-details" open>
+          <summary class="section-toggle"><h2>Individual runs</h2></summary>
+          <div class="section-content">
+            <input class="table-filter" type="search" id="runFilter" placeholder="Filter by task, model, or prompt">
+            <div class="scroll-table run-table" id="runTableWrap"></div>
+          </div>
+        </details>
       </section>
 
       <section class="card">
-        <h2>Glossary</h2>
-        <div class="helper" style="margin-bottom:10px;">What the agent-facing terms mean.</div>
-        <dl class="glossary" id="glossaryWrap"></dl>
+        <details class="section-details">
+          <summary class="section-toggle"><h2>Glossary</h2></summary>
+          <div class="section-content"><dl class="glossary" id="glossaryWrap"></dl></div>
+        </details>
       </section>
     </main>
   </div>
 </div>
+<div class="definition-tooltip" id="definitionTooltip" role="tooltip"></div>
 </div>
 
 <script id="agentviz-data" type="application/json">__AGENTVIZ_DATA__</script>
@@ -261,7 +320,11 @@
   var allGpus = uniq("gpu_type");
   var allVersions = uniq("git_commit");
   var versionDates = snapshot.version_dates || {};
-  function versionLabel(v) { var d = versionDates[v]; return d ? v + " · " + d : v; }
+  var versionMetadata = snapshot.version_metadata || {};
+  function versionLabel(v) {
+    var meta = versionMetadata[v], d = versionDates[v];
+    return meta && meta.label ? meta.label : (d ? v + " · " + d : v);
+  }
 
   function parseSeq(r) {
     if (Array.isArray(r.__seq)) return r.__seq;
@@ -305,7 +368,16 @@
   function intFmt(v) { return v == null ? "-" : Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 }); }
   function num1(v) { return v == null ? "-" : Number(v).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
   function pct(v) { return v == null ? "-" : (Number(v) * 100).toFixed(0) + "%"; }
-  function usd(v) { return v == null ? "-" : "$" + Number(v).toFixed(4); }
+  function usd(v) { return v == null ? "Unpriced" : "$" + Number(v).toFixed(4); }
+  function costLabel(v, unpriced) {
+    if (v == null) return "Unpriced";
+    return (unpriced ? "Partial " : "") + usd(v);
+  }
+  function isRemote(framework) { return String(framework || "").toLowerCase() === "openai"; }
+  function telemetry(v, remote, formatter) {
+    if (v != null && !isNaN(v)) return formatter(v);
+    return remote ? "N/A — remote API" : "Missing telemetry";
+  }
 
   function avg(list, key) {
     var sum = 0, n = 0;
@@ -373,6 +445,7 @@
       var row = { group: k, n_runs: g.length };
       METRICS.forEach(function (m) { row[m.key] = avg(g, m.key); });
       row.total_cost = sum(g, "total_dollar_cost");
+      row.unpriced_count = g.filter(function (r) { return r.total_dollar_cost == null; }).length;
       row.save_success = rate(g, "save_success");
       row.score_consistent = rate(g, "score_consistent");
       return row;
@@ -406,7 +479,12 @@
   function renderBars(wrapId, rows, valueKey, formatter) {
     var wrap = document.getElementById(wrapId);
     rows = rows.filter(function (r) { return r[valueKey] != null; });
-    if (!rows.length) { wrap.innerHTML = '<div class="empty">No data for this selection.</div>'; return; }
+    if (!rows.length) {
+      wrap.innerHTML = '<div class="empty">' +
+        (valueKey === "total_dollar_cost" ? "Unpriced — no cost rate is available for this selection." : "No data for this selection.") +
+        "</div>";
+      return;
+    }
     rows = rows.slice().sort(function (a, b) { return b[valueKey] - a[valueKey]; });
     var width = Math.max(360, Math.round(wrap.getBoundingClientRect().width) || 700);
     var rowH = 32, top = 10;
@@ -416,14 +494,19 @@
     var height = top * 2 + rows.length * rowH;
     var inner = Math.max(120, width - left - right);
     var maxV = Math.max.apply(null, rows.map(function (r) { return r[valueKey]; })) || 1;
+    function displayValue(r) {
+      return valueKey === "total_dollar_cost"
+        ? costLabel(r[valueKey], r.unpriced_count)
+        : formatter(r[valueKey]);
+    }
     var svg = ['<svg class="chart" viewBox="0 0 ' + width + " " + height + '">'];
     rows.forEach(function (r, i) {
       var y = top + i * rowH;
       var bw = r[valueKey] / maxV * inner;
       svg.push('<text x="' + (left - 8) + '" y="' + (y + 18) + '" text-anchor="end" font-size="12" fill="#374151">' + escapeXml(clip(r.group, 38)) + "</text>");
       svg.push('<rect x="' + left + '" y="' + y + '" width="' + inner + '" height="18" rx="6" fill="#eef2f7"/>');
-      svg.push('<rect x="' + left + '" y="' + y + '" width="' + bw.toFixed(1) + '" height="18" rx="6" fill="' + COLORS[i % COLORS.length] + '"><title>' + escapeXml(r.group) + ": " + formatter(r[valueKey]) + '</title></rect>');
-      svg.push('<text x="' + (left + inner + 6) + '" y="' + (y + 14) + '" font-size="11" fill="#6b7280">' + formatter(r[valueKey]) + "</text>");
+      svg.push('<rect x="' + left + '" y="' + y + '" width="' + bw.toFixed(1) + '" height="18" rx="6" fill="' + COLORS[i % COLORS.length] + '"><title>' + escapeXml(r.group) + ": " + displayValue(r) + '</title></rect>');
+      svg.push('<text x="' + (left + inner + 6) + '" y="' + (y + 14) + '" font-size="11" fill="#6b7280">' + displayValue(r) + "</text>");
     });
     svg.push("</svg>");
     wrap.innerHTML = svg.join("");
@@ -431,6 +514,43 @@
 
   function clip(s, n) { return s.length <= n ? s : s.slice(0, n - 1) + "…"; }
   function escapeXml(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  var glossaryById = {};
+  (snapshot.glossary || []).forEach(function (item) { glossaryById[item.id] = item; });
+  function glossaryLink(label, id) {
+    var item = glossaryById[id];
+    if (!item) return escapeXml(label);
+    return '<span class="glossary-term" tabindex="0" data-definition="' +
+      escapeXml(item.def) + '" aria-describedby="definitionTooltip"><abbr>' +
+      escapeXml(label) + '</abbr></span>';
+  }
+
+  var definitionTooltip = document.getElementById("definitionTooltip");
+  function positionDefinitionTooltip(x, y) {
+    var left = Math.min(x + 12, window.innerWidth - definitionTooltip.offsetWidth - 12);
+    var top = Math.min(y + 16, window.innerHeight - definitionTooltip.offsetHeight - 12);
+    definitionTooltip.style.left = Math.max(12, left) + "px";
+    definitionTooltip.style.top = Math.max(12, top) + "px";
+  }
+  function showDefinitionTooltip(term, x, y) {
+    definitionTooltip.textContent = term.dataset.definition;
+    definitionTooltip.style.opacity = 1;
+    positionDefinitionTooltip(x, y);
+  }
+  function hideDefinitionTooltip() { definitionTooltip.style.opacity = 0; }
+  document.addEventListener("mousemove", function (event) {
+    var term = event.target.closest && event.target.closest(".glossary-term");
+    if (!term) { hideDefinitionTooltip(); return; }
+    showDefinitionTooltip(term, event.clientX, event.clientY);
+  });
+  document.addEventListener("focusin", function (event) {
+    var term = event.target.closest && event.target.closest(".glossary-term");
+    if (!term) return;
+    var box = term.getBoundingClientRect();
+    showDefinitionTooltip(term, box.left, box.bottom);
+  });
+  document.addEventListener("focusout", function (event) {
+    if (event.target.closest && event.target.closest(".glossary-term")) hideDefinitionTooltip();
+  });
 
   // ── renderers ──
   function renderMeta() {
@@ -438,7 +558,12 @@
     var gen = snapshot.generated_at ? new Date(snapshot.generated_at).toLocaleString() : "unknown";
     chips.innerHTML = '<span class="chip">Generated ' + gen + '</span>' +
       '<span class="chip">' + snapshot.n_runs + ' total runs</span>' +
-      '<span class="chip">' + allModels.length + ' models · ' + allPrompts.length + ' prompts</span>';
+      '<span class="chip">' + allModels.length + ' models · ' + allPrompts.length + ' prompts</span>' +
+      (snapshot.pricing && snapshot.pricing.source_url
+        ? '<span class="chip">Future price config: <a href="' + escapeXml(snapshot.pricing.source_url) +
+          '">' + escapeXml(snapshot.pricing.basis || "rate source") + '</a> · verified ' +
+          escapeXml(snapshot.pricing.verified_at || "unknown") + '</span>'
+        : "");
   }
 
   function renderFilters() {
@@ -504,11 +629,11 @@
       { label: "Runs", value: intFmt(list.length) },
       { label: "Avg tool calls", value: num1(avg(list, "n_tool_calls")) },
       { label: "Avg total tokens", value: intFmt(avg(list, "total_tokens")) },
-      { label: "Avg LLM s", value: num1(avg(list, "llm_time_total")) },
-      { label: "Avg overhead s", value: num1(avg(list, "overhead_time")) },
-      { label: "Save success", value: pct(rate(list, "save_success")) },
-      { label: "Metric identified", value: pct(avg(list, "selection_accuracy")) },
-      { label: "Optimal route", value: pct(rate(list, "routing_path_correct")) }
+      { label: glossaryLink("Average LLM time (s)", "llm-time-total"), value: num1(avg(list, "llm_time_total")) },
+      { label: glossaryLink("Average overhead time (s)", "overhead-time"), value: num1(avg(list, "overhead_time")) },
+      { label: glossaryLink("Save success", "save-success"), value: pct(rate(list, "save_success")) },
+      { label: glossaryLink("Metric identified", "metric-identified"), value: pct(avg(list, "selection_accuracy")) },
+      { label: glossaryLink("Optimal route", "optimal-route"), value: pct(rate(list, "routing_path_correct")) }
     ];
     document.getElementById("summaryGrid").innerHTML = cards.map(function (c) {
       return '<div class="summary-card"><div class="label">' + c.label + '</div><div class="value">' + c.value + "</div></div>";
@@ -524,23 +649,23 @@
       header("Tool calls", "n_tool_calls", "group", st, true),
       header("Metric calls", "n_metric_calls", "group", st, true),
       header("Total tokens", "total_tokens", "group", st, true),
-      header("Avg $", "total_dollar_cost", "group", st, true),
-      header("Total $", "total_cost", "group", st, true),
-      header("Tokens/sec", "tokens_per_sec", "group", st, true),
-      header("LLM s", "llm_time_total", "group", st, true),
-      header("Ovh s", "overhead_time", "group", st, true),
+      header(glossaryLink("Average cost", "total-dollar-cost"), "total_dollar_cost", "group", st, true),
+      header(glossaryLink("Total cost", "total-dollar-cost"), "total_cost", "group", st, true),
+      header(glossaryLink("Tokens/sec", "tokens-per-sec"), "tokens_per_sec", "group", st, true),
+      header(glossaryLink("LLM time (s)", "llm-time-total"), "llm_time_total", "group", st, true),
+      header(glossaryLink("Overhead time (s)", "overhead-time"), "overhead_time", "group", st, true),
       header("Steps", "steps", "group", st, true),
-      header("Metric identified", "selection_accuracy", "group", st, true),
-      header("Optimal route", "routing_path_correct", "group", st, true),
-      header("Save %", "save_success", "group", st, true),
+      header(glossaryLink("Metric identified", "metric-identified"), "selection_accuracy", "group", st, true),
+      header(glossaryLink("Optimal route", "optimal-route"), "routing_path_correct", "group", st, true),
+      header("Save success", "save_success", "group", st, true),
       "</tr></thead><tbody>"];
     sorted.forEach(function (r) {
       html.push("<tr><td>" + escapeXml(r.group) + "</td><td class='num'>" + r.n_runs +
         "</td><td class='num'>" + num1(r.n_tool_calls) +
         "</td><td class='num'>" + num1(r.n_metric_calls) +
         "</td><td class='num'>" + intFmt(r.total_tokens) +
-        "</td><td class='num'>" + usd(r.total_dollar_cost) +
-        "</td><td class='num'>" + usd(r.total_cost) +
+        "</td><td class='num'>" + costLabel(r.total_dollar_cost, r.unpriced_count) +
+        "</td><td class='num'>" + costLabel(r.total_cost, r.unpriced_count) +
         "</td><td class='num'>" + num1(r.tokens_per_sec) +
         "</td><td class='num'>" + num1(r.llm_time_total) +
         "</td><td class='num'>" + num1(r.overhead_time) +
@@ -569,14 +694,15 @@
     });
     var html = ["<table><thead><tr><th>Framework</th><th>GPU type</th><th class='num'>Conc</th><th class='num'>n</th><th class='num'>Avg tokens/sec</th><th class='num'>Avg wall s</th><th class='num'>Avg requests running</th><th class='num'>Avg GPU cache</th></tr></thead><tbody>"];
     keys.forEach(function (k) {
-      var grp = groups[k], g = grp.rows;
-      html.push("<tr><td>" + escapeXml(grp.fw) + "</td><td>" + escapeXml(clip(grp.gpu, 26)) +
+      var grp = groups[k], g = grp.rows, remote = isRemote(grp.fw);
+      var gpuLabel = grp.gpu === "(none)" ? (remote ? "N/A — remote API" : "Missing telemetry") : clip(grp.gpu, 26);
+      html.push("<tr><td>" + escapeXml(grp.fw) + "</td><td>" + escapeXml(gpuLabel) +
         "</td><td class='num'>" + grp.conc +
         "</td><td class='num'>" + g.length +
-        "</td><td class='num'>" + num1(avg(g, "tokens_per_sec")) +
-        "</td><td class='num'>" + num1(avg(g, "wall_time_total")) +
-        "</td><td class='num'>" + num1(avg(g, "requests_running_end")) +
-        "</td><td class='num'>" + (avg(g, "gpu_cache_usage_end") == null ? "-" : pct(avg(g, "gpu_cache_usage_end"))) + "</td></tr>");
+        "</td><td class='num'>" + telemetry(avg(g, "tokens_per_sec"), remote, num1) +
+        "</td><td class='num'>" + telemetry(avg(g, "wall_time_total"), false, num1) +
+        "</td><td class='num'>" + telemetry(avg(g, "requests_running_end"), remote, num1) +
+        "</td><td class='num'>" + telemetry(avg(g, "gpu_cache_usage_end"), remote, pct) + "</td></tr>");
     });
     if (!keys.length) html.push("<tr><td colspan='8' class='helper'>No runs.</td></tr>");
     html.push("</tbody></table>");
@@ -644,7 +770,6 @@
       var x1 = a.rightX, y1 = a.cy, x2 = b.leftX, y2 = b.cy, mx = (x1 + x2) / 2;
       svg.push('<path d="M' + x1 + "," + y1 + " C" + mx + "," + y1 + " " + mx + "," + y2 + " " + x2 + "," + y2 +
         '" fill="none" stroke="' + color + '" stroke-width="' + strokeW(count).toFixed(2) + '" stroke-opacity="0.45"><title>' + count + ' run(s)</title></path>');
-      svg.push('<text x="' + mx.toFixed(1) + '" y="' + ((y1 + y2) / 2 - 2).toFixed(1) + '" font-size="14" fill="#6b7280" text-anchor="middle">' + count + "</text>");
     }
     Object.keys(startEdges).forEach(function (t) { edge(pos["0|__start"], pos["1|" + t], startEdges[t], "#8c1515"); });
     Object.keys(midEdges).forEach(function (k) {
@@ -659,8 +784,10 @@
         var term = n.key === "__start" || n.key === "__end";
         var fill = n.key === "__start" ? "#15803d" : n.key === "__end" ? "#b45309" : "#ffffff";
         var tcol = term ? "#fff" : "#1f2937";
+        svg.push('<g tabindex="0" aria-label="Full tool name: ' + escapeXml(n.label) + '"><title>Full tool name: ' + escapeXml(n.label) + '</title>');
         svg.push('<rect x="' + pp.x + '" y="' + pp.y + '" width="' + nodeW + '" height="' + nodeH + '" rx="6" fill="' + fill + '" stroke="' + (term ? fill : "#d7d9df") + '"/>');
         svg.push('<text x="' + (pp.x + nodeW / 2) + '" y="' + (pp.y + nodeH / 2 + 6) + '" font-size="17" text-anchor="middle" fill="' + tcol + '">' + escapeXml(clip(n.label, 20)) + "</text>");
+        svg.push("</g>");
       });
     });
     svg.push("</svg>");
@@ -732,22 +859,25 @@
       "<th>Trace</th></tr></thead><tbody>"];
     sorted.slice(0, 500).forEach(function (r) {
       var trace = r.weave_trace_url ? '<a href="' + escapeXml(r.weave_trace_url) + '" target="_blank">Weave ↗</a>' : "-";
-      var route = r.selection_accuracy == null ? "-" :
+      var route = r.selection_accuracy == null ? "<span class='route-warn'>⌀ Unscored</span>" :
         (r.selection_accuracy >= 1 ? "<span class='route-ok'>✓</span>" : "<span class='route-bad'>✗</span>");
-      var routePath = r.routing_path_correct == null ? "-" :
+      var routePath = r.routing_path_correct == null ? "<span class='route-warn'>⌀ Unscored</span>" :
         (r.routing_path_correct ? "<span class='route-ok'>✓</span>" : "<span class='route-bad'>✗</span>");
+      var rawVersion = r.git_commit == null ? "-" : String(r.git_commit);
+      var remote = isRemote(r.framework);
+      var gpu = r.gpu_type == null ? (remote ? "N/A — remote API" : "Missing telemetry") : clip(String(r.gpu_type), 22);
       html.push("<tr><td>" + escapeXml(String(r.task_id)) + "</td><td>" + escapeXml(String(r.model)) +
         "</td><td>" + escapeXml(String(r.prompt_name)) +
-        "</td><td>" + escapeXml(r.git_commit == null ? "-" : String(r.git_commit)) +
+        "</td><td title='" + escapeXml(rawVersion) + "'>" + escapeXml(versionLabel(rawVersion)) +
         "</td><td>" + escapeXml(r.framework == null ? "-" : String(r.framework)) +
-        "</td><td>" + escapeXml(r.gpu_type == null ? "-" : clip(String(r.gpu_type), 22)) +
+        "</td><td>" + escapeXml(gpu) +
         "</td><td class='num'>" + (r.concurrency == null ? "-" : r.concurrency) +
         "</td><td class='num'>" + (r.temperature == null ? "-" : num1(r.temperature)) +
         "</td><td class='num'>" + intFmt(r.steps) +
         "</td><td class='num'>" + intFmt(r.n_tool_calls) +
         "</td><td class='num'>" + intFmt(r.total_tokens) +
-        "</td><td class='num'>" + num1(r.tokens_per_sec) +
-        "</td><td class='num'>" + (r.save_success ? "✓" : "✗") +
+        "</td><td class='num'>" + telemetry(r.tokens_per_sec, remote, num1) +
+        "</td><td class='num'>" + (r.save_success == null ? "⌀ Unscored" : (r.save_success ? "✓" : "✗")) +
         "</td><td class='num'>" + route +
         "</td><td class='num'>" + routePath +
         "</td><td>" + trace + "</td></tr>");
@@ -797,7 +927,8 @@
     var wrap = document.getElementById("glossaryWrap");
     if (!items.length) { wrap.innerHTML = '<div class="empty">No glossary embedded.</div>'; return; }
     wrap.innerHTML = items.map(function (it) {
-      return "<dt>" + escapeXml(it.term) + "</dt><dd>" + escapeXml(it.def) + "</dd>";
+      return '<dt id="glossary-' + escapeXml(it.id) + '">' + escapeXml(it.term) +
+        "</dt><dd>" + escapeXml(it.def) + "</dd>";
     }).join("");
   }
 
