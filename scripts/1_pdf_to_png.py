@@ -5,22 +5,8 @@
 
 import os
 from pdf2image import convert_from_path
-from PIL import Image
+from dotenv import load_dotenv
 from pathlib import Path
-
-# Inputs
-
-# Load environment variables from .env file
-project_root = Path(__file__).resolve().parents[1]
-load_dotenv(project_root/".env")
-BASE_DIR = os.getenv("BASE_DIR")
-
-# where pdfs are located
-
-image_index_path = os.path.join(BASE_DIR, "inputs", "data", "pdfs")
-
-# where new pngs should be saved
-output_dir = os.path.join(BASE_DIR, "inputs", "data", "pngs")
 
 # Functions
 
@@ -48,10 +34,23 @@ def pdf_to_bw_png(pdf_path: str, output_dir: str, dpi: int = 300) -> None:
         print("Warning: file exceeds 5 MBs")
 
 
-def main() -> None:
+def main(base_dir: str | Path | None = None) -> None:
     """
-    Converts and saves all pdfs within the image_dir to png.
+    Converts and saves all PDFs in the configured input directory to PNG.
     """
+    if base_dir is None:
+        project_root = Path(__file__).resolve().parents[1]
+        load_dotenv(project_root / ".env")
+        configured_base_dir = os.getenv("BASE_DIR")
+        if not configured_base_dir:
+            raise RuntimeError(
+                "BASE_DIR is not configured; set it in the repository .env"
+            )
+        base_dir = configured_base_dir
+
+    image_dir = Path(base_dir) / "inputs" / "data" / "pdfs"
+    output_dir = Path(base_dir) / "inputs" / "data" / "pngs"
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     for pdf_path in image_dir.iterdir():
         if pdf_path.suffix.lower() == ".pdf":

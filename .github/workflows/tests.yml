@@ -1,0 +1,38 @@
+name: tests
+
+# Run the agent_eval unit tests on every push and pull request. The suite is
+# fully offline (EVAL_DISABLE_WEAVE=1 makes the weave decorator a no-op; no Mongo,
+# GPU, or API keys are touched), so CI needs no secrets.
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # Python 3.10 is the one supported YENs runtime.
+          python-version: "3.10"
+          cache: pip               # caches wheels keyed on requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Check Python environment
+        run: python scripts/check_setup.py python
+
+      - name: Run agent_eval tests
+        env:
+          EVAL_DISABLE_WEAVE: "1"
+        # cd into agent_eval so pytest picks up agent_eval/pytest.ini
+        # (testpaths=tests, asyncio_mode=auto); conftest puts the repo root on
+        # sys.path so `import agent_eval` and `scripts/evaluator.py` resolve.
+        run: |
+          cd agent_eval
+          python -m pytest

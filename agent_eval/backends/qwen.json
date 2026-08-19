@@ -1,0 +1,16 @@
+{
+  "framework": "vllm",
+  "base_url": "$LOCAL_MODEL_URL",
+  "models": {
+    "1": {
+      "model": "Qwen/Qwen3.6-35B-A3B",
+      "label": "Qwen3.6-35B-A3B",
+      "completion_kwargs": {
+        "temperature": 0,
+        "parallel_tool_calls": false
+      },
+      "input_price": 0,
+      "output_price": 0
+    }
+  }
+}

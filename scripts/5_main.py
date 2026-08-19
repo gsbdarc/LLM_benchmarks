@@ -8,6 +8,8 @@
 
 # Load Python packages and modules
 
+import argparse
+
 from dotenv import load_dotenv
 from PIL import Image
 import os
@@ -23,12 +25,6 @@ import sys
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from datetime import datetime
-
-# Task selection from slurm array
-#task_selection = sys.argv[1]
-# cast to int so we can use this to index mapping.csv
-#task_selection = int(task_selection)
-task_selection = 3930
 
 # Load environment variables from .env file
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -52,11 +48,23 @@ uri = (
     f"mongodb://{username}:{password}@{','.join(hosts)}/"
     f"?tls=true&replicaSet={setName}&authSource=admin&retryWrites=true&w=majority&appName=DARC-Data"
 )
-client = MongoClient(uri, server_api=ServerApi('1'))
-db = client["usf-internship"]
-collection = db["llm_outputs"]
-
 # Helper Functions
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run one inference mapping task.")
+    parser.add_argument(
+        "task_id",
+        type=int,
+        help="task_id from inputs/mapping.csv (normally SLURM_ARRAY_TASK_ID)",
+    )
+    return parser.parse_args(argv)
+
+
+def get_output_collection():
+    client = MongoClient(uri, server_api=ServerApi('1'))
+    return client["usf-internship"]["llm_outputs"]
+
 
 def check_task_mongo(collection, task_id: str, run_id: int) -> bool:
     """Check if tasks already exists in Mongo. If the task does exist, check if the status key has a value of processed."""
@@ -256,7 +264,7 @@ def write_results_mongo(collection, task_id: str, result: dict, run_id: int) -> 
     )
 
 
-def main():
+def main(task_selection: int):
     """Load a task from the mapping, process it through the LLM pipeline, and save results."""
 
     run_number = 1  # future iteration: add this as a slurm script variable, have a default
@@ -273,6 +281,8 @@ def main():
 
     if selected_task.empty:
         sys.exit(0)  # if the task_id is not in mapping then exit the program
+
+    collection = get_output_collection()
 
     results_json = os.path.join(
         BASE_DIR,
@@ -317,4 +327,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    main(args.task_id)

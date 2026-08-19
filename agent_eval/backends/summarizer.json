@@ -1,0 +1,18 @@
+{
+  "framework": "nim",
+  "base_url": "http://yen-gpu4:8000/v1",
+  "models": {
+    "1": {
+      "model": "google/gemma-4-31b-it",
+      "completion_kwargs": {
+        "max_tokens": 200,
+        "temperature": 0.2,
+        "extra_body": {
+          "chat_template_kwargs": { "enable_thinking": false }
+        }
+      },
+      "input_price": 0,
+      "output_price": 0
+    }
+  }
+}

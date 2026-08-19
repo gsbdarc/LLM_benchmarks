@@ -2,7 +2,30 @@ __pycache__/
 logs/
 snapshots/
 venv/
+.venv/
 inputs/data/
 *.swp
 .ipynb_checkpoints/
 outputs/
+
+# Secrets — never commit
+.env
+
+# Python build/test artifacts
+*.pyc
+.pytest_cache/
+
+# Stray backups + job logs
+.gitignore.save*
+*.out
+*.log
+
+# Generated eval-run registry (produced by agent_eval.registry.create_eval_mapping)
+inputs/eval_mapping.csv
+inputs/eval_mapping_sample.csv
+
+# Generated (data-laden) result pages — the tracked *_template.html files are the
+# data-free shells (tokenviz hygiene). Rebuild with `python -m analysis.build_dashboard`
+# / `build_date_fix_demo`, or just serve them (`serve_dashboard` / `serve_demo`).
+images/agent_dashboard_*.html
+images/date_fix_demo*.html

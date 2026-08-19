@@ -2,6 +2,8 @@
 
 > Stanford's AI Playground allows researchers and staff access to almost 20 LLMs via their API. How do users determine which model is best suited for their needs? We built a pipeline that delivers a clear ranking of how different models perform on a set of benchmarks related to processing table based images.
 
+> **This repo has two pipelines** that share one `.env`, `inputs/`, and a MongoDB backend: (1) the **inference pipeline** (`scripts/`) documented below, which runs LLMs over images and writes their outputs to Mongo; and (2) the **agentic metric-eval** (`agent_eval/` + `analysis/`), which *judges* those outputs — see [Agentic Metric-Eval & Dashboard](#agentic-metric-eval--dashboard). The agentic work is the current active development (branch `mcp-metric-calc`).
+
 ---
 
 ## Table of Contents
@@ -9,6 +11,8 @@
 - [Context](#context)
 - [Pipeline Overview](#pipeline-overview)
 - [Try It Yourself](#try_it_yourself)
+- [Agentic Metric-Eval & Dashboard](#agentic-metric-eval--dashboard)
+- [Date-Fix Demo](#date-fix-demo)
 - [Findings](#findings)
 - [Next Steps](#next-steps)
 
@@ -52,7 +56,7 @@ We designed the pipeline to be modular so that changes to inputs (models, images
 
 ## Try It Yourself
 
-If you're interested in reproducing this worflow, or customizing it for your specfic benchmarks, you can follow the below steps.
+If you're interested in reproducing this workflow, or customizing it for your specific benchmarks, you can follow the below steps.
 
 ### Clone the Repository
 
@@ -61,34 +65,72 @@ git clone https://github.com/gsbdarc/LLM_benchmarks
 cd LLM_benchmarks
 ```
 
-### Create and Activate a Virtual Environment (YENs)
+### Create and Activate a Virtual Environment
+
+One repo-local Python 3.10 `.venv/` serves both pipelines and is gitignored. From the repository
+root:
 
 ```bash
-/usr/bin/python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+python3.10 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
-### Create and Activate a Virtual Environment (Sherlock)
+If an existing environment uses the wrong Python version or has dependency problems, deactivate it,
+delete `.venv`, and recreate it with the commands above.
 
-Request compute resources (normal, dev, or gsb) to create a venv.
+### Understand Dependencies
 
-```
-salloc -p normal -t 1:00:00 -c 1
+- `requirements.in` is the short, human-maintained list of packages this repository directly uses.
+- `requirements.txt` is the generated lock. It pins direct and indirect packages to exact versions
+  so different branches and machines install the same environment.
 
-module load python/3.12
-/usr/bin/python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
+Install dependencies from `requirements.txt`.
+
+### MongoDB
+
+MongoDB gives parallel inference jobs one shared place to store results.
+
+- **Shared storage:** SLURM workers do not need to coordinate local result files.
+- **Safe reruns:** Stable IDs and upserts let completed tasks be skipped and repeated writes update
+  existing records.
+- **Flexible records:** Document fields can vary as benchmark outputs and metadata evolve.
+- **Downstream reuse:** Evaluation tools and live dashboards read the same central data.
+
+MongoDB collections do not enforce one rigid schema. The table below lists the stable identity and
+payload fields used by the current pipelines, rather than every optional field a document may hold.
+
+| Collection | Purpose | Representative stable fields |
+|---|---|---|
+| `benchmarks` | Benchmark definitions and expected-output mappings | `_id`, `task_name`, `schema`, `ground_truth` |
+| `ground_truths` | Human-extracted expected values for each image | `_id`, `image_id`, benchmark-specific expected fields |
+| `llm_outputs` | Model outputs produced by upstream inference | `_id`, `task_id`, `run_id`, `benchmark_id`, `model_id`, `image_id`, `output`, `status` |
+| `evaluations` | Scores from the deterministic evaluation pipeline | `task_id`, `benchmark_id`, `model_id`, `field_details`, `weighted_score` |
+| `agentic_evaluations` | Versioned per-field verdicts from metric-eval agents | `eval_id`, `git_commit`, source identifiers, `field_evaluations` |
+| `agentic_corrections` | Versioned date-repair decisions | `eval_id`, `git_commit`, `action`, `original_value`, `final_value`, review fields |
+| `agentic_runs` | Judge configuration, performance, cost, routing, and trace metadata | `eval_id`, `git_commit`, judge configuration, run metrics, outcome fields |
+
+The current implementation targets the `usf-internship` database in the DARC Atlas deployment.
+Replication therefore requires network access plus `MONGO_DB_USERNAME` and `MONGO_DB_PASSWORD`.
+
+### Tracing
+
+Weave/W&B tracing is optional. Set `WANDB_API_KEY`, or disable tracing with `--no-weave` or
+`EVAL_DISABLE_WEAVE=1` as appropriate.
 
 ### Environment Variables
 
-Create a `.env` file in the project root with:
+See [`.env.example`](.env.example) for the complete template. For example:
 
 ```text
+BASE_DIR=/path/to/LLM_benchmarks
 STANFORD_API_KEY=your_key_here
+MONGO_DB_USERNAME=your_username
+MONGO_DB_PASSWORD=your_password
 ```
+
+Do not commit `.env` or paste credential values into logs or issues.
 
 > ⚠️ Note: as models get added & removed from the Stanford AI API you will need to submit a ticket to update your API key.
 
@@ -145,7 +187,7 @@ Scripts should be run in the order that they are numbered.
 #### `1_pdf_to_png.py`
 
 - Before running: upload PDFs to `LLM_Benchmarks/inputs/data/pdfs/`
-- Converts PDFS into grayscale PNGs, saves files to `LLM_Benchmarks/iputs/data/pngs/`.
+- Converts PDFS into grayscale PNGs, saves files to `LLM_Benchmarks/inputs/data/pngs/`.
 - Prints PNG paths and file sizes in MBs.
 
 #### `2_make_index.py`
@@ -200,11 +242,12 @@ day_of_week = csv_df['Day'][0]
 }
 ```
 
-Depending on whether you're working in YENs or Sherlock edit the appropriate SLURM script and run the array job.
+On YENs, edit `yens.slurm` for the desired array job. It activates the repo-local `.venv/` (one level
+up), so submit it from the `scripts/` directory.
 
 Example:
 ```bash
-sbatch sherlock.slurm
+cd scripts && sbatch yens.slurm
 ```
 
 #### `6_combine_check_results.py`
@@ -217,6 +260,68 @@ sbatch sherlock.slurm
 - Loads combined_results.json and filters for tasks that have been processed.
 - Evaluates model outputs compared to ground truth, assigns a accuracy score based on exact matching.
 - Saves results as a `LLM_Benchmarks/outputs/results/metrics/metrics.json`
+
+---
+
+## Agentic Metric-Eval & Dashboard
+
+The scoring step above (`7_compute.py`, deterministic exact-match) has been reimagined as an **agent**. Instead of code picking a metric per field, an **MCP agent** — an LLM "judge" — reads each field's predicted-vs-expected values (the `llm_outputs` written by `5_main.py`) from Mongo, infers the data shape, routes it to the right composite scoring tool over MCP, and saves a verdict; results feed a live dashboard. We measure how well it routes plus performance/cost. This is the **current active work** (branch `mcp-metric-calc`) and lives in `agent_eval/` + `analysis/`.
+
+It reuses the same `.venv`, `.env`, and Mongo as above. Quickstart (**from the repo root**):
+
+```bash
+source .venv/bin/activate
+cd agent_eval && EVAL_DISABLE_WEAVE=1 python -m pytest ; cd ..        # tests (offline)
+python -m agent_eval.registry.create_eval_mapping --sample 100        # build a work sample
+sbatch agent_eval/scripts/run_eval_batch.slurm                        # run a batch (starts its own MCP server + fans out)
+python -m analysis.serve_dashboard                                    # live dashboard @ http://127.0.0.1:8787
+#   or a static file:  python -m analysis.build_dashboard --no-summaries --open
+```
+
+The harness runs **two tasks** on this same machinery — the metric-eval above, and a date-repair task
+covered in [Date-Fix Demo](#date-fix-demo) below.
+
+- **Design + module layout:** [`agent_eval/README.md`](agent_eval/README.md)
+- **Live status / roadmap:** [`NEXT_STEPS.md`](NEXT_STEPS.md)
+- **For AI coding agents:** [`CLAUDE.md`](CLAUDE.md) and the `agentic-eval` skill in [`.claude/skills/`](.claude/skills/) orient an agent automatically.
+
+---
+
+## Date-Fix Demo
+
+The same harness runs a **second task**, and it's the easiest one to see the point of. A TV guide
+covers one particular day — but that date is *not printed on the page*. It has to be derived from two
+things that are: the date the newspaper was published, and which day of the week the guide is for.
+The models above extracted all three values independently, so the derived `tv_guide_date` is often
+inconsistent with the other two.
+
+So we pointed an agent at it. For each case it loads the model's three answers, derives the correct
+date with a tool, and records one decision — **corrected**, **confirmed**, or **abstained** (some
+guides span several days, so no single date is right, and inventing one would be worse than saying
+so). It never sees the ground truth; that's held back and used only to grade it afterwards.
+
+The demo page reports what each judge fixed, what it left alone, what it handed back to a human, what
+it cost, and the step-by-step trace behind every row.
+
+### See it
+
+```bash
+source .venv/bin/activate
+python -m analysis.serve_demo        # prints the URL and the exact `ssh -L` line to reach it
+```
+
+The server binds localhost on the Yens node, so forward the port from your laptop — the command
+prints the line to copy, and VS Code's **Ports** panel does the same thing automatically. Reading
+the page needs Mongo credentials (`MONGO_DB_USERNAME` / `MONGO_DB_PASSWORD` in `.env`) and at least
+one date-fix batch already run; with no runs the page tells you so rather than erroring.
+
+For a self-contained file you can email or open from disk instead:
+
+```bash
+python -m analysis.build_date_fix_demo        # -> images/date_fix_demo.html
+```
+
+To run the task from scratch, see [`agent_eval/README.md`](agent_eval/README.md#two-tasks-on-one-harness).
 
 ---
 
@@ -256,7 +361,7 @@ Looking at model accuracy alongside total token cost showed that even though o1 
 
 ![model_cost](./images/token_cost.png)
 
-Double clicking into metadata extraction benchmarks Newspaper Name and Newspaper Date found similar results could be produced for varying costs. Claude-3-haiku models returned Newspaper Name and Newspaper Datejust as accurately as gemini-2.5-pro (100%) but only cost $0.06 or 1/24 as much. Similarly gemini-2.0-flash-lite-001 got Newspaper Date correct 100% of the time but only cost $0.03 vs $1.49 for gemini-2.5-pro. 
+Double clicking into metadata extraction benchmarks Newspaper Name and Newspaper Date found similar results could be produced for varying costs. Claude-3-haiku models returned Newspaper Name and Newspaper Date just as accurately as gemini-2.5-pro (100%) but only cost $0.06 or 1/24 as much. Similarly gemini-2.0-flash-lite-001 got Newspaper Date correct 100% of the time but only cost $0.03 vs $1.49 for gemini-2.5-pro. 
 
 ### Limitations
 
@@ -268,8 +373,8 @@ Changes to avaiable models are not always consistently announced and often requi
 
 ## Next Steps
 
-In order to create a more robust pipeline that delivers a comprehensive assessment of LLM capabilities we're planning on implementing the following:
+Current development is the **agentic metric-eval** (branch `mcp-metric-calc`). Live detail + runbook in [`NEXT_STEPS.md`](NEXT_STEPS.md); the headline threads:
 
-- [] Add external models to the pipeline
-- [] Modify pipeline to evaluate effectiveness of OCR + LLM data extraction with a variety of OCRs (Textract, LLAMA Index, etc.) 
-
+- **Prompt A/B:** `composite_v2` was measured against `composite_v1` — it's leaner (fewer redundant tool calls, lower cost) but less reliable at finishing the save on weaker models. A `v2.1` that restores a "you're not done until you save" nudge is the next prompt iteration.
+- **Local judge:** add a local **Qwen-3.6-35B** vLLM judge (2× A40) as a 4th judge alongside the hosted Playground models (scaffolding built; needs a GPU allocation to run).
+- **Reliability:** harden malformed tool-call handling (a bad tool-call JSON currently poisons the conversation and hard-fails the run) and enforce valid tool JSON via constrained decoding on the local judge.

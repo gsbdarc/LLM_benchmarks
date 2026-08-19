@@ -12,9 +12,10 @@
 # remove all prior venvs
 module purge
 
-# load python and project venv
+# load python + the repo-local .venv (submit from the scripts/ dir → repo root is one level up).
+# Sherlock is a separate filesystem from the Yens, so build its own .venv there — same convention.
 module load python/3.12
-source /home/groups/fmcnich/darc/ltdarc/LLM_benchmarks/venv/bin/activate
+source ../.venv/bin/activate
 
 # Run python script
 #for offset in $(seq 0 1000 2000)

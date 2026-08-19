@@ -1,0 +1,8 @@
+benchmark_id,benchmark_name,field_name,field_type,gold_metric,all_metrics
+5,first_channel,first_channel,raw_string,word_iou,word_iou
+6,first_channel_2,first_channel_2,raw_string,word_iou,word_iou
+7,first_channel_3,first_channel_raw,raw_string,word_iou,word_iou
+7,first_channel_3,first_channel_name,extracted_string,null_accuracy,"null_accuracy, levenshtein, char_f1"
+7,first_channel_3,first_channel_numbers,list,set_f1,"set_f1, sequence_lcs"
+10,first_program_4,first_program_trailing,extracted_string,null_accuracy,"null_accuracy, levenshtein, char_f1"
+11,all_channels_1,all_channels,list,set_f1,"set_f1, sequence_lcs, set_inclusion"

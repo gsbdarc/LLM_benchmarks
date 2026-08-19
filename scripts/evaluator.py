@@ -319,6 +319,112 @@ METRIC_REGISTRY = {
     "sequence_lcs": sequence_lcs,
     "set_inclusion": set_inclusion,
 }
+
+
+# ---------------------------------------------------------------------------
+#  Per-type composite scoring (single source of truth)
+#
+#  Each composite bundles the per-type metrics and applies the same formula
+#  used historically inside ``evaluate_task``. Both the deterministic pipeline
+#  (``evaluate_task`` -> ``scripts/6b_mongo_eval.py``) and the agentic MCP
+#  type-tools (``mcp/metric_server.py``) call these, so the agent and the
+#  baseline produce identical composites by construction.
+#
+#  Return shape:
+#      {
+#        "composite_score": float,          # the per-type composite
+#        "components": {<metric>: value},   # all sub-scores that fed it
+#        "field_type": "raw_string" | "extracted_string" | "list",
+#      }
+# ---------------------------------------------------------------------------
+
+def composite_raw_string(predicted: Any, expected: Any) -> dict:
+    """raw_string composite: word IoU is the sole signal."""
+    components = word_iou(predicted, expected)
+    return {
+        "composite_score": float(components.get("word_iou", 0.0)),
+        "components": components,
+        "field_type": "raw_string",
+    }
+
+
+def composite_extracted_string(predicted: Any, expected: Any) -> dict:
+    """extracted_string composite: null_accuracy gates the content score.
+
+    If presence detection is wrong the content score is irrelevant; if it is
+    right, use the better of levenshtein_similarity / char_f1.
+    """
+    components: dict = {}
+    components.update(null_accuracy(predicted, expected))
+    components.update(levenshtein_similarity(predicted, expected))
+    components.update(char_f1(predicted, expected))
+    null_score = components.get("null_accuracy", 0.0)
+    content_score = max(
+        components.get("levenshtein_similarity", 0.0),
+        components.get("char_f1", 0.0),
+    )
+    return {
+        "composite_score": float(null_score * content_score),
+        "components": components,
+        "field_type": "extracted_string",
+    }
+
+
+def composite_list(predicted: Any, expected: Any) -> dict:
+    """list composite: best of set_f1 / sequence_lcs / set_inclusion."""
+    components: dict = {}
+    components.update(set_f1(predicted, expected))
+    components.update(sequence_lcs(predicted, expected))
+    components.update(set_inclusion(predicted, expected))
+    composite = max(
+        components.get("set_f1", 0.0),
+        components.get("sequence_lcs", 0.0),
+        components.get("set_inclusion", 0.0),
+    )
+    return {
+        "composite_score": float(composite),
+        "components": components,
+        "field_type": "list",
+    }
+
+
+COMPOSITE_BY_TYPE = {
+    "raw_string": composite_raw_string,
+    "extracted_string": composite_extracted_string,
+    "list": composite_list,
+}
+
+
+def evaluate_field_composite(
+    field_type: str,
+    predicted: Any,
+    expected: Any,
+    fallback_metrics: list | None = None,
+) -> dict:
+    """Dispatch to the correct per-type composite.
+
+    Unknown ``field_type`` falls back to the first declared metric (matching the
+    legacy behavior in ``evaluate_task``).
+    """
+    fn = COMPOSITE_BY_TYPE.get(field_type)
+    if fn is not None:
+        return fn(predicted, expected)
+
+    components: dict = {}
+    composite: Any = 0.0
+    if fallback_metrics:
+        primary = fallback_metrics[0]
+        mfn = METRIC_REGISTRY.get(primary)
+        if mfn is not None:
+            components.update(mfn(predicted, expected))
+            composite = components.get(primary, 0.0)
+    if isinstance(composite, dict):  # metric returned an error payload
+        composite = 0.0
+    return {
+        "composite_score": float(composite),
+        "components": components,
+        "field_type": field_type,
+    }
  
  
 # ---------------------------------------------------------------------------
@@ -387,7 +493,8 @@ def evaluate_task(
         predicted = model_output.get(output_field)
         expected = _resolve_gt_value(ground_truth_doc, gt_field_path)
  
-        # Compute each metric for this field
+        # Compute each declared metric for this field (kept for the per-field
+        # `scores` detail that downstream consumers read).
         scores = {}
         for metric_name in metrics:
             fn = METRIC_REGISTRY.get(metric_name)
@@ -395,42 +502,16 @@ def evaluate_task(
                 scores[metric_name] = {"error": f"Unknown metric: {metric_name}"}
                 continue
             scores.update(fn(predicted, expected))
- 
-        # Compute composite score for the weighted aggregate based on field type.
+
+        # Composite score via the shared per-type helper — the single source of
+        # truth also used by the agentic MCP type-tools, so the deterministic
+        # baseline and the agent produce identical composites by construction.
         field_type = field_def.get("type", "raw_string")
- 
-        if field_type == "raw_string":
-            # Word IoU is the sole metric — use directly
-            composite_score = scores.get("word_iou", 0.0)
- 
-        elif field_type == "extracted_string":
-            # Composite: null_accuracy gates the content score.
-            # If presence detection is wrong, content score is irrelevant.
-            # If presence detection is right, use the better of levenshtein/char_f1.
-            null_score = scores.get("null_accuracy", 0.0)
-            content_score = max(
-                scores.get("levenshtein_similarity", 0.0),
-                scores.get("char_f1", 0.0),
-            )
-            composite_score = null_score * content_score
- 
-        elif field_type == "list":
-            # Use the better of set_f1 (order-independent) and sequence_lcs (order-dependent)
-            # This rewards models that get items right regardless of order,
-            # while still giving credit for correct ordering via LCS.
-            composite_score = max(
-                scores.get("set_f1", 0.0),
-                scores.get("sequence_lcs", 0.0),
-                scores.get("set_inclusion", 0.0),
-            )
- 
-        else:
-            # Fallback: first metric in the list
-            primary_metric = metrics[0]
-            composite_score = scores.get(primary_metric, 0.0)
- 
-        if isinstance(composite_score, dict):
-            composite_score = 0.0  # error case
+        composite = evaluate_field_composite(field_type, predicted, expected, metrics)
+        composite_score = composite["composite_score"]
+        # Surface any sub-scores the composite computed that weren't declared.
+        for sub_key, sub_val in composite["components"].items():
+            scores.setdefault(sub_key, sub_val)
 
         weighted_composite_score = composite_score * weight
         weighted_sum += composite_score * weight
