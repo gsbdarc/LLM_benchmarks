@@ -51,13 +51,24 @@ def test_date_fix_demo_uses_distinct_decision_and_review_language():
     assert labels["flagged"] == "Abstained — no single date"
 
     html = _template(build_date_fix_demo.TEMPLATE)
-    assert "This demo tests whether an agent can safely repair" in html
-    assert "Agent decision" in html
-    assert "Human-review flag" in html
+    assert "Can an AI reviewer fix a TV guide date without guessing?" in html
     assert "Rows requiring human review" in html
     assert "Why included" in html
     assert "Nothing here is reconstructed" not in html
     assert "Fixing the wording is a one-line prompt change" not in html
+
+
+def test_date_fix_about_card_is_scannable_and_keeps_detail_secondary():
+    html = _template(build_date_fix_demo.TEMPLATE)
+    about = html.split('<section class="card" id="about">', 1)[1].split("</section>", 1)[0]
+    assert 'class="about-grid"' in about
+    assert "What it checks" in about
+    assert "What it can do" in about
+    assert "What matters most" in about
+    assert '<details class="provenance-details">' in about
+    assert about.index("How these results were checked") < about.index('id="provenance"')
+    assert "derived" not in about.casefold()
+    assert "abstention" not in about.casefold()
 
 
 def test_date_fix_demo_prioritizes_context_and_preserves_full_text():
@@ -69,6 +80,53 @@ def test_date_fix_demo_prioritizes_context_and_preserves_full_text():
     assert "Agent’s final value" in html
     assert "data-full-text" in html
     assert "esc(String(s.thinking_api))" in html
+
+
+def test_date_fix_prompt_card_explains_both_instruction_parts_plainly():
+    html = _template(build_date_fix_demo.TEMPLATE)
+    prompt = html.split('<section class="card" id="promptCard">', 1)[1].split("</section>", 1)[0]
+    assert 'class="instruction-grid"' in prompt
+    assert "Same rules for every answer" in prompt
+    assert "One row at a time" in prompt
+    assert "The rules stay the same. The row details change." in prompt
+    assert '<details id="promptBox" class="prompt-details">' in prompt
+    assert '<details id="promptBox" open>' not in prompt
+    assert "See the exact instructions" in prompt
+    assert 'id="promptText" class="prompt-text-grid"' in prompt
+    assert ".prompt-text-grid { display: grid;" in html
+    assert "align-items: start" in html
+    assert "System prompt —" not in html
+    assert "Per-answer" not in html
+
+
+def test_date_fix_section_introductions_use_the_full_card_width():
+    html = _template(build_date_fix_demo.TEMPLATE)
+    assert html.count('class="section-lead"') == 5
+    assert ".section-lead {" in html
+    assert "width: 100%" in html
+    assert "max-width: 76ch" not in html
+    assert "A complete review has three steps" in html
+    assert "silent errors visible" in html
+
+
+def test_date_fix_queue_highlights_wrong_rows_that_requested_review():
+    html = _template(build_date_fix_demo.TEMPLATE)
+    assert ".queue-priority > td" in html
+    assert "queue-priority-image" in html
+    assert 'var priority = r.display_outcome === "wrong" && r.needs_review;' in html
+    assert 'priority ? " queue-priority" : ""' in html
+    assert "⚑ image " in html
+
+
+def test_every_date_fix_card_and_reviewer_filter_are_collapsible():
+    html = _template(build_date_fix_demo.TEMPLATE)
+    card_count = html.count('<section class="card"')
+    assert card_count > 1
+    assert html.count('<details class="section-details"') == card_count
+    assert html.count('<summary class="section-toggle">') == card_count
+    assert '<summary class="section-toggle"><h2>What this tests</h2></summary>' in html
+    assert '<details class="filters filter-details" open>' in html
+    assert '<summary class="filter-toggle">Reviewer filter</summary>' in html
 
 
 def test_metric_dashboard_has_readable_labels_and_missing_data_states():

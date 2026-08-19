@@ -47,9 +47,9 @@
                  color: var(--text-secondary); background: var(--surface-1);
                  border: 1px solid var(--ring); border-radius: 8px; padding: 5px 10px; cursor: pointer; }
   /* One filter row above everything it scopes — never a filter inside a card. */
-  .filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-             margin: 18px 0 16px; padding: 10px 12px; background: var(--surface-1);
+  .filters { margin: 18px 0 16px; padding: 10px 12px; background: var(--surface-1);
              border: 1px solid var(--ring); border-radius: 10px; }
+  .filter-content { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .filters .flabel { color: var(--text-secondary); font-size: 0.84rem; }
   .seg-ctl { display: inline-flex; border: 1px solid var(--ring); border-radius: 8px; overflow: hidden; }
   .seg-ctl button { font: inherit; font-size: 0.85rem; padding: 5px 12px; cursor: pointer;
@@ -62,7 +62,8 @@
           padding: 18px 20px; margin-bottom: 18px; }
   h2 { font-size: 1.02rem; margin: 0 0 3px; }
   h3 { font-size: 0.9rem; margin: 18px 0 3px; }
-  .hint { color: var(--text-secondary); font-size: 0.86rem; margin: 0 0 16px; max-width: 76ch; }
+  .hint, .section-lead { color: var(--text-secondary); font-size: 0.86rem; margin: 0 0 16px; }
+  .section-lead { width: 100%; }
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(156px, 1fr)); gap: 12px; margin-bottom: 18px; }
   .kpi { background: var(--surface-1); border: 1px solid var(--ring); border-radius: 12px;
          padding: 13px 15px; display: flex; flex-direction: column; }
@@ -116,6 +117,10 @@
            border-radius: 999px; border: 1px solid var(--ring); white-space: nowrap; }
   .badge.flag { color: var(--warn-ink); }
   .badge.silent { color: var(--series-4); font-weight: 600; }
+  .queue-priority > td { background: color-mix(in oklab, var(--surface-1) 90%, var(--warn-ink)); }
+  .queue-priority > td:first-child { border-left: 3px solid var(--warn-ink); }
+  .queue-priority-image { display: inline-flex; align-items: center; gap: 4px;
+                          color: var(--warn-ink); font-weight: 750; }
   /* Capped so the trace wraps at a readable width instead of stretching to the row
      list's (wider, horizontally scrolled) table width. */
   .trace { background: var(--plane); border: 1px solid var(--ring); border-radius: 10px;
@@ -138,13 +143,47 @@
          border-radius: 8px; padding: 7px 10px; font-size: 0.82rem; box-shadow: 0 3px 12px rgba(0,0,0,.16);
          z-index: 20; max-width: min(560px, calc(100vw - 24px)); white-space: normal; }
   details summary { cursor: pointer; color: var(--text-secondary); font-size: 0.84rem; }
+  .section-toggle { display: flex; align-items: baseline; gap: 12px; list-style: none;
+                    color: var(--text-primary); font-size: inherit; }
+  .section-toggle::-webkit-details-marker, .filter-toggle::-webkit-details-marker { display: none; }
+  .section-toggle h2 { flex: 1; margin: 0; }
+  .section-toggle::after, .filter-toggle::after {
+    content: "▾"; margin-left: auto; color: var(--text-muted); transition: transform 120ms ease;
+  }
+  .section-details:not([open]) > .section-toggle::after,
+  .filter-details:not([open]) > .filter-toggle::after { transform: rotate(-90deg); }
+  .section-details[open] > .section-toggle { margin-bottom: 14px; }
+  .section-content { min-width: 0; }
+  .filter-toggle { display: flex; align-items: center; gap: 10px; list-style: none;
+                   color: var(--text-secondary); font-size: 0.84rem; font-weight: 600; }
+  .filter-details[open] > .filter-toggle { margin-bottom: 10px; }
   .prompt-block { border: 1px solid var(--ring); border-radius: 10px; background: var(--plane);
                   padding: 10px 12px; margin-top: 10px; }
   .prompt-block .plabel { font-size: 0.78rem; color: var(--text-secondary); font-weight: 600; }
   .prompt-block pre { margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; font-size: 0.8rem;
                       font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text-primary); }
+  .prompt-text-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
+                      gap: 10px; align-items: start; }
+  .prompt-text-grid .prompt-block { margin-top: 0; }
   .footnote { color: var(--text-muted); font-size: 0.8rem; margin-top: 6px; }
   .facet2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 20px; }
+  .about-lead { margin: 5px 0 14px; font-size: 1.08rem; font-weight: 600; letter-spacing: -0.01em; }
+  .about-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .about-point { min-width: 0; padding: 12px 14px; border: 1px solid var(--ring); border-radius: 9px;
+                 background: var(--plane); }
+  .about-point h3 { margin: 0 0 5px; color: var(--text-primary); }
+  .about-point p { margin: 0; color: var(--text-secondary); font-size: 0.86rem; }
+  .provenance-details { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--grid); }
+  .provenance-details[open] > summary { margin-bottom: 10px; }
+  .instruction-lead { margin: 5px 0 14px; color: var(--text-secondary); font-size: 0.9rem; }
+  .instruction-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .instruction-part { min-width: 0; padding: 12px 14px; border: 1px solid var(--ring);
+                      border-radius: 9px; background: var(--plane); }
+  .instruction-part h3 { margin: 0 0 5px; color: var(--text-primary); }
+  .instruction-part p { margin: 0; color: var(--text-secondary); font-size: 0.86rem; }
+  .instruction-note { margin: 10px 0 0; color: var(--text-primary); font-size: 0.84rem; font-weight: 600; }
+  .prompt-details { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--grid); }
+  .prompt-details[open] > summary { margin-bottom: 10px; }
   .comparison-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
                      margin-bottom: 10px; }
   .comparison-item { border: 1px solid var(--ring); border-radius: 7px; padding: 7px 9px;
@@ -156,7 +195,10 @@
   /* The row list carries 10 columns of real data; scroll it rather than truncate values
      or shrink the type. Charts never get a nested scroll — a wide table legitimately does. */
   .tscroll { overflow-x: auto; }
-  @media (max-width: 700px) { .comparison-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 700px) {
+    .about-grid, .instruction-grid, .comparison-grid { grid-template-columns: 1fr; }
+    .prompt-text-grid { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body class="viz-root">
@@ -170,80 +212,130 @@
   </header>
 
   <section class="card" id="about">
-    <h2>What this tests</h2>
-    <p class="hint">This demo tests whether an agent can safely repair an LLM’s derived TV guide
-    date. It receives the source dates and the existing derived value, decides whether one date is
-    supported, and records either a correction or an abstention.</p>
-    <p class="hint"><strong>Agent decision</strong> is the value the agent saved. A
-    <strong>human-review flag</strong> is a separate warning that someone should inspect the row;
-    an answer can be correct and still carry that warning.</p>
-    <div id="provenance"></div>
-  </section>
-
-  <section class="card" id="promptCard">
-    <h2>The instructions the agent was given</h2>
-    <p class="hint">Every run used exactly these words. The prompt is shown up front because it
-    defines what counts as a repair, an abstention, and a human-review flag.</p>
-    <details id="promptBox" open>
-      <summary>Hide the prompt</summary>
-      <div id="promptText"></div>
+    <details class="section-details" open>
+      <summary class="section-toggle"><h2>What this tests</h2></summary>
+      <div class="section-content">
+        <p class="about-lead">Can an AI reviewer fix a TV guide date without guessing?</p>
+        <div class="about-grid">
+          <div class="about-point">
+            <h3>What it checks</h3>
+            <p>The newspaper date, the day of the week, and the date produced by the original model.</p>
+          </div>
+          <div class="about-point">
+            <h3>What it can do</h3>
+            <p>Keep the date, correct it, or say that no single date fits.</p>
+          </div>
+          <div class="about-point">
+            <h3>What matters most</h3>
+            <p>Fix wrong dates without changing dates that were already right. When unsure, send the row to a person.</p>
+          </div>
+        </div>
+        <details class="provenance-details">
+          <summary>How these results were checked</summary>
+          <div id="provenance"></div>
+        </details>
+      </div>
     </details>
   </section>
 
-  <div class="filters">
-    <span class="flabel">Reviewed by</span>
-    <span class="seg-ctl" id="judgePick"></span>
-    <span class="scope" id="scopeNote"></span>
-  </div>
+  <section class="card" id="promptCard">
+    <details class="section-details" open>
+      <summary class="section-toggle"><h2>Instructions given to the reviewer</h2></summary>
+      <div class="section-content">
+        <p class="instruction-lead">Each review combines a shared rulebook with one request for a specific row.</p>
+        <div class="instruction-grid">
+          <div class="instruction-part">
+            <h3>Same rules for every answer</h3>
+            <p>Explains the reviewer’s job, the choices it may make, and when to ask a person to check the result.</p>
+          </div>
+          <div class="instruction-part">
+            <h3>One row at a time</h3>
+            <p>Names the single row to review. The row identifiers change for each answer.</p>
+          </div>
+        </div>
+        <p class="instruction-note">The rules stay the same. The row details change.</p>
+        <details id="promptBox" class="prompt-details">
+          <summary>See the exact instructions</summary>
+          <div id="promptText" class="prompt-text-grid"></div>
+        </details>
+      </div>
+    </details>
+  </section>
+
+  <details class="filters filter-details" open>
+    <summary class="filter-toggle">Reviewer filter</summary>
+    <div class="filter-content">
+      <span class="flabel">Reviewed by</span>
+      <span class="seg-ctl" id="judgePick"></span>
+      <span class="scope" id="scopeNote"></span>
+    </div>
+  </details>
 
   <div class="kpis" id="kpis"></div>
 
   <section class="card">
-    <h2>Summary</h2>
-    <p class="hint">Every answer was checked against a known-correct date afterwards. The three kinds
-    of row were chosen deliberately: ones that needed fixing, ones already right (where any change
-    would be damage), and ones where no single date can be correct. Each model gets its own bar in
-    each kind, all on one scale.</p>
-    <div class="legend" id="legend"></div>
-    <div id="bands"></div>
-    <div id="judgeMetrics"></div>
-    <details>
-      <summary>Show these numbers as a table</summary>
-      <div id="bandTable"></div>
+    <details class="section-details" open>
+      <summary class="section-toggle"><h2>Summary</h2></summary>
+      <div class="section-content">
+        <p class="section-lead">We test three cases: a wrong date the reviewer should fix, a correct date
+        it should leave alone, and a guide covering several days where it should not guess. Every model
+        reviews the same cases.</p>
+        <div class="legend" id="legend"></div>
+        <div id="bands"></div>
+        <div id="judgeMetrics"></div>
+        <details>
+          <summary>Show these numbers as a table</summary>
+          <div id="bandTable"></div>
+        </details>
+      </div>
     </details>
   </section>
 
   <section class="card">
-    <h2>The path each model took</h2>
-    <p class="hint">Three tools, and the job needs all three in order: read the case, work out the
-    date, record the decision. A wandering agent shows up as extra boxes or a line doubling back.</p>
-    <div class="facet2" id="flows"></div>
+    <details class="section-details" open>
+      <summary class="section-toggle"><h2>The path each model took</h2></summary>
+      <div class="section-content">
+        <p class="section-lead">A complete review has three steps: load the row, calculate the date, and
+        save the decision. Extra boxes or a backward line mean the reviewer took unnecessary steps.</p>
+        <div class="facet2" id="flows"></div>
+      </div>
+    </details>
   </section>
 
   <section class="card">
-    <h2>Rows requiring human review</h2>
-    <p class="hint">An abstention is the agent’s decision that no single date is supportable. A
-    human-review flag is separate metadata requesting inspection. This queue also includes wrong
-    answers so silent errors remain visible even when the agent did not set the flag.</p>
-    <div id="queueSummary"></div>
-    <div id="queue"></div>
+    <details class="section-details" open>
+      <summary class="section-toggle"><h2>Rows requiring human review</h2></summary>
+      <div class="section-content">
+        <p class="section-lead">A row appears here when no single date fits, the reviewer asks a person
+        to check its work, or the final answer is wrong. Including all three keeps silent errors visible.</p>
+        <div id="queueSummary"></div>
+        <div id="queue"></div>
+      </div>
+    </details>
   </section>
 
   <section class="card">
-    <h2>What it costs at scale</h2>
-    <p class="hint">The original extraction already produced three date fields. Comparing those
-    existing fields can identify candidate rows without another model call; only the candidates are
-    sent to the review agent.</p>
-    <div id="costCompare"></div>
-    <h3>How long each answer took</h3>
-    <div id="hist"></div>
+    <details class="section-details" open>
+      <summary class="section-toggle"><h2>What it costs at scale</h2></summary>
+      <div class="section-content">
+        <p class="section-lead">The three existing date answers can be compared at no added model cost
+        to find rows worth reviewing. Only those rows are sent to the reviewer.</p>
+        <div id="costCompare"></div>
+        <h3>How long each answer took</h3>
+        <div id="hist"></div>
+      </div>
+    </details>
   </section>
 
   <section class="card">
-    <h2>Every row, and how the agent got there</h2>
-    <p class="hint">Click any row to open the agent's own steps — the tool it called, the values it
-    passed, its reasoning, and how long each step took.</p>
-    <div class="tscroll"><div id="runs"></div></div>
+    <details class="section-details" open>
+      <summary class="section-toggle"><h2>Every row, and how the agent got there</h2></summary>
+      <div class="section-content">
+        <p class="section-lead">Select a row to see the reviewer’s steps, the information it used, its
+        explanation, and how long it took.</p>
+        <div class="tscroll"><div id="runs"></div></div>
+      </div>
+    </details>
   </section>
   <footer class="footer" id="footerMeta"></footer>
 </div>
@@ -507,6 +599,12 @@
     return "Agent requested review";
   }
 
+  function queueImage(r, priority) {
+    return priority
+      ? '<strong class="queue-priority-image">⚑ image ' + esc(r.image_id) + "</strong>"
+      : "image " + esc(r.image_id);
+  }
+
   function renderQueue(j) {
     var flagged = j.rows.filter(function (r) {
       return r.needs_review || r.fix_outcome === "abstained" || r.display_outcome === "wrong";
@@ -531,7 +629,9 @@
       "</tr></thead><tbody>" +
       flagged.map(function (r, i) {
         var why = r.review_reason || r.reason || "";
-        return '<tr class="clickable" data-q="' + i + '"><td class="nw">image ' + esc(r.image_id) +
+        var priority = r.display_outcome === "wrong" && r.needs_review;
+        return '<tr class="clickable' + (priority ? " queue-priority" : "") + '" data-q="' + i +
+          '"><td class="nw">' + queueImage(r, priority) +
           "</td><td class='nw'>" + esc(queueReason(r)) + "</td><td class='nw'>" + esc(r.action) +
           "</td><td><code>" + esc(r.final_value) + "</code></td>" +
           '<td class="why" tabindex="0" data-full-text="' + esc(why) + '"><span>' + esc(why) + "</span></td></tr>" +
@@ -698,12 +798,13 @@
 
   // ── prompt ──────────────────────────────────────────────────────────────
   document.getElementById("promptText").innerHTML =
-    '<div class="prompt-block"><div class="plabel">System prompt — the standing instructions</div><pre>' +
-    esc(D.prompt.system) + '</pre></div><div class="prompt-block"><div class="plabel">Per-answer ' +
-    "instruction — sent once per row with the identifiers filled in</div><pre>" +
+    '<div class="prompt-block"><div class="plabel">Rules used for every answer</div><pre>' +
+    esc(D.prompt.system) + '</pre></div><div class="prompt-block"><div class="plabel">Request for one answer ' +
+    "— row identifiers are filled in for each review</div><pre>" +
     esc(D.prompt.user) + "</pre></div>";
   document.getElementById("promptBox").addEventListener("toggle", function (e) {
-    e.target.querySelector("summary").textContent = e.target.open ? "Hide the prompt" : "Show the prompt";
+    e.target.querySelector("summary").textContent =
+      e.target.open ? "Hide the exact instructions" : "See the exact instructions";
   });
 
   // ── delegated hover: works for bars rendered at any point ───────────────
