@@ -40,6 +40,7 @@ DEFAULT_CACHE = REPO_ROOT / "outputs" / ".path_summary_cache.json"
 
 # The three composite type-tools (for the routing / glossary views).
 TYPE_TOOLS = ["evaluate_raw_string", "evaluate_extracted_string", "evaluate_list"]
+METRIC_EVAL_PROMPT_PREFIX = "composite_"
 
 # Columns embedded per run. Kept explicit so the payload is stable and small.
 # NOTE: reasoning_json is intentionally NOT embedded per-run (it can be large);
@@ -183,10 +184,15 @@ def summarize_paths(
     {} — never raises — if the needed columns are missing or the summarizer is
     unreachable.
     """
-    if not {"tool_sequence_json", "reasoning_json"} <= present:
+    if not {"tool_sequence_json", "reasoning_json", "prompt_name"} <= present:
         return {}
 
-    df = con.execute("SELECT tool_sequence_json, reasoning_json FROM runs").df()
+    df = con.execute(
+        """SELECT tool_sequence_json, reasoning_json
+           FROM runs
+           WHERE starts_with(prompt_name, ?)""",
+        [METRIC_EVAL_PROMPT_PREFIX],
+    ).df()
 
     groups: dict = {}
     for _, r in df.iterrows():
@@ -287,7 +293,14 @@ def build_snapshot(
     con = connect(base_dir)
     present = _present_columns(con)
     cols = [c for c in RUN_COLUMNS if c in present]
-    df = con.execute(f"SELECT {', '.join(cols)} FROM runs").df()
+    if "prompt_name" in present:
+        df = con.execute(
+            f"SELECT {', '.join(cols)} FROM runs WHERE starts_with(prompt_name, ?)",
+            [METRIC_EVAL_PROMPT_PREFIX],
+        ).df()
+    else:
+        # Runs predating prompt identity cannot be assigned to a task safely.
+        df = con.execute(f"SELECT {', '.join(cols)} FROM runs WHERE FALSE").df()
     # to_json -> loads gives native JSON types with NaN -> null.
     runs = json.loads(df.to_json(orient="records"))
     # Stable shape: any RUN_COLUMNS missing from older Parquet come back as null.
