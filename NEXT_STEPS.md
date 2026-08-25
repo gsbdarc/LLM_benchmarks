@@ -1,6 +1,8 @@
 # Next steps — date-fix demo shipped; local Qwen judge is the open thread
 
-Branch `mcp-metric-calc`. **183 tests green.**
+Branch `mcp-metric-calc`. **211 tests green as of 2026-08-25.** See
+[`PROJECT_STATUS.md`](PROJECT_STATUS.md) for the wrap-up handoff and the distinction between
+offline-verified behavior and infrastructure-dependent work.
 
 **Most recent work: the date-fix task** — a *second* task on the same harness, plus the dashboard
 honesty fixes. See "Date-fix task — shipped" below, and `agent_eval/README.md` §"Two tasks on one

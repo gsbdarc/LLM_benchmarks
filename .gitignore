@@ -3,6 +3,7 @@ logs/
 snapshots/
 venv/
 .venv/
+venv_1/
 inputs/data/
 *.swp
 .ipynb_checkpoints/
@@ -29,3 +30,8 @@ inputs/eval_mapping_sample.csv
 # / `build_date_fix_demo`, or just serve them (`serve_dashboard` / `serve_demo`).
 images/agent_dashboard_*.html
 images/date_fix_demo*.html
+images/agent_dashboard.html
+
+# Local experiments and generated scratch outputs
+inputs/processed.csv
+multi_gpu_serve/test_file.txt

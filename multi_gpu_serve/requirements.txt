@@ -1,0 +1,4 @@
+# Qwen3.6-35B-A3B needs vLLM >= 0.17 (hybrid Gated-DeltaNet MoE support).
+# The vllm wheel bundles a matching torch + CUDA userspace; the GPU node only
+# needs a compatible NVIDIA driver.
+vllm>=0.17

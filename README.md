@@ -4,6 +4,9 @@
 
 > **This repo has two pipelines** that share one `.env`, `inputs/`, and a MongoDB backend: (1) the **inference pipeline** (`scripts/`) documented below, which runs LLMs over images and writes their outputs to Mongo; and (2) the **agentic metric-eval** (`agent_eval/` + `analysis/`), which *judges* those outputs — see [Agentic Metric-Eval & Dashboard](#agentic-metric-eval--dashboard). The agentic work is the current active development (branch `mcp-metric-calc`).
 
+> **Project handoff:** [`PROJECT_STATUS.md`](PROJECT_STATUS.md) records what is verified, what remains
+> experimental or incomplete, the operational setup quirks, and the follow-up backlog.
+
 ---
 
 ## Table of Contents

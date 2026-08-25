@@ -5,15 +5,16 @@ description: >-
   tasks: metric-eval (judging how outputs are scored) and date-fix (repairing derived
   tv_guide_date values). Use when running either task, reading the dashboard or date-fix demo,
   or extending the harness — adding a judge backend, a prompt variant, a new MCP tool, or a
-  whole new task. Covers the agent_eval/ + analysis/ pipeline on branch mcp-metric-calc.
+  whole new task. Covers the agent_eval/ + analysis/ pipeline.
 ---
 
 # Agentic metric-eval harness
 
 ## Orient
 This repo has **two pipelines**: upstream inference (`scripts/`, writes `llm_outputs` to Mongo) and
-this **agentic harness** (`agent_eval/` + `analysis/`, reads those outputs). Active branch:
-`mcp-metric-calc`. An MCP FastMCP server (`agent_eval/server.py`) exposes the tools; an async agent
+this **agentic harness** (`agent_eval/` + `analysis/`, reads those outputs). Inspect the current
+branch and working tree before acting; do not assume a branch name. An MCP FastMCP server
+(`agent_eval/server.py`) exposes the tools; an async agent
 loop (`agent_eval/runtime/agent.py`) drives an LLM through one output per run.
 
 **The harness runs TWO tasks — establish which one you're in before editing.** The prompt variant
