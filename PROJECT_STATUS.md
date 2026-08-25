@@ -139,18 +139,18 @@ These are historical results documented in `NEXT_STEPS.md`, not reruns performed
 
 ## Prioritized follow-up backlog
 
-GitHub issue links will be added here after the backlog is deduplicated against existing issues:
+The wrap-up backlog was checked against the repository's existing issues before filing:
 
-1. Fix malformed tool-call JSON poisoning retry history.
-2. Enforce structured tool-call generation where backends support it.
-3. Investigate saved-but-Unscored metric-eval runs.
-4. Fail fast on unknown prompt task prefixes.
-5. Complete the Qwen judge run and serving runbook on 2× A40.
-6. Revisit `composite_v2.1` after reliability fixes.
-7. Operationalize the living dashboard and expose routing diagnostics.
-8. Validate judge pricing metadata and provenance.
-9. Make the MongoDB deployment and database configurable.
-10. Finish and fact-check the project blog draft.
+1. [#26 — Fix malformed tool-call JSON poisoning retry history](https://github.com/gsbdarc/LLM_benchmarks/issues/26)
+2. [#27 — Enforce structured tool-call generation where backends support it](https://github.com/gsbdarc/LLM_benchmarks/issues/27)
+3. [#28 — Investigate saved-but-Unscored metric-eval runs](https://github.com/gsbdarc/LLM_benchmarks/issues/28)
+4. [#29 — Fail fast on unknown prompt task prefixes](https://github.com/gsbdarc/LLM_benchmarks/issues/29)
+5. [#30 — Complete the Qwen judge run and serving runbook on 2× A40](https://github.com/gsbdarc/LLM_benchmarks/issues/30)
+6. [#31 — Revisit `composite_v2.1` after reliability fixes](https://github.com/gsbdarc/LLM_benchmarks/issues/31)
+7. [#32 — Operationalize the living dashboard and expose routing diagnostics](https://github.com/gsbdarc/LLM_benchmarks/issues/32)
+8. [#33 — Validate judge pricing metadata and provenance](https://github.com/gsbdarc/LLM_benchmarks/issues/33)
+9. [#34 — Make the MongoDB deployment and database configurable](https://github.com/gsbdarc/LLM_benchmarks/issues/34)
+10. [#35 — Finish and fact-check the project blog draft](https://github.com/gsbdarc/LLM_benchmarks/issues/35)
 
 ## Verification performed for this handoff
 
