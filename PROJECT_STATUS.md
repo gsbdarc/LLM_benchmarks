@@ -1,6 +1,6 @@
 # Project status and handoff
 
-**As of:** 2026-08-25
+**As of:** 2026-08-26
 
 **Handoff branch:** `mcp-metric-calc`
 
@@ -8,10 +8,17 @@ This repository contains two related pipelines for evaluating multimodal LLM ext
 historical TV-guide images. The original inference pipeline runs models over images. The newer
 agentic evaluation harness reads those outputs and measures or repairs them through MCP tools.
 
-This document separates locally verified behavior from prior experiment results and unfinished
-infrastructure work. For the detailed agentic design rationale, read
-[`agent_eval/README.md`](agent_eval/README.md); for the chronological work log and recorded run
-results, read [`NEXT_STEPS.md`](NEXT_STEPS.md).
+This document began as an AI-assisted repository review and was corrected against the code, tests,
+configuration, Git history, and recorded experiments. It separates locally verified behavior from
+prior experiment results and unfinished infrastructure work. For the detailed agentic design
+rationale, read [`agent_eval/README.md`](agent_eval/README.md); for the chronological work log and
+recorded run results, read [`NEXT_STEPS.md`](NEXT_STEPS.md).
+
+For a cold start, read `README.md` first, this handoff second, `agent_eval/README.md` for stable
+design decisions, and `NEXT_STEPS.md` for historical run details. The `agentic-eval` skill under
+`.agents/skills/` contains the operational commands and extension procedures used by coding agents.
+Anything time-sensitive here—including prices, model availability, infrastructure state, and issue
+status—is a dated snapshot that must be rechecked before new work.
 
 ## Current state at a glance
 
@@ -100,11 +107,18 @@ These are historical results documented in `NEXT_STEPS.md`, not reruns performed
 
 - The self-refreshing dashboard SLURM script exists but still needs an owner to submit and monitor
   it. `routing_path_reason` is not yet surfaced in the runs table.
-- Claude Sonnet 4.6 pricing is recorded as an unconfirmed 3/15 input/output assumption; DeepSeek-V3.2
-  remains unpriced because no supported price was recorded. Price metadata needs dated provenance.
+- Hosted-judge prices are snapshots, not permanent facts. Earlier runs used the prices present in
+  their recorded `git_commit`, including the former 3/15 Claude configuration. Commit `0c58635`
+  updated the configured Stanford Gateway rates to 1.5/7.5 for Claude Sonnet 4.6 and 0.125/1 for
+  GPT-5-mini, based on Stanford's 50% discount and verified on 2026-08-18. DeepSeek-V3.2 remains
+  unpriced because Stanford published no supported rate. Before new runs, recheck Stanford's rate
+  page and follow the refresh procedure in the `agentic-eval` skill; do not rewrite historical run
+  costs with newer rates.
 - `temp.md` and `images/blog/` are an unfinished project article. Its 13-model/34-image/2,730-task
-  figures conflict with later 18-model/35-image/3,780-task claims, and several image links do not
-  match the archived filenames.
+  figures conflict with later 18-model/35-image/3,780-task claims. The archival handoff repaired its
+  image paths to match the preserved filenames without fact-checking the article. The README's
+  archived token-cost claim referenced an image that was never tracked and is now labeled as
+  unverified rather than silently pointed at a different figure.
 - `reference/redivis_example/` and experimental notebooks are preserved reference work, not part of
   either supported pipeline. Some include executed outputs and environment-specific endpoints; treat
   them as examples, not reproducible tests.
@@ -152,9 +166,15 @@ The wrap-up backlog was checked against the repository's existing issues before 
 9. [#34 — Make the MongoDB deployment and database configurable](https://github.com/gsbdarc/LLM_benchmarks/issues/34)
 10. [#35 — Finish and fact-check the project blog draft](https://github.com/gsbdarc/LLM_benchmarks/issues/35)
 
+Archival-review note: the body of #33 still describes the superseded unconfirmed 3/15 Claude rate.
+The 2026-08-26 repository state now records the Stanford source, unit, verification date, snapshot
+warning, known/unpriced/local cases, dashboard wording, and refresh procedure; a repository owner
+should review and close or reframe that issue in GitHub. Issue #35 also predates the repaired blog
+image paths, but its fact-checking and publication decisions remain open.
+
 ## Verification performed for this handoff
 
-From the repository-local environment on 2026-08-25:
+The initial environment wrap-up on 2026-08-25 recorded:
 
 ```text
 scripts/check_setup.py python                         5 passed, 0 failed
@@ -168,5 +188,12 @@ cd agent_eval && EVAL_DISABLE_WEAVE=1 python -m pytest
                                                    211 passed
 ```
 
-MongoDB, Stanford Playground, Weave, live dashboards, SLURM jobs, and GPU serving were not contacted
-as part of this wrap-up. Their status should not be inferred from the offline checks.
+The final archival pass on 2026-08-26 repeated the Python setup profile (5 passed), validated all
+tracked Markdown file targets and notebook JSON, rendered the metric dashboard from the 240-run
+local cache, rendered the date-fix demo from MongoDB (66 answers for each of two judges), and reran
+the offline suite (211 passed in 8.46 seconds). The pricing metadata test was exercised red/green:
+it first failed on the missing snapshot metadata and then passed after that metadata was added.
+
+The final date-fix render proves read access to the configured MongoDB at that moment; it did not
+write data or rerun a batch. Stanford Playground, Weave, SLURM jobs, GPU serving, and browser-based
+visual review were not exercised, so their current status should not be inferred from these checks.

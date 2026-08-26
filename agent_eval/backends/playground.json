@@ -4,8 +4,10 @@
   "api_key_env": "STANFORD_API_KEY",
   "pricing": {
     "basis": "Stanford AI API Gateway rates",
+    "unit": "USD per 1M tokens",
     "source_url": "https://uit.stanford.edu/service/ai-api-gateway/rates",
-    "verified_at": "2026-08-18"
+    "verified_at": "2026-08-18",
+    "note": "Dated snapshot used for new runs; verify the source before future batches."
   },
   "models": {
     "1": {

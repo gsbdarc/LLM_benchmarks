@@ -2,10 +2,18 @@
 
 > Stanford's AI Playground allows researchers and staff access to almost 20 LLMs via their API. How do users determine which model is best suited for their needs? We built a pipeline that delivers a clear ranking of how different models perform on a set of benchmarks related to processing table based images.
 
-> **This repo has two pipelines** that share one `.env`, `inputs/`, and a MongoDB backend: (1) the **inference pipeline** (`scripts/`) documented below, which runs LLMs over images and writes their outputs to Mongo; and (2) the **agentic metric-eval** (`agent_eval/` + `analysis/`), which *judges* those outputs — see [Agentic Metric-Eval & Dashboard](#agentic-metric-eval--dashboard). The agentic work is the current active development (branch `mcp-metric-calc`).
+> **This repo has two pipelines** that share one `.env`, `inputs/`, and a MongoDB backend:
+> (1) the **inference pipeline** (`scripts/`) documented below, which runs LLMs over images and
+> writes their outputs to Mongo; and (2) the **agentic metric-eval** (`agent_eval/` + `analysis/`),
+> which *judges* those outputs—see
+> [Agentic Metric-Eval & Dashboard](#agentic-metric-eval--dashboard). The agentic work is preserved
+> on the archival handoff branch `mcp-metric-calc`.
 
-> **Project handoff:** [`PROJECT_STATUS.md`](PROJECT_STATUS.md) records what is verified, what remains
-> experimental or incomplete, the operational setup quirks, and the follow-up backlog.
+> **Returning to this project:** start with [`PROJECT_STATUS.md`](PROJECT_STATUS.md), the dated
+> archival handoff of what is verified, incomplete, and infrastructure-dependent. Then use
+> [`agent_eval/README.md`](agent_eval/README.md) for design rationale and
+> [`NEXT_STEPS.md`](NEXT_STEPS.md) for the chronological experiment record. Treat external service
+> status, model availability, and prices as historical unless rechecked against their current source.
 
 ---
 
@@ -360,9 +368,11 @@ When analyzing results by image id we found that there was about a 40% differenc
 
 ### Token Cost
 
-Looking at model accuracy alongside total token cost showed that even though o1 was the 6th most accurate LLM it used almost 4.7x the amount of tokens as the most accurate model (gemini-2.5-pro).
-
-![model_cost](./images/token_cost.png)
+The original project notes said that, although o1 was the sixth most accurate model, it used almost
+4.7 times as many tokens as gemini-2.5-pro. This archived claim has not been fact-checked, and the
+referenced `images/token_cost.png` figure was never tracked. Treat it as unfinished analysis rather
+than a supported result; `images/model_tokens.png` is a different average-token table and does not
+substantiate this paragraph.
 
 Double clicking into metadata extraction benchmarks Newspaper Name and Newspaper Date found similar results could be produced for varying costs. Claude-3-haiku models returned Newspaper Name and Newspaper Date just as accurately as gemini-2.5-pro (100%) but only cost $0.06 or 1/24 as much. Similarly gemini-2.0-flash-lite-001 got Newspaper Date correct 100% of the time but only cost $0.03 vs $1.49 for gemini-2.5-pro. 
 

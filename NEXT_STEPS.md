@@ -1,6 +1,6 @@
 # Next steps — date-fix demo shipped; local Qwen judge is the open thread
 
-Branch `mcp-metric-calc`. **211 tests green as of 2026-08-25.** See
+Branch `mcp-metric-calc`. **211 tests green as of 2026-08-26.** See
 [`PROJECT_STATUS.md`](PROJECT_STATUS.md) for the wrap-up handoff and the distinction between
 offline-verified behavior and infrastructure-dependent work.
 
@@ -51,8 +51,12 @@ no field matching `gold_metrics.csv`. Now visible as Unscored rather than hidden
 - **`routing_path_correct`** scorer (whole clean path) beside `selection_accuracy`; wired to
   sink / `agentic_runs` / dashboard.
 - **#1 cost:** per-model prices in `backends/*.json` + `config.model_price` + `$` in `flatten_run`
-  + dashboard Cost column. DeepSeek-V3.2 unpriced (no published price → null); **claude-sonnet-4-6
-  assumed 3/15 — CONFIRM**.
+  + dashboard Cost column. At the time of the earliest recorded runs, gpt-5-mini and
+  claude-sonnet-4-6 used their then-configured vendor rates (0.25/2 and 3/15). Commit `0c58635`
+  changed the configuration to Stanford's discounted 0.125/1 and 1.5/7.5 rates, verified
+  2026-08-18. Existing run rows retain the costs stamped when they were written. DeepSeek-V3.2 is
+  unpriced (no published price → null). Recheck Stanford's current rate page before future runs and
+  use the refresh procedure in the `agentic-eval` skill.
 - **#2 living dashboard:** `analysis/export_runs.py` + `agent_eval/scripts/refresh_dashboard.slurm`
   (self-rescheduling; `sbatch` once to go live). Generated `images/agent_dashboard_live.html` gitignored.
 - **Versioned Mongo stores:** `code_version` (git_commit) in BOTH collection keys (compound unique
@@ -115,14 +119,15 @@ GPU_TYPE="NVIDIA A40" sbatch agent_eval/scripts/run_eval_batch.slurm   # (drop -
 ```
 
 ## Then
-- Confirm the **claude-sonnet-4-6 price** (assumed 3/15).
+- Recheck Stanford Gateway prices before any new hosted batch; the repository stores a dated
+  snapshot, and the `agentic-eval` skill documents how to update it.
 - `sbatch agent_eval/scripts/refresh_dashboard.slurm` once to make the dashboard "living".
 - Surface `routing_path_reason` in the dashboard runs table (deferred until the local summarizer is up).
 
 ## Recipes (from repo root)
 ```bash
 source .venv/bin/activate
-cd agent_eval && EVAL_DISABLE_WEAVE=1 python -m pytest ; cd ..          # 183 tests
+cd agent_eval && EVAL_DISABLE_WEAVE=1 python -m pytest ; cd ..          # 211 tests as of 2026-08-26
 # rebuild dashboard from the central store:
 python -m analysis.export_runs --out outputs/dashboard_cache
 python -m analysis.build_dashboard --base-dir outputs/dashboard_cache --no-summaries \

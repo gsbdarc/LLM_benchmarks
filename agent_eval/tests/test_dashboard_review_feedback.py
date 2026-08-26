@@ -8,16 +8,22 @@ def _template(path):
     return path.read_text()
 
 
-def test_stanford_gateway_prices_and_source_are_current():
+def test_stanford_gateway_price_snapshot_and_provenance():
     assert config.model_price("playground", "gpt-5-mini") == (0.125, 1.0)
     assert config.model_price("playground", "claude-sonnet-4-6") == (1.5, 7.5)
     assert config.model_price("playground", "gemini-2.5-pro") == (2.5, 15)
     assert config.model_price("playground", "gemini-2.5-flash") == (0.3, 2.5)
     assert config.model_price("playground", "DeepSeek-V3.2") == (None, None)
+    assert config.model_price("nim") == (0, 0)
+    assert config.model_price("qwen") == (0, 0)
+    assert config.model_price("missing-backend") == (None, None)
 
     pricing = config.BACKENDS["playground"]["pricing"]
+    assert pricing["unit"] == "USD per 1M tokens"
     assert pricing["source_url"] == "https://uit.stanford.edu/service/ai-api-gateway/rates"
     assert pricing["verified_at"] == "2026-08-18"
+    assert "snapshot" in pricing["note"].casefold()
+    assert "verify" in pricing["note"].casefold()
 
 
 def test_version_metadata_explains_dirty_code_without_losing_identity():

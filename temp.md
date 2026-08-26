@@ -34,7 +34,7 @@ This article covers the conceptual framework behind designing an LLM evaluation 
 
 For social science, history, and business research, valuable data is often trapped inside dense tabular images, historical newspapers, SEC filings, or city council minutes. Consider historical TV Guides: printed weekly schedules listing channels, time slots, and programs for a given media market. These documents offer a rich look into cultural and media history, but the data locked inside them cannot be queried, aggregated, or computationally analyzed without first being digitized.
 
-![Examples of historical TV Guide tables and layouts](images/blog/tv_guide_example.png)
+![Examples of historical TV Guide tables and layouts](images/blog/llm_eval_tv_guide_example.png)
 
 Traditionally, digitizing these images required manual labor. A project supervisor would outsource pages to a third party or a team of student research assistants with instructions to manually transcribe the data cell-by-cell into a spreadsheet, followed by a secondary review process to spot human error. While accurate, this methodology is deeply time-intensive, expensive, and fundamentally bottlenecked at scale.
 
@@ -44,13 +44,13 @@ Traditionally, digitizing these images required manual labor. A project supervis
 
 Large Language Models (LLMs) are highly capable tools for structured text extraction, but choosing whether and how to integrate them into an academic workflow introduces a deceptively difficult multi-variable optimization problem.
 
-![The trade-off matrix: Accuracy, Budget, Data constraints, and Research Needs](images/blog/research_dilemma.png)
+![The trade-off matrix: Accuracy, Budget, Data constraints, and Research Needs](images/blog/llm_eval_research_dilemma.png)
 
 As the matrix shows, these four factors do not exist in isolation. Strict budget constraints might force you to rely on smaller, less accurate open-source models; unique spatial layouts in your data might eliminate language-only models entirely; and your acceptable accuracy thresholds may shift as you uncover structural edge cases in your documents. Because these variables are deeply interdependent, a systematic evaluation framework is crucial.
 
 As a quick proof-of-concept, you can log into the **Stanford AI Playground**—a graphical user interface (GUI) allowing users to manually upload an image, type a prompt, and see an output within seconds.
 
-![Demonstration of a manual single-image test on the Stanford AI Playground](images/blog/playground.gif)
+![Demonstration of a manual single-image test on the Stanford AI Playground](images/blog/llm_eval_playground.gif)
 
 While excellent for exploratory testing, manual interfaces fail when trying to systematically select the absolute best model for a project. To find the optimal setup, we need to test across every available multimodal LLM (models capable of processing both visual images and text strings simultaneously). That includes over 20 unique models.
 
@@ -59,7 +59,7 @@ Furthermore, evaluating models based on a single image can lead to statistical n
 > 💡 **Jargon Buster: Multimodal LLM**
 > A multimodal Large Language Model is an AI system capable of processing multiple types of input—such as reading text *and* analyzing visual features within an image simultaneously.
 
-![Visualizing how tasks scale multiplicatively with models and images](images/blog/tasks_at_scale.png)
+![Visualizing how tasks scale multiplicatively with models and images](images/blog/llm_eval_tasks_at_scale.png)
 
 When we evaluate **35 validation images**, **6 unique benchmark targets**, and **18 distinct models**, we quickly reach **3,780 unique combinations**. Programmatically feeding these one-by-one into a web interface is impossible. To scale this, we must shift from manual interfaces to automated pipelines.
 
@@ -69,7 +69,7 @@ When we evaluate **35 validation images**, **6 unique benchmark targets**, and *
 
 To handle this matrix at scale, we constructed an automated pipeline. Below is a visual representation of our architecture, which processes tasks programmatically rather than manually.
 
-![Architecture diagram showing input selection, high-performance computing cluster execution, and metric analysis](images/blog/pipeline.png)
+![Architecture diagram showing input selection, high-performance computing cluster execution, and metric analysis](images/blog/llm_eval_pipeline.png)
 
 To support this computationally, we leveraged **Yens** (Stanford's high-performance computing cluster) and utilized **SLURM array jobs** (a workload manager that allows us to execute hundreds of extraction tasks simultaneously in parallel). This infrastructure handles the heavy lifting of image preprocessing, batch API calls to model providers, and saving JSON-structured outputs.
 
