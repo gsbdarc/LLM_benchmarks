@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agentic Eval"
+  short_description: "Work safely with this evaluation harness"
+  default_prompt: "Use $agentic-eval to work on the agent evaluation harness while preserving its task and grading boundaries."

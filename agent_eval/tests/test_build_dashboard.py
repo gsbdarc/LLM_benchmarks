@@ -13,12 +13,12 @@ from agent_eval.tests.test_sink import sample_meta, sample_result
 def _write_runs(base_dir):
     rows = [
         sink.flatten_run(sample_result(tokens_per_sec=10.0),
-                         sample_meta(backend="nim", model="gemma", prompt_name="baseline_v1", concurrency=1),
+                         sample_meta(backend="nim", model="gemma", prompt_name="composite_v1", concurrency=1),
                          integrity={"save_success": True, "save_count": 1,
                                     "score_consistency": {"consistent": True}},
                          scores={"selection_accuracy": {"selection_accuracy": 1.0}}),
         sink.flatten_run(sample_result(tokens_per_sec=20.0),
-                         sample_meta(backend="nim", model="gemma", prompt_name="variant_v2", concurrency=4),
+                         sample_meta(backend="nim", model="gemma", prompt_name="composite_v2", concurrency=4),
                          integrity={"save_success": True, "save_count": 1,
                                     "score_consistency": {"consistent": True}},
                          scores={"selection_accuracy": {"selection_accuracy": 0.5}}),
@@ -31,8 +31,36 @@ def test_build_snapshot_counts_runs(tmp_path):
     _write_runs(tmp_path)
     snap = build_dashboard.build_snapshot(tmp_path, summarize=False)
     assert snap["n_runs"] == 2
-    assert {r["prompt_name"] for r in snap["runs"]} == {"baseline_v1", "variant_v2"}
+    assert {r["prompt_name"] for r in snap["runs"]} == {"composite_v1", "composite_v2"}
     assert "generated_at" in snap
+
+
+def test_build_snapshot_includes_only_metric_eval_runs(tmp_path):
+    rows = [
+        sink.flatten_run(
+            sample_result(),
+            sample_meta(model="gpt-5-mini", prompt_name="composite_v1"),
+        ),
+        sink.flatten_run(
+            sample_result(),
+            sample_meta(model="gemini-2.5-pro", prompt_name="composite_v2"),
+        ),
+        sink.flatten_run(
+            sample_result(),
+            sample_meta(model="gemini-2.5-pro", prompt_name="date_fix_v1"),
+        ),
+        sink.flatten_run(
+            sample_result(),
+            sample_meta(model="gemini-2.5-flash", prompt_name="date_fix_v1"),
+        ),
+    ]
+    sink.write_runs(rows, base_dir=tmp_path)
+
+    snap = build_dashboard.build_snapshot(tmp_path, summarize=False)
+
+    assert snap["n_runs"] == 2
+    assert {r["prompt_name"] for r in snap["runs"]} == {"composite_v1", "composite_v2"}
+    assert {r["model"] for r in snap["runs"]} == {"gpt-5-mini", "gemini-2.5-pro"}
 
 
 def test_build_snapshot_raises_without_runs(tmp_path):
@@ -56,15 +84,16 @@ def test_build_snapshot_embeds_prompts_and_glossary(tmp_path):
 
 
 def test_build_snapshot_embeds_every_registered_prompt(tmp_path):
-    """All prompt variants in the runs render their real text; unknown names are omitted.
+    """All metric prompt variants in the runs render real text; other tasks are omitted.
 
     Comparing prompt versions in the UI needs BOTH texts, not just the default one.
     """
     from agent_eval.prompts import prompt_names
-    names = prompt_names()
+    names = [n for n in prompt_names()
+             if n.startswith(build_dashboard.METRIC_EVAL_PROMPT_PREFIX)]
     assert len(names) >= 2, "expected at least two prompt variants on disk"
     rows = [sink.flatten_run(sample_result(), sample_meta(prompt_name=n))
-            for n in names + ["deleted_variant_v0"]]
+            for n in names + ["date_fix_v1", "deleted_variant_v0"]]
     sink.write_runs(rows, base_dir=tmp_path)
     snap = build_dashboard.build_snapshot(tmp_path, summarize=False)
     for n in names:
@@ -74,6 +103,7 @@ def test_build_snapshot_embeds_every_registered_prompt(tmp_path):
     assert len({snap["prompts"][n]["system"] for n in names}) == len(names)
     # a name the registry no longer knows degrades to the UI's "(not embedded)" placeholder
     assert "deleted_variant_v0" not in snap["prompts"]
+    assert "date_fix_v1" not in snap["prompts"]
 
 
 def test_render_html_injects_and_escapes(tmp_path):
