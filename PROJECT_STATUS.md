@@ -24,13 +24,13 @@ status—is a dated snapshot that must be rechecked before new work.
 
 | Area | State | Evidence or limit |
 |---|---|---|
-| Python environment | Working locally | Python 3.10; all 140 locked packages match; `pip check` passes. |
+| Python environment | Working locally | Python 3.10; all 26 direct dependencies are covered by the reproducible lock; `pip check` passes. |
 | Upstream inference (`scripts/`) | Implemented; locally configured | Local prerequisite checks pass. No live model/Mongo inference batch was rerun during wrap-up. |
 | Metric-eval agent | Working offline; previously run live | Composite routing, versioned storage, scoring, observability, batching, and dashboard code are covered by tests. Live results cited below come from earlier jobs recorded in `NEXT_STEPS.md`. |
 | Date-fix agent | Shipped | Tool isolation, mixed work-list construction, correction scoring, and the demo are covered by tests; the real-corpus rule is pinned at 30 matched / 3 ambiguous / 2 known misses. |
 | Metric dashboard | Working | It now excludes date-fix rows from run counts, prompts, and path summaries. |
 | Local Qwen judge | Scaffolded, not completed | Backend/config and 2× A40 serving scripts exist, but no server was active at wrap-up and `LOCAL_MODEL_URL` was unset. |
-| Project blog and reference experiments | Archived WIP | Preserved for follow-up; not fact-checked or integrated into the supported pipelines. |
+| Analysis notebooks | Archived results | `plot_metrics.ipynb` preserves upstream graphics/tables; `mongo_evals.ipynb` preserves MongoDB-backed evaluation analysis. Their live paths were not reproduced during handoff. |
 
 ## What works
 
@@ -41,8 +41,15 @@ ground-truth extraction, model execution, result combination, and deterministic 
 benchmarks remain data-driven through `inputs/models.json` and `inputs/benchmarks.json`. MongoDB
 provides shared storage and idempotent writes for parallel SLURM jobs.
 
-The local `inference` setup profile currently confirms the locked Python environment, Poppler,
-`BASE_DIR`, Stanford API credentials, and MongoDB credentials. That establishes local readiness, not
+The local prerequisite checker is `scripts/check_setup.py`. Run its inference checks from the
+repository root:
+
+```bash
+python scripts/check_setup.py inference
+```
+
+This confirms the Python environment, Poppler, `BASE_DIR`, Stanford API credential variable, and
+MongoDB credential variables without contacting those services. It establishes local readiness, not
 current external-service availability: model access can change when the Stanford Playground retires
 models or issues replacement keys.
 
@@ -82,9 +89,10 @@ These are historical results documented in `NEXT_STEPS.md`, not reruns performed
 
 ### Reliability bugs
 
-- A malformed tool-call JSON message is appended to conversation history before parsing fails. The
-  invalid assistant message can poison the retry and cause a hard backend 400. A regression test and
-  history sanitation are still needed.
+- Sometimes a model sends a tool request in an invalid format. The system mistakenly keeps that
+  broken request and sends it back to the model on the next attempt, which can cause the retry to
+  fail immediately. This still needs a test and a fix that removes the broken request before
+  retrying.
 - Twenty-two historical metric-eval runs saved successfully but had no field matching
   `gold_metrics.csv`. They are now honestly displayed as **Unscored**, but the mismatch has not been
   explained.
@@ -99,9 +107,10 @@ These are historical results documented in `NEXT_STEPS.md`, not reruns performed
   reconciliation before it is treated as a runbook.
 - Generation-time enforcement of valid function-call JSON should be tested on vLLM and, where
   supported, hosted Playground backends.
-- A `composite_v2.1` terminal-save nudge was deliberately deferred until prompt-independent
-  reliability problems are fixed. Any future comparison should reuse the same 40 outputs and report
-  save success alongside routing accuracy to avoid survivorship bias.
+- A possible `composite_v2.1` prompt change—a final reminder that the agent is not done until it
+  calls `save_evaluation`—was deliberately deferred until prompt-independent reliability problems
+  are fixed. Any future comparison should reuse the same 40 outputs and report save success alongside
+  routing accuracy to avoid survivorship bias.
 
 ### Reporting and documentation
 
@@ -114,14 +123,22 @@ These are historical results documented in `NEXT_STEPS.md`, not reruns performed
   unpriced because Stanford published no supported rate. Before new runs, recheck Stanford's rate
   page and follow the refresh procedure in the `agentic-eval` skill; do not rewrite historical run
   costs with newer rates.
-- `temp.md` and `images/blog/` are an unfinished project article. Its 13-model/34-image/2,730-task
-  figures conflict with later 18-model/35-image/3,780-task claims. The archival handoff repaired its
-  image paths to match the preserved filenames without fact-checking the article. The README's
-  archived token-cost claim referenced an image that was never tracked and is now labeled as
-  unverified rather than silently pointed at a different figure.
-- `reference/redivis_example/` and experimental notebooks are preserved reference work, not part of
-  either supported pipeline. Some include executed outputs and environment-specific endpoints; treat
-  them as examples, not reproducible tests.
+- The README's upstream-inference cost findings are supported by saved tables in
+  `notebooks/plot_metrics.ipynb`, even though the referenced `images/token_cost.png` chart was never
+  committed. For the March 17, 2026 results, the notebook records an estimated $41.35 total for o1
+  versus $8.76 for gemini-2.5-pro (about 4.7 times as much). It also supports the equal-accuracy
+  comparisons for Newspaper Name (claude-3-haiku $0.06 versus gemini-2.5-pro $1.34) and Newspaper
+  Date (gemini-2.0-flash-lite-001 $0.03 versus gemini-2.5-pro $1.49). It does not support the old
+  claim that claude-3-haiku matched gemini-2.5-pro on Newspaper Date: their accuracies were 88.6%
+  and 100%. These dollar amounts were calculated from recorded tokens and the static rates in
+  `inputs/models.json`; before producing new figures, check Stanford's current Gateway rate page,
+  update that file, run `python scripts/7_compute_metrics.py`, and rerun
+  `notebooks/plot_metrics.ipynb`. Keep the old figures tied to their date and original rates.
+- `notebooks/plot_metrics.ipynb` preserves the dated upstream model, benchmark, and image graphics
+  and summary tables. `notebooks/mongo_evals.ipynb` preserves MongoDB-backed evaluation cleaning,
+  weighted-score analysis, heatmaps, and spot checks. Both contain saved outputs and
+  environment-specific paths; treat them as historical analysis records, not reproducible tests or
+  the supported runtime for either pipeline.
 
 ## Setup and data-location knowledge
 
@@ -133,6 +150,11 @@ These are historical results documented in `NEXT_STEPS.md`, not reruns performed
   `EVAL_DISABLE_WEAVE=1`, local tests may attempt tracing initialization.
 - Secrets live only in the ignored `.env`; `.env.example` is the template. Never copy secret values
   into notebooks, generated dashboards, logs, issues, or commits.
+- To obtain `STANFORD_API_KEY`, use Stanford UIT's
+  [AI API Gateway service page](https://uit.stanford.edu/service/ai-api-gateway). Its **Get started**
+  section links the new-key request and the current access instructions. A valid PTA and its approval
+  are required; the same page links help for changing an existing key's model access. Store the
+  issued credential only in the ignored `.env`.
 - Source images and ground-truth files live below the ignored `inputs/data/` tree. Generated agent
   work lists live under `inputs/`; generated run Parquet lives under `outputs/agent_runs/`.
 - The current code targets the DARC Atlas deployment and `usf-internship` MongoDB database. Hosts and
@@ -162,26 +184,18 @@ The wrap-up backlog was checked against the repository's existing issues before 
 5. [#30 — Complete the Qwen judge run and serving runbook on 2× A40](https://github.com/gsbdarc/LLM_benchmarks/issues/30)
 6. [#31 — Revisit `composite_v2.1` after reliability fixes](https://github.com/gsbdarc/LLM_benchmarks/issues/31)
 7. [#32 — Operationalize the living dashboard and expose routing diagnostics](https://github.com/gsbdarc/LLM_benchmarks/issues/32)
-8. [#33 — Validate judge pricing metadata and provenance](https://github.com/gsbdarc/LLM_benchmarks/issues/33)
-9. [#34 — Make the MongoDB deployment and database configurable](https://github.com/gsbdarc/LLM_benchmarks/issues/34)
-10. [#35 — Finish and fact-check the project blog draft](https://github.com/gsbdarc/LLM_benchmarks/issues/35)
-
-Archival-review note: the body of #33 still describes the superseded unconfirmed 3/15 Claude rate.
-The 2026-08-26 repository state now records the Stanford source, unit, verification date, snapshot
-warning, known/unpriced/local cases, dashboard wording, and refresh procedure; a repository owner
-should review and close or reframe that issue in GitHub. Issue #35 also predates the repaired blog
-image paths, but its fact-checking and publication decisions remain open.
+8. [#34 — Make the MongoDB deployment and database configurable](https://github.com/gsbdarc/LLM_benchmarks/issues/34)
 
 ## Verification performed for this handoff
 
 The initial environment wrap-up on 2026-08-25 recorded:
 
 ```text
-scripts/check_setup.py python                         5 passed, 0 failed
-scripts/check_setup.py inference                    10 passed, 0 failed
-scripts/check_setup.py agent-eval --backend playground
+python scripts/check_setup.py python                  5 passed, 0 failed
+python scripts/check_setup.py inference              10 passed, 0 failed
+python scripts/check_setup.py agent-eval --backend playground
                                                      8 passed, 0 failed
-scripts/check_setup.py agent-eval --backend qwen --batch
+python scripts/check_setup.py agent-eval --backend qwen --batch
                                                      8 passed, 1 failed
                                                      (LOCAL_MODEL_URL not set)
 cd agent_eval && EVAL_DISABLE_WEAVE=1 python -m pytest

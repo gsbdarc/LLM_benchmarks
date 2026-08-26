@@ -143,13 +143,18 @@ MONGO_DB_PASSWORD=your_password
 
 Do not commit `.env` or paste credential values into logs or issues.
 
-> ⚠️ Note: as models get added & removed from the Stanford AI API you will need to submit a ticket to update your API key.
+To obtain `STANFORD_API_KEY`, start with Stanford UIT's
+[AI API Gateway service page](https://uit.stanford.edu/service/ai-api-gateway). Its **Get started**
+section links the new-key request and current access instructions. A valid PTA and its approval are
+required. Use the change-key help linked from that page if a model is added or removed from an
+existing key, and keep the issued credential only in the ignored `.env`.
 
 ### Update Inputs (`LLM_benchmarks/inputs/`)
 
 #### `models.json`
 
-Defines which LLMs should be used to process tasks and their model-specific configurations, add or remove as needed.
+Defines which LLMs should be used to process tasks and their model-specific configurations, add or
+remove as needed. The `input_cost` and `output_cost` values are estimated USD per 1 million tokens.
 
 Example:
 ```json
@@ -159,11 +164,20 @@ Example:
         "family": "gpt",
         "max_context_input": 128000,
         "max_context_output": 4096,
-        "max_context_window": 132096}
+        "max_context_window": 132096,
+        "input_cost": 10,
+        "output_cost": 30}
 }
 ```
 
-Note: max_context parameters are helpful for reference but not actually needed to run this pipeline. 
+The checked-in prices are a dated snapshot, not a promise of current Stanford pricing. Before a new
+cost analysis, check the [Stanford AI API Gateway rates](https://uit.stanford.edu/service/ai-api-gateway/rates),
+then update `input_cost` and `output_cost` here. To refresh the estimates from recorded token counts,
+run `python scripts/7_compute_metrics.py` from the repository root and rerun
+[`notebooks/plot_metrics.ipynb`](notebooks/plot_metrics.ipynb). Preserve the original date and rates
+when describing historical results; do not silently reinterpret an old run using newer prices.
+
+Note: max-context parameters are helpful for reference but are not needed to run this pipeline.
 
 #### `benchmarks.json`
 
@@ -264,19 +278,20 @@ cd scripts && sbatch yens.slurm
 #### `6_combine_check_results.py`
 - Loads all results within the `LLM_Benchmarks/outputs/results/` directory.
 - Combines results into a single DataFrame.
-- Saves the results to `LLM_Benchmarks/outputs/results/metrics/combined_results.json`
+- Saves the results to `LLM_benchmarks/outputs/metrics/combined_results.json`.
 - Prints the total number of successful and unsuccessful tasks, returns dictionary of error messages with counts.
 
-#### `7_compute.py`
+#### `7_compute_metrics.py`
 - Loads combined_results.json and filters for tasks that have been processed.
-- Evaluates model outputs compared to ground truth, assigns a accuracy score based on exact matching.
-- Saves results as a `LLM_Benchmarks/outputs/results/metrics/metrics.json`
+- Calculates estimated cost from recorded token counts and the rates in `inputs/models.json`.
+- Evaluates model outputs compared to ground truth and assigns an accuracy score based on exact matching.
+- Saves results to `LLM_benchmarks/outputs/metrics/metrics.json`.
 
 ---
 
 ## Agentic Metric-Eval & Dashboard
 
-The scoring step above (`7_compute.py`, deterministic exact-match) has been reimagined as an **agent**. Instead of code picking a metric per field, an **MCP agent** — an LLM "judge" — reads each field's predicted-vs-expected values (the `llm_outputs` written by `5_main.py`) from Mongo, infers the data shape, routes it to the right composite scoring tool over MCP, and saves a verdict; results feed a live dashboard. We measure how well it routes plus performance/cost. This is the **current active work** (branch `mcp-metric-calc`) and lives in `agent_eval/` + `analysis/`.
+The scoring step above (`7_compute_metrics.py`, deterministic exact-match) has been reimagined as an **agent**. Instead of code picking a metric per field, an **MCP agent** — an LLM "judge" — reads each field's predicted-vs-expected values (the `llm_outputs` written by `5_main.py`) from Mongo, infers the data shape, routes it to the right composite scoring tool over MCP, and saves a verdict; results feed a live dashboard. We measure how well it routes plus performance/cost. This is the **current active work** (branch `mcp-metric-calc`) and lives in `agent_eval/` + `analysis/`.
 
 It reuses the same `.venv`, `.env`, and Mongo as above. Quickstart (**from the repo root**):
 
@@ -336,6 +351,21 @@ To run the task from scratch, see [`agent_eval/README.md`](agent_eval/README.md#
 
 ---
 
+## Analysis Notebooks
+
+Two exploratory notebooks preserve the graphics and result analysis behind this project:
+
+- [`notebooks/plot_metrics.ipynb`](notebooks/plot_metrics.ipynb) contains the dated upstream
+  inference summary tables and graphics broken down by model, benchmark, and image.
+- [`notebooks/mongo_evals.ipynb`](notebooks/mongo_evals.ipynb) loads evaluation results from MongoDB
+  for data cleaning, weighted-score analysis, heatmaps, and result spot checks.
+
+These notebooks contain saved historical outputs and some environment-specific paths. Treat them as
+analysis records rather than the supported way to run either pipeline; use the scripts and dashboard
+commands documented above for new work.
+
+---
+
 ## Findings
 
 We ran each task 3x with results showing that gemini-2.5-pro was the most accurate multimodal model in the Stanford AI Playground API at the time of testing (March 17th, 2026). We've now added Claude-4-5-Sonnet, Claude-Opus-4-6, Llama-4, and gpt-5.2 into our evaluation pipeline. 
@@ -366,15 +396,24 @@ When analyzing results by image id we found that there was about a 40% differenc
 
 ![image_results](./images/results_image.png)
 
-### Token Cost
+### Historical Token-Cost Estimates
 
-The original project notes said that, although o1 was the sixth most accurate model, it used almost
-4.7 times as many tokens as gemini-2.5-pro. This archived claim has not been fact-checked, and the
-referenced `images/token_cost.png` figure was never tracked. Treat it as unfinished analysis rather
-than a supported result; `images/model_tokens.png` is a different average-token table and does not
-substantiate this paragraph.
+The saved March 17, 2026 tables in
+[`notebooks/plot_metrics.ipynb`](notebooks/plot_metrics.ipynb) estimate cost from recorded input and
+output token counts using the per-million-token rates that were in `inputs/models.json` at the time.
+They are historical estimates, not current Stanford prices or billed totals.
 
-Double clicking into metadata extraction benchmarks Newspaper Name and Newspaper Date found similar results could be produced for varying costs. Claude-3-haiku models returned Newspaper Name and Newspaper Date just as accurately as gemini-2.5-pro (100%) but only cost $0.06 or 1/24 as much. Similarly gemini-2.0-flash-lite-001 got Newspaper Date correct 100% of the time but only cost $0.03 vs $1.49 for gemini-2.5-pro. 
+Across all evaluated tasks, o1 ranked sixth in accuracy and had an estimated total cost of $41.35,
+compared with $8.76 for the most accurate model, gemini-2.5-pro—about 4.7 times as much. This is a
+cost comparison, not a claim that o1 used 4.7 times as many tokens.
+
+The benchmark-level tables also show two examples where models reached the same accuracy for
+different estimated costs:
+
+- On Newspaper Name, claude-3-haiku and gemini-2.5-pro both scored 100%; their estimated totals were
+  $0.06 and $1.34, respectively.
+- On Newspaper Date, gemini-2.0-flash-lite-001 and gemini-2.5-pro both scored 100%; their estimated
+  totals were $0.03 and $1.49, respectively.
 
 ### Limitations
 

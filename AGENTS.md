@@ -11,8 +11,8 @@
 ## Archival handoff
 
 - Branch `mcp-metric-calc` is an intentionally broad project snapshot. It contains supported code,
-  unfinished writing, notebooks, reference examples, and local-model experiments so a future
-  maintainer can recover the full context. Do not treat that breadth as accidental cleanup debt.
+  notebooks, and local-model experiments so a future maintainer can recover the relevant technical
+  context. Do not treat that breadth as accidental cleanup debt.
 - Treat claims in `PROJECT_STATUS.md`, `NEXT_STEPS.md`, backend pricing, and linked GitHub issues as
   dated evidence. Verify model availability, rates, infrastructure, and issue state before acting on
   them months later.

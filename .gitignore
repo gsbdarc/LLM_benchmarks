@@ -35,3 +35,7 @@ images/agent_dashboard.html
 # Local experiments and generated scratch outputs
 inputs/processed.csv
 multi_gpu_serve/test_file.txt
+
+# Standalone writing material intentionally excluded from the technical handoff
+images/blog/
+temp.md

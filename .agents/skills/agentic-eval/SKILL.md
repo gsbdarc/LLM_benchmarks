@@ -20,7 +20,7 @@ For a cold start, inspect the current branch and working tree, then read these i
 3. `agent_eval/README.md` — stable harness layout and design rationale.
 4. `NEXT_STEPS.md` — chronological experiments, recorded results, and old runbooks.
 
-Branch `mcp-metric-calc` intentionally preserves WIP, notebooks, examples, and infrastructure
+Branch `mcp-metric-calc` intentionally preserves relevant WIP, notebooks, and infrastructure
 experiments. Do not remove or reorganize them merely because they are unfinished. Treat prices,
 model availability, infrastructure status, "immediate next" labels, and GitHub issue state as dated
 evidence; verify them before starting new work.
